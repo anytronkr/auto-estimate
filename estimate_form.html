@@ -21,6 +21,79 @@
     .preview-btn { width:100%; margin-top:24px; background:#1cc7b6; color:#fff; border:none; padding:12px 0; border-radius:8px; font-size:1.1em; cursor:pointer;
       display: flex; align-items: center; justify-content: center;
     }
+    
+    /* 로딩 애니메이션 스타일 */
+    .loading {
+      position: relative;
+      background: #1cc7b6 !important;
+      color: transparent !important;
+      pointer-events: none;
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(28, 199, 182, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      margin: -12px 0 0 -12px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      z-index: 10;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 버튼 비활성화 상태 */
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    /* 네비게이션 버튼 스타일 */
+    .nav-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 16px;
+      gap: 12px;
+    }
+    
+    .nav-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      text-align: center;
+      display: inline-block;
+    }
+    
+    .back-btn {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
+    .home-btn {
+      background: #1cc7b6;
+      color: #fff;
+    }
+    
+    .nav-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 <body>
@@ -97,6 +170,12 @@
     </div>
   </div>
   <button type="button" class="preview-btn" id="preview-btn">견적서 생성하기</button>
+  
+  <!-- 네비게이션 버튼 -->
+  <div class="nav-buttons">
+    <button type="button" class="nav-btn back-btn" id="back-btn">뒤로가기</button>
+    <a href="/" class="nav-btn home-btn">처음화면으로</a>
+  </div>
 </div>
 <script>
 // 1. 데이터 구조화
@@ -473,39 +552,78 @@ function validateEstimateForm() {
   return true;
 }
 
-function sendEstimateToFastAPI() {
+async function sendEstimateToFastAPI() {
   if (!validateEstimateForm()) return;
-  const data = collectEstimateData();
-  const fileId = new URLSearchParams(window.location.search).get("id");
-  data.fileId = fileId;
+  
+  const button = document.getElementById('preview-btn');
+  const originalText = button.textContent;
+  
+  try {
+    // 버튼 비활성화 및 로딩 애니메이션 적용
+    button.disabled = true;
+    button.classList.add('loading');
+    button.textContent = '처리 중...';
+    
+    // 즉시 시각적 피드백을 위한 약간의 지연
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    const data = collectEstimateData();
+    const fileId = new URLSearchParams(window.location.search).get("id");
+    data.fileId = fileId;
 
-  // 견적제품 선택 값 저장
-  const productCategory = document.getElementById('product-category').value;
-  localStorage.setItem('productCategory', productCategory);
+    // 견적제품 선택 값 저장
+    const productCategory = document.getElementById('product-category').value;
+    localStorage.setItem('productCategory', productCategory);
 
-  fetch('http://localhost:9000/estimate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  })
-  .then(res => res.json())
-  .then(result => {
+    // 최소 로딩 시간 설정 (너무 빨리 넘어가는 것 방지)
+    const startTime = Date.now();
+    const minLoadingTime = 1500; // 최소 1.5초 로딩
+    
+    button.textContent = '견적서 생성 중...';
+    
+    const response = await fetch('http://localhost:9000/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    button.textContent = '완료 중...';
+    
     if(result.status === "success") {
-      alert('견적서가 성공적으로 생성되었습니다!');
-      // localStorage에 데이터 저장 후 미리보기로 이동
-      const dataToStore = JSON.stringify(data);
-      console.log('저장할 데이터:', dataToStore);
-      localStorage.setItem('estimateData', dataToStore);
-      console.log('localStorage 저장 완료');
-      window.location.href = `preview.html?id=${fileId}`;
+      // 최소 로딩 시간 보장
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      
+      setTimeout(() => {
+        // localStorage에 데이터 저장 후 미리보기로 이동
+        const dataToStore = JSON.stringify(data);
+        console.log('저장할 데이터:', dataToStore);
+        localStorage.setItem('estimateData', dataToStore);
+        console.log('localStorage 저장 완료');
+        window.location.href = `preview.html?id=${fileId}`;
+      }, remainingTime);
     } else {
       alert('전송 실패! 다시 시도해 주세요.');
     }
-  })
-  .catch(() => alert('전송 중 오류가 발생했습니다.'));
+  } catch (error) {
+    console.error('견적서 생성 중 오류:', error);
+    alert('전송 중 오류가 발생했습니다.');
+  } finally {
+    // 버튼 상태 복원
+    button.disabled = false;
+    button.classList.remove('loading');
+    button.textContent = originalText;
+  }
 }
 
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
+
+// 네비게이션 버튼 이벤트 리스너
+document.getElementById('back-btn').addEventListener('click', function() {
+  history.back();
+});
 </script>
 </body>
 </html>
