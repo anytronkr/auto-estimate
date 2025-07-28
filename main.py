@@ -64,7 +64,9 @@ def get_credentials():
             CREDS_PATH,
             scopes=[
                 'https://www.googleapis.com/auth/spreadsheets',
-                'https://www.googleapis.com/auth/drive'
+                'https://www.googleapis.com/auth/drive',
+                'https://www.googleapis.com/auth/drive.file',
+                'https://www.googleapis.com/auth/drive.readonly'
             ]
         )
     
@@ -84,17 +86,19 @@ def copy_estimate_template():
         
         print("Google Drive API 서비스 생성 중...")
         
-        # 자격증명 새로고침 시도
+        # 자격증명 새로고침 시도 (더 강력한 방법)
         try:
             if hasattr(creds, 'refresh'):
                 print("자격증명 새로고침 시도...")
-                creds.refresh(None)
+                from google.auth.transport.requests import Request as GoogleRequest
+                creds.refresh(GoogleRequest())
                 print("자격증명 새로고침 완료")
         except Exception as refresh_error:
             print("자격증명 새로고침 실패:", refresh_error)
+            # 새로고침 실패해도 계속 진행
         
-        # Google Drive API 서비스 생성
-        service = build('drive', 'v3', credentials=creds)
+        # Google Drive API 서비스 생성 (타임아웃 설정 추가)
+        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
         
         # 현재 시간을 YYMMDD HHmm 형식으로 포맷
         now = datetime.now()

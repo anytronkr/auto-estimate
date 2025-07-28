@@ -33,7 +33,9 @@ def get_google_credentials():
             creds_dict,
             scopes=[
                 'https://www.googleapis.com/auth/spreadsheets',
-                'https://www.googleapis.com/auth/drive'
+                'https://www.googleapis.com/auth/drive',
+                'https://www.googleapis.com/auth/drive.file',
+                'https://www.googleapis.com/auth/drive.readonly'
             ]
         )
     return None
