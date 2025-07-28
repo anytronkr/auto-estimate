@@ -28,6 +28,7 @@ def get_google_credentials():
     if credentials_json:
         import json
         from google.oauth2 import service_account
+        from datetime import datetime, timedelta
         creds_dict = json.loads(credentials_json)
         return service_account.Credentials.from_service_account_info(
             creds_dict,

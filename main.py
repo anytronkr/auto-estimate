@@ -15,8 +15,9 @@ from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
+import time
 
 app = FastAPI()
 
@@ -67,7 +68,8 @@ def get_credentials():
                 'https://www.googleapis.com/auth/drive',
                 'https://www.googleapis.com/auth/drive.file',
                 'https://www.googleapis.com/auth/drive.readonly'
-            ]
+            ],
+            token_expiry=datetime.now() + timedelta(hours=1) # 토큰 만료 시간 설정
         )
     
     print("Google Service Account 자격증명을 찾을 수 없습니다.")
@@ -77,6 +79,13 @@ def copy_estimate_template():
     """견적서 템플릿 스프레드시트를 복사하여 새 파일 생성"""
     try:
         print("견적서 템플릿 복사 시작...")
+        
+        # 시간 동기화 진단
+        current_time = datetime.now()
+        print(f"현재 서버 시간: {current_time}")
+        print(f"현재 서버 시간 (UTC): {current_time.utcnow()}")
+        print(f"현재 타임스탬프: {time.time()}")
+        
         creds = get_credentials()
         if not creds:
             return {"status": "error", "message": "Google Service Account 자격증명을 가져올 수 없습니다."}
