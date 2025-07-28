@@ -428,7 +428,7 @@ async function autoFillEstimateNumber() {
   // 오늘 PDF생성횟수 가져오기 (임시로 +1, 실제는 서버에서 받아야 정확)
   let count = 1;
   try {
-    const res = await fetch('http://localhost:9000/estimate', {
+    const res = await fetch('https://auto-estimate.onrender.com/estimate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ check_only: true })
@@ -562,7 +562,7 @@ async function sendEstimateToFastAPI() {
       
       try {
         // 견적서 템플릿 복사 API 호출
-        const templateResponse = await fetch('http://localhost:9000/create-estimate-template', {
+        const templateResponse = await fetch('https://auto-estimate.onrender.com/create-estimate-template', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -596,7 +596,7 @@ async function sendEstimateToFastAPI() {
     
     button.textContent = '견적서 생성 중...';
     
-    const response = await fetch('http://localhost:9000/estimate', {
+    const response = await fetch('https://auto-estimate.onrender.com/estimate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)

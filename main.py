@@ -814,6 +814,18 @@ async def test_pipedrive(request: Request):
 async def fill_estimate(request: Request):
     data = await request.json()
     file_id = data.get("fileId")
+    
+    # fileId가 없거나 템플릿 변수인 경우 새로운 템플릿 생성
+    if not file_id or file_id == "{{24.id}}" or "{{" in str(file_id) or "}}" in str(file_id):
+        print("fileId가 없거나 템플릿 변수입니다. 새로운 템플릿을 생성합니다.")
+        template_result = copy_estimate_template()
+        
+        if template_result["status"] == "success":
+            file_id = template_result["file_id"]
+            print(f"새로운 템플릿 생성 완료: {file_id}")
+        else:
+            return {"status": "error", "msg": f"템플릿 생성 실패: {template_result['message']}"}
+    
     if not file_id:
         return {"status": "error", "msg": "fileId 없음"}
 
