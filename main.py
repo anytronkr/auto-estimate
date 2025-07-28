@@ -33,8 +33,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 정적 파일 서빙 설정 (API 엔드포인트와 충돌 방지)
-app.mount("/static", StaticFiles(directory="."), name="static")
+# 정적 파일 서빙 설정 제거 (루트 경로와 충돌 방지)
+# app.mount("/static", StaticFiles(directory="."), name="static")
 
 # Health check 엔드포인트 (Render.com용)
 @app.get("/health")
