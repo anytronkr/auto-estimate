@@ -674,8 +674,8 @@ async def get_pipedrive_stages(pipeline_id: int):
 # HTML 파일 서빙 엔드포인트들
 @app.get("/")
 async def root():
-    """루트 페이지 - 견적서 작성 페이지로 리다이렉트"""
-    return FileResponse("estimate_form.html")
+    """루트 페이지 - 견적서 생성 시작 페이지"""
+    return FileResponse("index.html")
 
 @app.get("/estimate_form.html")
 async def estimate_form():
