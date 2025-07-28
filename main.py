@@ -79,7 +79,20 @@ def copy_estimate_template():
         if not creds:
             return {"status": "error", "message": "Google Service Account 자격증명을 가져올 수 없습니다."}
         
+        print("자격증명 타입:", type(creds))
+        print("자격증명 만료 시간:", getattr(creds, 'expiry', 'N/A'))
+        
         print("Google Drive API 서비스 생성 중...")
+        
+        # 자격증명 새로고침 시도
+        try:
+            if hasattr(creds, 'refresh'):
+                print("자격증명 새로고침 시도...")
+                creds.refresh(None)
+                print("자격증명 새로고침 완료")
+        except Exception as refresh_error:
+            print("자격증명 새로고침 실패:", refresh_error)
+        
         # Google Drive API 서비스 생성
         service = build('drive', 'v3', credentials=creds)
         
