@@ -44,6 +44,11 @@ async def health_check():
 # PDF export 및 구글 드라이브 업로드 함수
 FOLDER_ID = get_google_drive_folder_id()
 
+# 견적서 템플릿 스프레드시트 ID
+TEMPLATE_SHEET_ID = "1Rf7dGonf0HgAfZ-XS3cW1Hp3V-NiOTWbt8m_qRtyzBY"
+# 견적서 저장 폴더 ID
+ESTIMATE_FOLDER_ID = "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"
+
 def get_credentials():
     """환경변수에서 Google Service Account 자격증명 가져오기"""
     creds = get_google_credentials()
@@ -60,6 +65,53 @@ def get_credentials():
             ]
         )
     return None
+
+def copy_estimate_template():
+    """견적서 템플릿 스프레드시트를 복사하여 새 파일 생성"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return {"status": "error", "message": "Google Service Account 자격증명을 가져올 수 없습니다."}
+        
+        # Google Drive API 서비스 생성
+        service = build('drive', 'v3', credentials=creds)
+        
+        # 현재 시간을 YYMMDD HHmm 형식으로 포맷
+        now = datetime.now()
+        formatted_date = now.strftime("%y%m%d %H%M")
+        
+        # 새 파일명 생성
+        new_filename = f"견적서_DLP_{formatted_date}"
+        
+        # 파일 복사 요청
+        copy_metadata = {
+            'name': new_filename,
+            'parents': [ESTIMATE_FOLDER_ID]  # 지정된 폴더에 저장
+        }
+        
+        # 스프레드시트 복사
+        copied_file = service.files().copy(
+            fileId=TEMPLATE_SHEET_ID,
+            body=copy_metadata
+        ).execute()
+        
+        new_file_id = copied_file['id']
+        
+        print(f"견적서 템플릿 복사 완료: {new_filename} (ID: {new_file_id})")
+        
+        return {
+            "status": "success",
+            "file_id": new_file_id,
+            "filename": new_filename,
+            "message": "견적서 템플릿이 성공적으로 복사되었습니다."
+        }
+        
+    except Exception as e:
+        print(f"견적서 템플릿 복사 중 오류: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"견적서 템플릿 복사 중 오류가 발생했습니다: {str(e)}"
+        }
 
 def get_pipedrive_settings():
     """환경변수에서 Pipedrive 설정 가져오기"""
@@ -710,6 +762,12 @@ async def pdf_sharing():
 async def test_endpoint():
     """간단한 테스트 엔드포인트"""
     return {"status": "success", "message": "서버가 정상적으로 작동 중입니다."}
+
+@app.post("/create-estimate-template")
+async def create_estimate_template():
+    """견적서 템플릿 스프레드시트를 복사하여 새 파일 생성"""
+    result = copy_estimate_template()
+    return result
 
 # 테스트용 엔드포인트 추가
 @app.post("/test-pipedrive")

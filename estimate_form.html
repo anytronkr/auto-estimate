@@ -556,15 +556,32 @@ async function sendEstimateToFastAPI() {
     const data = collectEstimateData();
     const fileId = new URLSearchParams(window.location.search).get("id");
     
-    // fileId 유효성 검사 및 처리
+    // fileId가 없거나 템플릿 변수인 경우 새로운 견적서 템플릿 생성
     if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
-      console.warn("유효하지 않은 fileId:", fileId);
-      // fileId가 없거나 템플릿 변수인 경우 처리
-      data.fileId = null;
+      console.log("새로운 견적서 템플릿 생성 시작");
       
-      // 사용자에게 알림
-      alert("견적서 템플릿이 준비되지 않았습니다. 관리자에게 문의해주세요.");
-      return;
+      try {
+        // 견적서 템플릿 복사 API 호출
+        const templateResponse = await fetch('http://localhost:9000/create-estimate-template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const templateResult = await templateResponse.json();
+        
+        if (templateResult.status === "success") {
+          console.log("견적서 템플릿 생성 성공:", templateResult);
+          data.fileId = templateResult.file_id;
+        } else {
+          console.error("견적서 템플릿 생성 실패:", templateResult);
+          alert("견적서 템플릿 생성에 실패했습니다: " + templateResult.message);
+          return;
+        }
+      } catch (error) {
+        console.error("견적서 템플릿 생성 중 오류:", error);
+        alert("견적서 템플릿 생성 중 오류가 발생했습니다.");
+        return;
+      }
     } else {
       data.fileId = fileId;
     }
@@ -623,33 +640,14 @@ async function sendEstimateToFastAPI() {
 
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
 
-// 페이지 로드 시 fileId 상태 확인
+// 페이지 로드 시 fileId 상태 확인 (디버그용)
 document.addEventListener('DOMContentLoaded', function() {
   const fileId = new URLSearchParams(window.location.search).get("id");
   
   if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
-    console.warn("페이지 로드 시 유효하지 않은 fileId 감지:", fileId);
-    
-    // 페이지 상단에 경고 메시지 표시
-    const warningDiv = document.createElement('div');
-    warningDiv.style.cssText = `
-      background: #fff3cd;
-      border: 1px solid #ffeaa7;
-      color: #856404;
-      padding: 12px;
-      margin-bottom: 16px;
-      border-radius: 6px;
-      text-align: center;
-      font-weight: 500;
-    `;
-    warningDiv.innerHTML = `
-      ⚠️ <strong>견적서 템플릿이 준비되지 않았습니다.</strong><br>
-      관리자에게 문의하거나 처음화면으로 돌아가주세요.
-    `;
-    
-    // 컨테이너의 맨 위에 삽입
-    const container = document.querySelector('.container');
-    container.insertBefore(warningDiv, container.firstChild);
+    console.log("fileId가 없거나 템플릿 변수입니다. 견적서 생성 시 자동으로 새 템플릿을 생성합니다.");
+  } else {
+    console.log("유효한 fileId가 제공되었습니다:", fileId);
   }
 });
 
