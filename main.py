@@ -675,19 +675,24 @@ async def get_pipedrive_stages(pipeline_id: int):
 @app.get("/")
 async def root():
     """루트 페이지 - 견적서 생성 시작 페이지 (랜딩 페이지)"""
+    print("루트 경로 요청됨 - index.html 서빙 시도")
     try:
         with open("index.html", "r", encoding="utf-8") as f:
             content = f.read()
+        print(f"index.html 파일 읽기 성공, 길이: {len(content)}")
         from fastapi.responses import HTMLResponse
         return HTMLResponse(content=content)
     except FileNotFoundError:
+        print("index.html 파일을 찾을 수 없습니다.")
         return {"error": "index.html 파일을 찾을 수 없습니다."}
     except Exception as e:
+        print(f"파일 읽기 오류: {str(e)}")
         return {"error": f"파일 읽기 오류: {str(e)}"}
 
 @app.get("/estimate_form.html")
 async def estimate_form():
     """견적서 작성 페이지"""
+    print("estimate_form.html 경로 요청됨")
     return FileResponse("estimate_form.html")
 
 @app.get("/preview.html")
