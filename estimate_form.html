@@ -555,7 +555,19 @@ async function sendEstimateToFastAPI() {
     
     const data = collectEstimateData();
     const fileId = new URLSearchParams(window.location.search).get("id");
-    data.fileId = fileId;
+    
+    // fileId 유효성 검사 및 처리
+    if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
+      console.warn("유효하지 않은 fileId:", fileId);
+      // fileId가 없거나 템플릿 변수인 경우 처리
+      data.fileId = null;
+      
+      // 사용자에게 알림
+      alert("견적서 템플릿이 준비되지 않았습니다. 관리자에게 문의해주세요.");
+      return;
+    } else {
+      data.fileId = fileId;
+    }
 
     // 견적제품 선택 값 저장
     const productCategory = document.getElementById('product-category').value;
@@ -588,7 +600,12 @@ async function sendEstimateToFastAPI() {
         console.log('저장할 데이터:', dataToStore);
         localStorage.setItem('estimateData', dataToStore);
         console.log('localStorage 저장 완료');
-        window.location.href = `preview.html?id=${fileId}`;
+        // fileId가 유효한 경우에만 URL에 포함
+        if (data.fileId) {
+          window.location.href = `preview.html?id=${data.fileId}`;
+        } else {
+          window.location.href = `preview.html`;
+        }
       }, remainingTime);
     } else {
       alert('전송 실패! 다시 시도해 주세요.');
@@ -606,6 +623,35 @@ async function sendEstimateToFastAPI() {
 
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
 
+// 페이지 로드 시 fileId 상태 확인
+document.addEventListener('DOMContentLoaded', function() {
+  const fileId = new URLSearchParams(window.location.search).get("id");
+  
+  if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
+    console.warn("페이지 로드 시 유효하지 않은 fileId 감지:", fileId);
+    
+    // 페이지 상단에 경고 메시지 표시
+    const warningDiv = document.createElement('div');
+    warningDiv.style.cssText = `
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+      padding: 12px;
+      margin-bottom: 16px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 500;
+    `;
+    warningDiv.innerHTML = `
+      ⚠️ <strong>견적서 템플릿이 준비되지 않았습니다.</strong><br>
+      관리자에게 문의하거나 처음화면으로 돌아가주세요.
+    `;
+    
+    // 컨테이너의 맨 위에 삽입
+    const container = document.querySelector('.container');
+    container.insertBefore(warningDiv, container.firstChild);
+  }
+});
 
 </script>
 </body>
