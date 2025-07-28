@@ -59,40 +59,29 @@
       cursor: not-allowed;
     }
     
-    /* 네비게이션 버튼 스타일 */
-    .nav-buttons {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 16px;
-      gap: 12px;
-    }
-    
-    .nav-btn {
-      flex: 1;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
-      font-size: 0.9em;
+    /* 처음화면으로 버튼 스타일 */
+    .home-button {
+      width: 100%;
+      margin-top: 12px;
+      background: #f8f9fa;
+      color: #6c757d;
+      border: 2px solid #dee2e6;
+      padding: 10px 0;
+      border-radius: 8px;
+      font-size: 0.95em;
       cursor: pointer;
       transition: all 0.3s ease;
       text-decoration: none;
       text-align: center;
-      display: inline-block;
+      display: block;
     }
     
-    .back-btn {
-      background: #e0e0e0;
-      color: #333;
-    }
-    
-    .home-btn {
-      background: #1cc7b6;
-      color: #fff;
-    }
-    
-    .nav-btn:hover {
-      opacity: 0.9;
+    .home-button:hover {
+      background: #e9ecef;
+      color: #495057;
+      border-color: #adb5bd;
       transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
   </style>
 </head>
@@ -171,11 +160,8 @@
   </div>
   <button type="button" class="preview-btn" id="preview-btn">견적서 생성하기</button>
   
-  <!-- 네비게이션 버튼 -->
-  <div class="nav-buttons">
-    <button type="button" class="nav-btn back-btn" id="back-btn">뒤로가기</button>
-    <a href="/" class="nav-btn home-btn">처음화면으로</a>
-  </div>
+  <!-- 처음화면으로 버튼 -->
+  <a href="/" class="home-button">처음화면으로</a>
 </div>
 <script>
 // 1. 데이터 구조화
@@ -620,10 +606,7 @@ async function sendEstimateToFastAPI() {
 
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
 
-// 네비게이션 버튼 이벤트 리스너
-document.getElementById('back-btn').addEventListener('click', function() {
-  history.back();
-});
+
 </script>
 </body>
 </html>
