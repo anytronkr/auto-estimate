@@ -773,7 +773,9 @@ async def test_endpoint():
 @app.post("/create-estimate-template")
 async def create_estimate_template():
     """견적서 템플릿 스프레드시트를 복사하여 새 파일 생성"""
+    print("=== 견적서 템플릿 생성 API 호출됨 ===")
     result = copy_estimate_template()
+    print("=== 견적서 템플릿 생성 결과:", result, "===")
     return result
 
 # 테스트용 엔드포인트 추가

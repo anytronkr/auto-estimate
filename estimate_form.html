@@ -559,15 +559,19 @@ async function sendEstimateToFastAPI() {
             // fileId가 없거나 템플릿 변수인 경우 새로운 견적서 템플릿 생성
         if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
           console.log("새로운 견적서 템플릿 생성 시작");
+          console.log("현재 fileId:", fileId);
           
           try {
+            console.log("견적서 템플릿 복사 API 호출 중...");
             // 견적서 템플릿 복사 API 호출
             const templateResponse = await fetch('https://auto-estimate.onrender.com/create-estimate-template', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' }
             });
             
+            console.log("API 응답 상태:", templateResponse.status);
             const templateResult = await templateResponse.json();
+            console.log("API 응답 결과:", templateResult);
             
             if (templateResult.status === "success") {
               console.log("견적서 템플릿 생성 성공:", templateResult);
@@ -577,6 +581,7 @@ async function sendEstimateToFastAPI() {
               const newUrl = new URL(window.location);
               newUrl.searchParams.set('id', templateResult.file_id);
               window.history.replaceState({}, '', newUrl);
+              console.log("URL 업데이트 완료:", newUrl.toString());
             } else {
               console.error("견적서 템플릿 생성 실패:", templateResult);
               alert("견적서 템플릿 생성에 실패했습니다: " + templateResult.message);
@@ -588,6 +593,7 @@ async function sendEstimateToFastAPI() {
             return;
           }
         } else {
+          console.log("기존 fileId 사용:", fileId);
           data.fileId = fileId;
         }
 
