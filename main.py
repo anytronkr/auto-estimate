@@ -21,6 +21,25 @@ import time
 
 app = FastAPI()
 
+# 서버 시작 시 시간대 정보 출력
+@app.on_event("startup")
+async def startup_event():
+    import os
+    # 시간대 환경변수 설정 (UTC로 강제)
+    os.environ['TZ'] = 'UTC'
+    import time
+    time.tzset()  # Linux/Unix에서만 작동
+    
+    current_time = datetime.now()
+    utc_time = datetime.utcnow()
+    timezone_info = os.environ.get('TZ', 'Not set')
+    print(f"=== 서버 시작 시간대 정보 ===")
+    print(f"현재 시간: {current_time}")
+    print(f"UTC 시간: {utc_time}")
+    print(f"시간대 환경변수 (TZ): {timezone_info}")
+    print(f"시간 차이: {current_time - utc_time}")
+    print(f"================================")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
