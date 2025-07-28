@@ -675,7 +675,15 @@ async def get_pipedrive_stages(pipeline_id: int):
 @app.get("/")
 async def root():
     """루트 페이지 - 견적서 생성 시작 페이지"""
-    return FileResponse("index.html")
+    try:
+        with open("index.html", "r", encoding="utf-8") as f:
+            content = f.read()
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=content)
+    except FileNotFoundError:
+        return {"error": "index.html 파일을 찾을 수 없습니다."}
+    except Exception as e:
+        return {"error": f"파일 읽기 오류: {str(e)}"}
 
 @app.get("/estimate_form.html")
 async def estimate_form():
