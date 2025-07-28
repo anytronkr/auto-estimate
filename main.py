@@ -50,13 +50,16 @@ TEMPLATE_SHEET_ID = "1Rf7dGonf0HgAfZ-XS3cW1Hp3V-NiOTWbt8m_qRtyzBY"
 ESTIMATE_FOLDER_ID = "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"
 
 def get_credentials():
-    """환경변수에서 Google Service Account 자격증명 가져오기"""
+    """Google Service Account 자격증명 가져오기"""
+    # 먼저 환경변수에서 시도
     creds = get_google_credentials()
     if creds:
+        print("환경변수에서 자격증명 로드 성공")
         return creds
     
-    # 로컬 개발용 fallback
+    # 로컬 파일에서 fallback
     if os.path.exists(CREDS_PATH):
+        print("로컬 creds.json 파일에서 자격증명 로드")
         return service_account.Credentials.from_service_account_file(
             CREDS_PATH,
             scopes=[
@@ -64,15 +67,19 @@ def get_credentials():
                 'https://www.googleapis.com/auth/drive'
             ]
         )
+    
+    print("Google Service Account 자격증명을 찾을 수 없습니다.")
     return None
 
 def copy_estimate_template():
     """견적서 템플릿 스프레드시트를 복사하여 새 파일 생성"""
     try:
+        print("견적서 템플릿 복사 시작...")
         creds = get_credentials()
         if not creds:
             return {"status": "error", "message": "Google Service Account 자격증명을 가져올 수 없습니다."}
         
+        print("Google Drive API 서비스 생성 중...")
         # Google Drive API 서비스 생성
         service = build('drive', 'v3', credentials=creds)
         
