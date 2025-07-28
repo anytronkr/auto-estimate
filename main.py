@@ -674,7 +674,7 @@ async def get_pipedrive_stages(pipeline_id: int):
 # HTML 파일 서빙 엔드포인트들
 @app.get("/")
 async def root():
-    """루트 페이지 - 견적서 생성 시작 페이지"""
+    """루트 페이지 - 견적서 생성 시작 페이지 (랜딩 페이지)"""
     try:
         with open("index.html", "r", encoding="utf-8") as f:
             content = f.read()
