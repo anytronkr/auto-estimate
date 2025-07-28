@@ -127,8 +127,37 @@
             color: #555;
         }
 
-        .feature strong {
-            color: #4CAF50;
+        .quick-links {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .quick-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            color: #666;
+            text-decoration: none;
+            border-radius: 25px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .quick-link:hover {
+            background: #e9ecef;
+            color: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .link-icon {
+            font-size: 1.1em;
         }
 
         @media (max-width: 480px) {
@@ -151,11 +180,6 @@
     <div class="container">
         <div class="logo">A</div>
         <h1>애니트론 견적서 생성</h1>
-        <p class="subtitle">
-            간편하고 정확한 견적서를 생성하세요.<br>
-            전문적인 견적서를 빠르게 만들어드립니다.
-        </p>
-        
         <button id="startButton" class="start-button">
             견적서 생성 시작
         </button>
@@ -165,19 +189,15 @@
             <p>견적서 생성 준비 중...</p>
         </div>
 
-        <div class="features">
-            <div class="feature">
-                <strong>빠른 생성</strong><br>
-                3분 내 완성
-            </div>
-            <div class="feature">
-                <strong>정확한 견적</strong><br>
-                실시간 계산
-            </div>
-            <div class="feature">
-                <strong>PDF 다운로드</strong><br>
-                즉시 다운로드
-            </div>
+        <div class="quick-links">
+            <a href="https://drive.google.com/drive/folders/1aRR0m61B_a4B6ag76GrYt-8bdxiyYRC6?ths=true" target="_blank" class="quick-link">
+                <span class="link-icon">📁</span>
+                구글드라이브 바로가기
+            </a>
+            <a href="https://docs.google.com/spreadsheets/d/1lanDTaqOzAXFQaZcqj91X6kknbpHXREH3bLQrTeVq6Q/edit?gid=0#gid=0" target="_blank" class="quick-link">
+                <span class="link-icon">📊</span>
+                견적발행목록 바로가기
+            </a>
         </div>
     </div>
 
