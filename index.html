@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>애니트론 견적서 생성</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            padding: 60px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+            line-height: 1.5;
+        }
+
+        .start-button {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 18px 40px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.3em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(76, 175, 80, 0.4);
+        }
+
+        .start-button:active {
+            transform: translateY(0);
+        }
+
+        .start-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .features {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .feature {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .feature strong {
+            color: #4CAF50;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 40px 20px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .start-button {
+                padding: 15px 30px;
+                font-size: 1.1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">A</div>
+        <h1>애니트론 견적서 생성</h1>
+        <p class="subtitle">
+            간편하고 정확한 견적서를 생성하세요.<br>
+            전문적인 견적서를 빠르게 만들어드립니다.
+        </p>
+        
+        <button id="startButton" class="start-button">
+            견적서 생성 시작
+        </button>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>견적서 생성 준비 중...</p>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <strong>빠른 생성</strong><br>
+                3분 내 완성
+            </div>
+            <div class="feature">
+                <strong>정확한 견적</strong><br>
+                실시간 계산
+            </div>
+            <div class="feature">
+                <strong>PDF 다운로드</strong><br>
+                즉시 다운로드
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('startButton').addEventListener('click', function() {
+            const button = this;
+            const loading = document.getElementById('loading');
+            const webhookUrl = 'https://hook.us2.make.com/l477a7ymen3587uj6aoj5zgyftx95exa';
+            const redirectUrl = '/input-quote';
+
+            // 버튼 비활성화 및 로딩 표시
+            button.disabled = true;
+            button.textContent = '처리 중...';
+            loading.style.display = 'block';
+
+            // 웹훅 호출
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'estimate_generation_started',
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    referrer: document.referrer
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Webhook call failed:', response.statusText);
+                    throw new Error('Webhook call failed');
+                } else {
+                    console.log('Webhook called successfully!');
+                    return response;
+                }
+            })
+            .catch(error => {
+                console.error('Error calling webhook:', error);
+                // 웹훅 실패해도 계속 진행
+            })
+            .finally(() => {
+                // 1초 후 리디렉션 (사용자에게 로딩 상태를 보여주기 위해)
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 1000);
+            });
+        });
+
+        // 페이지 로드 시 애니메이션
+        window.addEventListener('load', function() {
+            const container = document.querySelector('.container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                container.style.transition = 'all 0.6s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
+        });
+    </script>
+</body>
+</html> 
