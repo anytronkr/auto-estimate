@@ -248,14 +248,13 @@
     }
 
     function goBack() {
-      // localStorage에서 estimateData의 fileId를 우선 사용, 없으면 현재 url의 id 파라미터 사용
-      let fileId = null;
-      try {
-        const estimateData = JSON.parse(localStorage.getItem('estimateData') || '{}');
-        fileId = estimateData.fileId;
-      } catch (e) {}
+      // URL에서 fileId 파라미터를 우선 사용, 없으면 localStorage에서 estimateData의 fileId 사용
+      let fileId = urlParams.get('fileId');
       if (!fileId) {
-        fileId = urlParams.get('id');
+        try {
+          const estimateData = JSON.parse(localStorage.getItem('estimateData') || '{}');
+          fileId = estimateData.fileId;
+        } catch (e) {}
       }
       if (fileId) {
         window.location.href = `estimate_form.html?id=${fileId}`;

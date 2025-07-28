@@ -556,35 +556,40 @@ async function sendEstimateToFastAPI() {
     const data = collectEstimateData();
     const fileId = new URLSearchParams(window.location.search).get("id");
     
-    // fileId가 없거나 템플릿 변수인 경우 새로운 견적서 템플릿 생성
-    if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
-      console.log("새로운 견적서 템플릿 생성 시작");
-      
-      try {
-        // 견적서 템플릿 복사 API 호출
-        const templateResponse = await fetch('https://auto-estimate.onrender.com/create-estimate-template', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        const templateResult = await templateResponse.json();
-        
-        if (templateResult.status === "success") {
-          console.log("견적서 템플릿 생성 성공:", templateResult);
-          data.fileId = templateResult.file_id;
+            // fileId가 없거나 템플릿 변수인 경우 새로운 견적서 템플릿 생성
+        if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
+          console.log("새로운 견적서 템플릿 생성 시작");
+          
+          try {
+            // 견적서 템플릿 복사 API 호출
+            const templateResponse = await fetch('https://auto-estimate.onrender.com/create-estimate-template', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            
+            const templateResult = await templateResponse.json();
+            
+            if (templateResult.status === "success") {
+              console.log("견적서 템플릿 생성 성공:", templateResult);
+              data.fileId = templateResult.file_id;
+              
+              // URL에 fileId 추가
+              const newUrl = new URL(window.location);
+              newUrl.searchParams.set('id', templateResult.file_id);
+              window.history.replaceState({}, '', newUrl);
+            } else {
+              console.error("견적서 템플릿 생성 실패:", templateResult);
+              alert("견적서 템플릿 생성에 실패했습니다: " + templateResult.message);
+              return;
+            }
+          } catch (error) {
+            console.error("견적서 템플릿 생성 중 오류:", error);
+            alert("견적서 템플릿 생성 중 오류가 발생했습니다.");
+            return;
+          }
         } else {
-          console.error("견적서 템플릿 생성 실패:", templateResult);
-          alert("견적서 템플릿 생성에 실패했습니다: " + templateResult.message);
-          return;
+          data.fileId = fileId;
         }
-      } catch (error) {
-        console.error("견적서 템플릿 생성 중 오류:", error);
-        alert("견적서 템플릿 생성 중 오류가 발생했습니다.");
-        return;
-      }
-    } else {
-      data.fileId = fileId;
-    }
 
     // 견적제품 선택 값 저장
     const productCategory = document.getElementById('product-category').value;
@@ -617,7 +622,7 @@ async function sendEstimateToFastAPI() {
         console.log('저장할 데이터:', dataToStore);
         localStorage.setItem('estimateData', dataToStore);
         console.log('localStorage 저장 완료');
-        // fileId가 유효한 경우에만 URL에 포함
+        // fileId를 URL에 포함하여 preview.html로 이동
         if (data.fileId) {
           window.location.href = `preview.html?id=${data.fileId}`;
         } else {
