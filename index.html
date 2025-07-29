@@ -208,19 +208,52 @@
     </div>
 
     <script>
-        document.getElementById('startButton').addEventListener('click', function() {
+        document.getElementById('startButton').addEventListener('click', async function() {
             const button = this;
             const loading = document.getElementById('loading');
 
             // 버튼 비활성화 및 로딩 표시
             button.disabled = true;
-            button.textContent = '처리 중...';
+            button.textContent = '견적서 템플릿 생성 중...';
             loading.style.display = 'block';
 
-            // 바로 estimate_form.html로 이동
-            setTimeout(() => {
-                window.location.href = '/estimate_form.html';
-            }, 500);
+            try {
+                console.log('=== 견적서 템플릿 생성 시작 ===');
+                
+                // 견적서 템플릿 생성 API 호출
+                const response = await fetch('/create-estimate-template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                console.log('API 응답 상태:', response.status);
+                const result = await response.json();
+                console.log('API 응답 결과:', result);
+                
+                if (result.status === 'success') {
+                    console.log('견적서 템플릿 생성 성공:', result.file_id);
+                    
+                    // fileId와 함께 estimate_form.html로 이동
+                    window.location.href = `/estimate_form.html?id=${result.file_id}`;
+                } else {
+                    console.error('견적서 템플릿 생성 실패:', result.message);
+                    alert('견적서 템플릿 생성에 실패했습니다: ' + result.message);
+                    
+                    // 실패 시 버튼 상태 복원
+                    button.disabled = false;
+                    button.textContent = '견적서 생성 시작';
+                    loading.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('견적서 템플릿 생성 중 오류:', error);
+                alert('견적서 템플릿 생성 중 오류가 발생했습니다.');
+                
+                // 오류 시 버튼 상태 복원
+                button.disabled = false;
+                button.textContent = '견적서 생성 시작';
+                loading.style.display = 'none';
+            }
         });
 
         // 페이지 로드 시 애니메이션

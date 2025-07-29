@@ -592,6 +592,14 @@ async function sendEstimateToFastAPI() {
     
     // fileId가 없거나 템플릿 변수인 경우 새로운 견적서 템플릿 생성
     if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
+      console.log("fileId가 없거나 템플릿 변수입니다. 새로운 템플릿을 생성합니다.");
+    } else {
+      console.log("유효한 fileId가 이미 제공되었습니다:", fileId);
+      data.fileId = fileId;
+    }
+    
+    // fileId가 없는 경우에만 템플릿 생성
+    if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
       console.log("새로운 견적서 템플릿 생성 시작");
       console.log("현재 fileId:", fileId);
       console.log("fileId 검증:", {
