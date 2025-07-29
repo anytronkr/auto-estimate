@@ -336,9 +336,18 @@ async function generatePDF() {
     const data = JSON.parse(estimateData);
 
     const urlParams = new URLSearchParams(window.location.search);
+    console.log('preview.html - URL 파라미터:', urlParams.toString());
+    console.log('preview.html - URL에서 가져온 id:', urlParams.get('id'));
+    console.log('preview.html - localStorage data.fileId:', data.fileId);
+    
     const fileId = urlParams.get('id') || data.fileId;
-    if (fileId) data.fileId = fileId;
-    else {
+    console.log('preview.html - 최종 사용할 fileId:', fileId);
+    
+    if (fileId) {
+      data.fileId = fileId;
+      console.log('preview.html - data.fileId 설정 완료:', data.fileId);
+    } else {
+      console.error('preview.html - fileId가 없습니다!');
       alert("fileId가 없습니다. URL에 id 파라미터가 필요합니다.");
       return;
     }

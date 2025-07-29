@@ -250,15 +250,25 @@
     function goBack() {
       // URL에서 fileId 파라미터를 우선 사용, 없으면 localStorage에서 estimateData의 fileId 사용
       let fileId = urlParams.get('fileId');
+      console.log('pdf-sharing.html - URL에서 가져온 fileId:', fileId);
+      
       if (!fileId) {
         try {
           const estimateData = JSON.parse(localStorage.getItem('estimateData') || '{}');
           fileId = estimateData.fileId;
-        } catch (e) {}
+          console.log('pdf-sharing.html - localStorage에서 가져온 fileId:', fileId);
+        } catch (e) {
+          console.error('pdf-sharing.html - localStorage 파싱 오류:', e);
+        }
       }
+      
+      console.log('pdf-sharing.html - 최종 사용할 fileId:', fileId);
+      
       if (fileId) {
+        console.log('pdf-sharing.html - estimate_form.html로 이동:', `estimate_form.html?id=${fileId}`);
         window.location.href = `estimate_form.html?id=${fileId}`;
       } else {
+        console.log('pdf-sharing.html - fileId 없음, 홈으로 이동');
         window.location.href = 'estimate_form.html';
       }
     }
