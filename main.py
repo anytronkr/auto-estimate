@@ -93,10 +93,15 @@ def get_credentials():
     print("=== 자격증명 로드 시작 ===")
     
     # 환경변수에서 직접 로드 (권장 방법)
-    creds = get_google_credentials()
-    if creds:
-        print(f"✅ 자격증명 로드 성공 - 타입: {type(creds)}")
-        return creds
+    try:
+        creds = get_google_credentials()
+        if creds:
+            print(f"✅ 환경변수에서 자격증명 로드 성공 - 타입: {type(creds)}")
+            return creds
+        else:
+            print("⚠️ 환경변수에서 자격증명 로드 실패")
+    except Exception as e:
+        print(f"❌ 환경변수에서 자격증명 로드 중 오류: {e}")
     
     # 로컬 파일에서 fallback (개발용)
     if os.path.exists(CREDS_PATH):
@@ -115,6 +120,8 @@ def get_credentials():
             return creds
         except Exception as e:
             print(f"❌ 로컬 파일에서 자격증명 로드 실패: {e}")
+    else:
+        print(f"❌ 로컬 파일 {CREDS_PATH}이 존재하지 않습니다")
     
     print("❌ Google Service Account 자격증명을 찾을 수 없습니다.")
     print("=== 자격증명 로드 종료 ===")
