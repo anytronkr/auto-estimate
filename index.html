@@ -211,46 +211,16 @@
         document.getElementById('startButton').addEventListener('click', function() {
             const button = this;
             const loading = document.getElementById('loading');
-            const webhookUrl = 'https://hook.us2.make.com/l477a7ymen3587uj6aoj5zgyftx95exa';
-            const redirectUrl = '/estimate_form.html';
 
             // 버튼 비활성화 및 로딩 표시
             button.disabled = true;
             button.textContent = '처리 중...';
             loading.style.display = 'block';
 
-            // 웹훅 호출
-            fetch(webhookUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: 'estimate_generation_started',
-                    timestamp: new Date().toISOString(),
-                    userAgent: navigator.userAgent,
-                    referrer: document.referrer
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    console.error('Webhook call failed:', response.statusText);
-                    throw new Error('Webhook call failed');
-                } else {
-                    console.log('Webhook called successfully!');
-                    return response;
-                }
-            })
-            .catch(error => {
-                console.error('Error calling webhook:', error);
-                // 웹훅 실패해도 계속 진행
-            })
-            .finally(() => {
-                // 1초 후 리디렉션 (사용자에게 로딩 상태를 보여주기 위해)
-                setTimeout(() => {
-                    window.location.href = redirectUrl;
-                }, 1000);
-            });
+            // 바로 estimate_form.html로 이동 (캐시 방지)
+            setTimeout(() => {
+                window.location.href = '/estimate_form.html?t=' + Date.now();
+            }, 500);
         });
 
         // 페이지 로드 시 애니메이션
