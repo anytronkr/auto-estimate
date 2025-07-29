@@ -24,14 +24,23 @@ DATA_COLLECTION_COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 # Render.com 환경변수에서 설정 읽기
 def get_google_credentials():
     """환경변수에서 Google Service Account JSON 읽기"""
-    credentials_json = os.environ.get("GOOGLE_CREDENTIALS")
-    if credentials_json:
-        import json
-        from google.oauth2 import service_account
-        from datetime import datetime, timedelta
-        creds_dict = json.loads(credentials_json)
-        return service_account.Credentials.from_service_account_info(
-            creds_dict,
+    import json
+    from google.oauth2 import service_account
+    
+    # Render의 환경변수에서 JSON 문자열을 불러와 파싱
+    google_creds = os.getenv("GOOGLE_CREDENTIALS")
+    
+    if not google_creds:
+        print("❌ 환경변수 GOOGLE_CREDENTIALS가 설정되지 않았습니다")
+        return None
+    
+    try:
+        # JSON 문자열 → Python 딕셔너리
+        info = json.loads(google_creds)
+        
+        # 자격증명 생성
+        credentials = service_account.Credentials.from_service_account_info(
+            info,
             scopes=[
                 'https://www.googleapis.com/auth/spreadsheets',
                 'https://www.googleapis.com/auth/drive',
@@ -39,7 +48,16 @@ def get_google_credentials():
                 'https://www.googleapis.com/auth/drive.readonly'
             ]
         )
-    return None
+        
+        print("✅ Google Service Account 자격증명 로드 성공")
+        return credentials
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON 파싱 오류: {e}")
+        return None
+    except Exception as e:
+        print(f"❌ 자격증명 생성 오류: {e}")
+        return None
 
 def get_pipedrive_config():
     """환경변수에서 Pipedrive 설정 읽기"""

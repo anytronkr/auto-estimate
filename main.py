@@ -92,25 +92,11 @@ def get_credentials():
     """Google Service Account 자격증명 가져오기"""
     print("=== 자격증명 로드 시작 ===")
     
-    # 환경변수 확인
-    credentials_json = os.environ.get("GOOGLE_CREDENTIALS")
-    print(f"환경변수 GOOGLE_CREDENTIALS 존재: {credentials_json is not None}")
-    if credentials_json:
-        print(f"환경변수 길이: {len(credentials_json)} 문자")
-        print(f"환경변수 시작 부분: {credentials_json[:100]}...")
-    
-    # 먼저 환경변수에서 시도
-    try:
-        creds = get_google_credentials()
-        if creds:
-            print("✅ 환경변수에서 자격증명 로드 성공")
-            print(f"자격증명 타입: {type(creds)}")
-            print(f"자격증명 만료 시간: {getattr(creds, 'expiry', 'N/A')}")
-            return creds
-        else:
-            print("❌ 환경변수에서 자격증명 로드 실패")
-    except Exception as e:
-        print(f"❌ 환경변수에서 자격증명 로드 중 오류: {e}")
+    # 환경변수에서 직접 로드 (권장 방법)
+    creds = get_google_credentials()
+    if creds:
+        print(f"✅ 자격증명 로드 성공 - 타입: {type(creds)}")
+        return creds
     
     # 로컬 파일에서 fallback (개발용)
     if os.path.exists(CREDS_PATH):
@@ -129,19 +115,6 @@ def get_credentials():
             return creds
         except Exception as e:
             print(f"❌ 로컬 파일에서 자격증명 로드 실패: {e}")
-    
-    # Workload Identity 시도 (Render.com에서 권장)
-    try:
-        from google.auth import default
-        print("🔐 Workload Identity 사용 시도...")
-        creds, project = default()
-        if creds:
-            print("✅ Workload Identity 자격증명 로드 성공")
-            return creds
-        else:
-            print("❌ Workload Identity 자격증명 로드 실패")
-    except Exception as e:
-        print(f"❌ Workload Identity 로드 실패: {e}")
     
     print("❌ Google Service Account 자격증명을 찾을 수 없습니다.")
     print("=== 자격증명 로드 종료 ===")
