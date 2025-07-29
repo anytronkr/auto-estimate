@@ -235,6 +235,24 @@
                 container.style.transform = 'translateY(0)';
             }, 100);
         });
+
+        // 서버 활성 상태 유지 (10분마다 ping)
+        function keepAlive() {
+            fetch('/ping')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Keep-alive ping:', data.pong);
+                })
+                .catch(error => {
+                    console.error('Keep-alive failed:', error);
+                });
+        }
+
+        // 페이지 로드 시 즉시 실행
+        keepAlive();
+
+        // 주기적으로 실행 (10분마다)
+        setInterval(keepAlive, 10 * 60 * 1000);
     </script>
 </body>
 </html> 

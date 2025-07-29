@@ -68,7 +68,17 @@ app.add_middleware(
 # Health check 엔드포인트 (Render.com용)
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "message": "Estimate API is running"}
+    return {
+        "status": "healthy", 
+        "message": "Estimate API is running",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0"
+    }
+
+# Keep-alive 엔드포인트 (서버 활성 상태 유지)
+@app.get("/ping")
+async def ping():
+    return {"pong": datetime.now().isoformat()}
 
 # PDF export 및 구글 드라이브 업로드 함수
 FOLDER_ID = get_google_drive_folder_id()
@@ -86,7 +96,7 @@ def get_credentials():
         print("환경변수에서 자격증명 로드 성공")
         return creds
     
-    # 로컬 파일에서 fallback
+    # 로컬 파일에서 fallback (개발용)
     if os.path.exists(CREDS_PATH):
         print("로컬 creds.json 파일에서 자격증명 로드")
         return service_account.Credentials.from_service_account_file(
@@ -96,9 +106,19 @@ def get_credentials():
                 'https://www.googleapis.com/auth/drive',
                 'https://www.googleapis.com/auth/drive.file',
                 'https://www.googleapis.com/auth/drive.readonly'
-            ],
-            token_expiry=datetime.now() + timedelta(hours=1) # 토큰 만료 시간 설정
+            ]
         )
+    
+    # Workload Identity 시도 (Render.com에서 권장)
+    try:
+        from google.auth import default
+        print("Workload Identity 사용 시도...")
+        creds, project = default()
+        if creds:
+            print("Workload Identity 자격증명 로드 성공")
+            return creds
+    except Exception as e:
+        print(f"Workload Identity 로드 실패: {e}")
     
     print("Google Service Account 자격증명을 찾을 수 없습니다.")
     return None
