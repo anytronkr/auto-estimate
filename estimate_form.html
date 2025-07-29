@@ -471,25 +471,47 @@ function collectEstimateData() {
 }
 
 function validateEstimateForm() {
+  console.log("=== 견적서 유효성 검사 시작 ===");
+  
   // 필수 입력값 체크
-  if (!document.getElementById('date').value) {
+  const date = document.getElementById('date').value;
+  const number = document.getElementById('number').value;
+  const supplierPerson = document.getElementById('supplier-person').value;
+  const receiverCompany = document.getElementById('receiver-company').value;
+  const productCategory = document.getElementById('product-category').value;
+  const deliveryDate = document.getElementById('delivery-date').value;
+  
+  console.log("입력값 확인:");
+  console.log("- 견적일자:", date);
+  console.log("- 견적번호:", number);
+  console.log("- 공급자 담당자:", supplierPerson);
+  console.log("- 수신자 회사명:", receiverCompany);
+  console.log("- 견적제품:", productCategory);
+  console.log("- 납기일:", deliveryDate);
+  
+  if (!date) {
+    console.log("❌ 견적일자 누락");
     alert('견적일자를 입력해 주세요.');
     return false;
   }
-  if (!document.getElementById('number').value) {
+  if (!number) {
+    console.log("❌ 견적번호 누락");
     alert('견적번호를 입력해 주세요.');
     return false;
   }
-  if (!document.getElementById('supplier-person').value) {
+  if (!supplierPerson) {
+    console.log("❌ 공급자 담당자 누락");
     alert('공급자 담당자를 선택해 주세요.');
     return false;
   }
-  if (!document.getElementById('receiver-company').value) {
+  if (!receiverCompany) {
+    console.log("❌ 수신자 회사명 누락");
     alert('수신자 회사명을 입력해 주세요.');
     return false;
   }
   // 견적제품 선택 필수
-  if (!document.getElementById('product-category').value) {
+  if (!productCategory) {
+    console.log("❌ 견적제품 누락");
     alert('견적제품을 선택해 주세요.');
     return false;
   }
@@ -533,15 +555,25 @@ function validateEstimateForm() {
     }
   }
   // 납기일 필수
-  if (!document.getElementById('delivery-date').value) {
+  if (!deliveryDate) {
+    console.log("❌ 납기일 누락");
     alert('납기일을 입력해 주세요.');
     return false;
   }
+  
+  console.log("✅ 모든 필수 입력값 검증 완료");
   return true;
 }
 
 async function sendEstimateToFastAPI() {
-  if (!validateEstimateForm()) return;
+  console.log("=== 견적서 생성 시작 ===");
+  
+  if (!validateEstimateForm()) {
+    console.log("❌ 유효성 검사 실패");
+    return;
+  }
+  
+  console.log("✅ 유효성 검사 통과");
   
   const button = document.getElementById('preview-btn');
   const originalText = button.textContent;
