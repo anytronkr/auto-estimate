@@ -54,4 +54,7 @@ creds.json
 pipedrive_config_local.py
 
 # PDF files
-*.pdf 
+*.pdf
+
+# Downloaded files
+new-quotation-465202-1b88e9c2735f.json 
