@@ -852,6 +852,11 @@ async def test_endpoint():
 async def create_estimate_template():
     """견적서 템플릿 스프레드시트를 복사하여 새 파일 생성"""
     print("=== 견적서 템플릿 생성 API 호출됨 ===")
+    print(f"현재 작업 디렉토리: {os.getcwd()}")
+    print(f"creds.json 파일 존재: {os.path.exists(CREDS_PATH)}")
+    print(f"템플릿 스프레드시트 ID: {TEMPLATE_SHEET_ID}")
+    print(f"대상 폴더 ID: {ESTIMATE_FOLDER_ID}")
+    
     result = copy_estimate_template()
     print("=== 견적서 템플릿 생성 결과:", result, "===")
     return result
