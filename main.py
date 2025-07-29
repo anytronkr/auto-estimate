@@ -25,29 +25,46 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     import os
-    # 시간대 환경변수 설정 (UTC로 강제)
-    os.environ['TZ'] = 'UTC'
-    import time
+    print("=== 서버 시작 이벤트 시작 ===")
+    
     try:
-        time.tzset()  # Linux/Unix에서만 작동
-    except:
-        pass  # Windows에서는 무시
-    
-    current_time = datetime.now()
-    utc_time = datetime.utcnow()
-    timezone_info = os.environ.get('TZ', 'Not set')
-    
-    # 시간 차이 계산 수정
-    time_diff = current_time - utc_time
-    time_diff_seconds = abs(time_diff.total_seconds())
-    
-    print(f"=== 서버 시작 시간대 정보 ===")
-    print(f"현재 시간: {current_time}")
-    print(f"UTC 시간: {utc_time}")
-    print(f"시간대 환경변수 (TZ): {timezone_info}")
-    print(f"시간 차이 (초): {time_diff_seconds:.2f}초")
-    print(f"시간 차이 (분): {time_diff_seconds/60:.2f}분")
-    print(f"================================")
+        # 시간대 환경변수 설정 (UTC로 강제)
+        os.environ['TZ'] = 'UTC'
+        import time
+        try:
+            time.tzset()  # Linux/Unix에서만 작동
+        except:
+            pass  # Windows에서는 무시
+        
+        current_time = datetime.now()
+        utc_time = datetime.utcnow()
+        timezone_info = os.environ.get('TZ', 'Not set')
+        
+        # 시간 차이 계산 수정
+        time_diff = current_time - utc_time
+        time_diff_seconds = abs(time_diff.total_seconds())
+        
+        print(f"=== 서버 시작 시간대 정보 ===")
+        print(f"현재 시간: {current_time}")
+        print(f"UTC 시간: {utc_time}")
+        print(f"시간대 환경변수 (TZ): {timezone_info}")
+        print(f"시간 차이 (초): {time_diff_seconds:.2f}초")
+        print(f"시간 차이 (분): {time_diff_seconds/60:.2f}분")
+        print(f"================================")
+        
+        # 환경 변수 확인
+        print("=== 환경 변수 확인 ===")
+        print(f"PORT: {os.environ.get('PORT', 'Not set')}")
+        print(f"GOOGLE_CREDENTIALS 존재: {'GOOGLE_CREDENTIALS' in os.environ}")
+        print(f"PIPEDRIVE_API_TOKEN 존재: {'PIPEDRIVE_API_TOKEN' in os.environ}")
+        print("================================")
+        
+        print("=== 서버 시작 이벤트 완료 ===")
+        
+    except Exception as e:
+        print(f"❌ 서버 시작 중 오류: {e}")
+        import traceback
+        traceback.print_exc()
 
 app.add_middleware(
     CORSMiddleware,
