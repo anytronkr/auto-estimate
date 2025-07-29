@@ -217,9 +217,9 @@
             button.textContent = '처리 중...';
             loading.style.display = 'block';
 
-            // 바로 estimate_form.html로 이동 (캐시 방지)
+            // 바로 estimate_form.html로 이동
             setTimeout(() => {
-                window.location.href = '/estimate_form.html?t=' + Date.now();
+                window.location.href = '/estimate_form.html';
             }, 500);
         });
 

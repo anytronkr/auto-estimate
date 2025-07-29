@@ -653,7 +653,13 @@ document.getElementById('preview-btn').addEventListener('click', sendEstimateToF
 
 // 페이지 로드 시 fileId 상태 확인 (디버그용)
 document.addEventListener('DOMContentLoaded', function() {
-  const fileId = new URLSearchParams(window.location.search).get("id");
+  const urlParams = new URLSearchParams(window.location.search);
+  const fileId = urlParams.get("id");
+  const timestamp = urlParams.get("t"); // 캐시 방지 매개변수 무시
+  
+  console.log("URL 파라미터 확인:");
+  console.log("- fileId:", fileId);
+  console.log("- timestamp:", timestamp);
   
   if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
     console.log("fileId가 없거나 템플릿 변수입니다. 견적서 생성 시 자동으로 새 템플릿을 생성합니다.");
