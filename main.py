@@ -107,8 +107,9 @@ TEMPLATE_SHEET_ID = os.environ.get("TEMPLATE_SHEET_ID", "1aItq8Vd9qAaEuN7EmOv5XY
 # "양식" 폴더 ID를 여기에 설정하세요
 # Google Drive에서 "양식" 폴더로 이동 후 URL에서 폴더 ID 확인
 # 예: https://drive.google.com/drive/folders/1AbCDeFgHiJKlmNOpQRstuVWxyz1234567
-ESTIMATE_FOLDER_ID = os.environ.get("ESTIMATE_FOLDER_ID", "1g05Y9LbrGg9-uq9p1g_CI1ejeLaeInWB")
-# ESTIMATE_FOLDER_ID = "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg"  # 임시 설정
+# 임시로 Service Account가 접근 가능한 폴더 사용
+ESTIMATE_FOLDER_ID = os.environ.get("ESTIMATE_FOLDER_ID", "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg")
+# ESTIMATE_FOLDER_ID = "1g05Y9LbrGg9-uq9p1g_CI1ejeLaeInWB"  # 양식 폴더 (Service Account 접근 불가)
 # ESTIMATE_FOLDER_ID = "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"  # 원래 폴더 (Service Account 접근 불가)
 
 def get_credentials():
@@ -1279,6 +1280,66 @@ async def test_file_access():
             "status": "error",
             "message": f"파일 접근 테스트 실패: {str(e)}",
             "테스트파일ID": TEMPLATE_SHEET_ID
+        }
+
+@app.get("/test-folder-access")
+async def test_folder_access():
+    """Google Drive 폴더 접근 테스트 엔드포인트"""
+    try:
+        print("=== Google Drive 폴더 접근 테스트 시작 ===")
+        
+        creds = get_credentials()
+        if not creds:
+            return {"error": "자격증명을 가져올 수 없습니다"}
+        
+        service = build("drive", "v3", credentials=creds)
+        
+        # 테스트할 폴더 ID들
+        test_folders = [
+            {"name": "양식 폴더", "id": "1g05Y9LbrGg9-uq9p1g_CI1ejeLaeInWB"},
+            {"name": "템플릿 파일 폴더", "id": "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg"},
+            {"name": "원래 폴더", "id": "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"}
+        ]
+        
+        results = []
+        
+        for folder in test_folders:
+            try:
+                print(f"테스트 폴더: {folder['name']} ({folder['id']})")
+                file_info = service.files().get(fileId=folder['id']).execute()
+                
+                folder_name = file_info.get("name", "Unknown")
+                folder_type = file_info.get("mimeType", "Unknown")
+                
+                print(f"✅ {folder['name']} 접근 성공: {folder_name}")
+                
+                results.append({
+                    "name": folder['name'],
+                    "id": folder['id'],
+                    "status": "success",
+                    "folder_name": folder_name,
+                    "type": folder_type
+                })
+                
+            except Exception as e:
+                print(f"❌ {folder['name']} 접근 실패: {e}")
+                results.append({
+                    "name": folder['name'],
+                    "id": folder['id'],
+                    "status": "error",
+                    "error": str(e)
+                })
+        
+        return {
+            "status": "completed",
+            "results": results
+        }
+        
+    except Exception as e:
+        print(f"❌ 폴더 접근 테스트 실패: {e}")
+        return {
+            "status": "error",
+            "message": f"폴더 접근 테스트 실패: {str(e)}"
         }
 
 if __name__ == "__main__":
