@@ -104,7 +104,8 @@ FOLDER_ID = get_google_drive_folder_id()
 TEMPLATE_SHEET_ID = os.environ.get("TEMPLATE_SHEET_ID", "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg")
 # TEMPLATE_SHEET_ID = "1Rf7dGonf0HgAfZ-XS3cW1Hp3V-NiOTWbt8m_qRtyzBY"  # 원래 ID (Service Account 접근 불가)
 # 견적서 저장 폴더 ID
-ESTIMATE_FOLDER_ID = "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"
+ESTIMATE_FOLDER_ID = os.environ.get("ESTIMATE_FOLDER_ID", "1uMd2VH07SP1qNsrrwh8IUH4eQuQf6Z9X")
+# ESTIMATE_FOLDER_ID = "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"  # 원래 폴더 (Service Account 접근 불가)
 
 def get_credentials():
     """Google Service Account 자격증명 가져오기"""
