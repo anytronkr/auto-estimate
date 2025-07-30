@@ -101,7 +101,8 @@ async def ping():
 FOLDER_ID = get_google_drive_folder_id()
 
 # 견적서 템플릿 스프레드시트 ID
-TEMPLATE_SHEET_ID = "1Rf7dGonf0HgAfZ-XS3cW1Hp3V-NiOTWbt8m_qRtyzBY"
+TEMPLATE_SHEET_ID = os.environ.get("TEMPLATE_SHEET_ID", "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg")
+# TEMPLATE_SHEET_ID = "1Rf7dGonf0HgAfZ-XS3cW1Hp3V-NiOTWbt8m_qRtyzBY"  # 원래 ID (Service Account 접근 불가)
 # 견적서 저장 폴더 ID
 ESTIMATE_FOLDER_ID = "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"
 
@@ -1157,6 +1158,123 @@ async def collect_data(request: Request):
         import traceback
         print(f"상세 오류: {traceback.format_exc()}")
         return {"status": "error", "message": f"데이터 수집 실패: {str(e)}"}
+
+@app.get("/test-drive-copy")
+async def test_copy():
+    """Google Drive 파일 복사 테스트 엔드포인트"""
+    try:
+        print("=== Google Drive 파일 복사 테스트 시작 ===")
+        
+        creds = get_credentials()
+        if not creds:
+            return {"error": "자격증명을 가져올 수 없습니다"}
+        
+        service = build("drive", "v3", credentials=creds)
+        
+        # 테스트할 파일 ID (현재 설정된 템플릿 파일)
+        test_file_id = TEMPLATE_SHEET_ID
+        print(f"테스트 파일 ID: {test_file_id}")
+        
+        # 복사될 폴더 ID
+        target_folder_id = ESTIMATE_FOLDER_ID
+        print(f"대상 폴더 ID: {target_folder_id}")
+        
+        # 파일 복사 시도
+        copied = service.files().copy(
+            fileId=test_file_id,
+            body={
+                "name": f"복사된파일_테스트_{datetime.now().strftime('%Y%m%d_%H%M%S')}", 
+                "parents": [target_folder_id]
+            }
+        ).execute()
+        
+        copied_file_id = copied["id"]
+        print(f"✅ 파일 복사 성공: {copied_file_id}")
+        
+        # 복사된 파일 정보 가져오기
+        file_info = service.files().get(fileId=copied_file_id).execute()
+        file_name = file_info.get("name", "Unknown")
+        
+        # 테스트 파일 삭제 (정리)
+        service.files().delete(fileId=copied_file_id).execute()
+        print(f"✅ 테스트 파일 삭제 완료: {file_name}")
+        
+        return {
+            "status": "success",
+            "message": "파일 복사 테스트 성공",
+            "복사된파일ID": copied_file_id,
+            "파일명": file_name,
+            "테스트파일ID": test_file_id,
+            "대상폴더ID": target_folder_id
+        }
+        
+    except Exception as e:
+        print(f"❌ 파일 복사 테스트 실패: {e}")
+        return {
+            "status": "error",
+            "message": f"파일 복사 테스트 실패: {str(e)}",
+            "테스트파일ID": TEMPLATE_SHEET_ID,
+            "대상폴더ID": ESTIMATE_FOLDER_ID
+        }
+
+@app.get("/test-file-access")
+async def test_file_access():
+    """Google Drive 파일 접근 테스트 엔드포인트"""
+    try:
+        print("=== Google Drive 파일 접근 테스트 시작 ===")
+        
+        creds = get_credentials()
+        if not creds:
+            return {"error": "자격증명을 가져올 수 없습니다"}
+        
+        service = build("drive", "v3", credentials=creds)
+        
+        # 테스트할 파일 ID
+        test_file_id = TEMPLATE_SHEET_ID
+        print(f"테스트 파일 ID: {test_file_id}")
+        
+        # 파일 정보 가져오기
+        file_info = service.files().get(fileId=test_file_id).execute()
+        
+        file_name = file_info.get("name", "Unknown")
+        file_type = file_info.get("mimeType", "Unknown")
+        owners = file_info.get("owners", [])
+        owner_email = owners[0].get("emailAddress", "Unknown") if owners else "Unknown"
+        
+        print(f"✅ 파일 정보 가져오기 성공")
+        print(f"파일명: {file_name}")
+        print(f"파일타입: {file_type}")
+        print(f"소유자: {owner_email}")
+        
+        # 권한 정보 가져오기
+        permissions = service.permissions().list(fileId=test_file_id).execute()
+        permission_list = []
+        
+        for perm in permissions.get('permissions', []):
+            email = perm.get('emailAddress', 'N/A')
+            role = perm.get('role', 'N/A')
+            permission_list.append({"email": email, "role": role})
+            print(f"권한: {email} - {role}")
+        
+        return {
+            "status": "success",
+            "message": "파일 접근 테스트 성공",
+            "파일정보": {
+                "id": test_file_id,
+                "name": file_name,
+                "type": file_type,
+                "owner": owner_email
+            },
+            "권한정보": permission_list
+        }
+        
+    except Exception as e:
+        print(f"❌ 파일 접근 테스트 실패: {e}")
+        return {
+            "status": "error",
+            "message": f"파일 접근 테스트 실패: {str(e)}",
+            "테스트파일ID": TEMPLATE_SHEET_ID
+        }
 
 if __name__ == "__main__":
     import uvicorn

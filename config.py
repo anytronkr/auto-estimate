@@ -30,15 +30,33 @@ def get_google_credentials():
     # Render의 환경변수에서 JSON 문자열을 불러와 파싱
     google_creds = os.getenv("GOOGLE_CREDENTIALS")
     
+    print("=== 환경 변수 디버깅 ===")
+    print(f"GOOGLE_CREDENTIALS 존재: {'GOOGLE_CREDENTIALS' in os.environ}")
+    print(f"GOOGLE_CREDENTIALS 길이: {len(google_creds) if google_creds else 0}")
+    if google_creds:
+        print(f"GOOGLE_CREDENTIALS 첫 100자: {google_creds[:100]}...")
+        print(f"GOOGLE_CREDENTIALS 마지막 50자: ...{google_creds[-50:]}")
+    
     if not google_creds:
         print("❌ 환경변수 GOOGLE_CREDENTIALS가 설정되지 않았습니다")
         return None
     
     try:
         # JSON 문자열 → Python 딕셔너리
+        print("JSON 파싱 시도 중...")
         info = json.loads(google_creds)
+        print(f"JSON 파싱 성공 - 키 개수: {len(info)}")
+        print(f"JSON 키들: {list(info.keys())}")
+        
+        # 필수 키 확인
+        required_keys = ['type', 'project_id', 'private_key_id', 'private_key', 'client_email']
+        missing_keys = [key for key in required_keys if key not in info]
+        if missing_keys:
+            print(f"❌ 필수 키 누락: {missing_keys}")
+            return None
         
         # 자격증명 생성
+        print("자격증명 생성 시도 중...")
         credentials = service_account.Credentials.from_service_account_info(
             info,
             scopes=[
@@ -54,9 +72,13 @@ def get_google_credentials():
         
     except json.JSONDecodeError as e:
         print(f"❌ JSON 파싱 오류: {e}")
+        print(f"JSON 문자열 길이: {len(google_creds)}")
+        print(f"JSON 문자열 샘플: {google_creds[:200]}...")
         return None
     except Exception as e:
         print(f"❌ 자격증명 생성 오류: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def get_pipedrive_config():
