@@ -25,6 +25,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     import os
+    import json
     print("=== 서버 시작 이벤트 시작 ===")
     
     try:
@@ -58,6 +59,28 @@ async def startup_event():
         print(f"GOOGLE_CREDENTIALS 존재: {'GOOGLE_CREDENTIALS' in os.environ}")
         print(f"PIPEDRIVE_API_TOKEN 존재: {'PIPEDRIVE_API_TOKEN' in os.environ}")
         print("================================")
+        
+        # Google 자격증명을 creds.json 파일로 저장 (gspread용)
+        print("=== Google 자격증명 파일 생성 ===")
+        google_creds = os.getenv("GOOGLE_CREDENTIALS")
+        if google_creds:
+            try:
+                # JSON 파싱하여 유효성 확인
+                creds_data = json.loads(google_creds)
+                
+                # creds.json 파일로 저장
+                with open("creds.json", "w", encoding="utf-8") as f:
+                    json.dump(creds_data, f, indent=2, ensure_ascii=False)
+                
+                print("✅ creds.json 파일 생성 완료")
+                print(f"파일 크기: {os.path.getsize('creds.json')} bytes")
+                
+            except json.JSONDecodeError as e:
+                print(f"❌ JSON 파싱 오류: {e}")
+            except Exception as e:
+                print(f"❌ creds.json 파일 생성 오류: {e}")
+        else:
+            print("❌ GOOGLE_CREDENTIALS 환경 변수가 설정되지 않음")
         
         print("=== 서버 시작 이벤트 완료 ===")
         
