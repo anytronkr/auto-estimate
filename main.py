@@ -224,7 +224,8 @@ def copy_estimate_template():
         # 스프레드시트 복사
         copied_file = service.files().copy(
             fileId=TEMPLATE_SHEET_ID,
-            body=copy_metadata
+            body=copy_metadata,
+            supportsAllDrives=True  # 공유 드라이브 지원
         ).execute()
         
         new_file_id = copied_file['id']
@@ -1214,7 +1215,8 @@ async def test_copy():
             body={
                 "name": f"복사된파일_테스트_{datetime.now().strftime('%Y%m%d_%H%M%S')}", 
                 "parents": [target_folder_id]
-            }
+            },
+            supportsAllDrives=True  # 공유 드라이브 지원
         ).execute()
         
         copied_file_id = copied["id"]
