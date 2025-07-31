@@ -131,8 +131,9 @@ TEMPLATE_SHEET_ID = os.environ.get("TEMPLATE_SHEET_ID", "1aItq8Vd9qAaEuN7EmOv5XY
 # Google Drive에서 폴더로 이동 후 URL에서 폴더 ID 확인
 # 예: https://drive.google.com/drive/folders/1AbCDeFgHiJKlmNOpQRstuVWxyz1234567
 # 주의: 파일 ID가 아닌 폴더 ID여야 합니다!
-ESTIMATE_FOLDER_ID = os.environ.get("ESTIMATE_FOLDER_ID", "1g05Y9LbrGg9-uq9p1g_CI1ejeLaeInWB")
-# ESTIMATE_FOLDER_ID = "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg"  # 임시 설정
+# 임시로 템플릿 파일과 같은 폴더 사용 (Service Account 접근 가능)
+ESTIMATE_FOLDER_ID = os.environ.get("ESTIMATE_FOLDER_ID", "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg")
+# ESTIMATE_FOLDER_ID = "1g05Y9LbrGg9-uq9p1g_CI1ejeLaeInWB"  # 양식 폴더 (Service Account 접근 불가)
 # ESTIMATE_FOLDER_ID = "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"  # 원래 폴더 (Service Account 접근 불가)
 
 def get_credentials():
