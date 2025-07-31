@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+gunicorn
+google-auth
+google-api-python-client
+gspread
+reportlab
+requests
+python-multipart 
