@@ -1195,10 +1195,15 @@ async def test_copy():
     """Google Drive 파일 복사 테스트 엔드포인트"""
     try:
         print("=== Google Drive 파일 복사 테스트 시작 ===")
+        print(f"서버 환경: {os.environ.get('RENDER', 'Not Render')}")
+        print(f"현재 작업 디렉토리: {os.getcwd()}")
         
         creds = get_credentials()
         if not creds:
             return {"error": "자격증명을 가져올 수 없습니다"}
+        
+        print(f"자격증명 타입: {type(creds)}")
+        print(f"자격증명 만료 시간: {creds.expiry}")
         
         service = build("drive", "v3", credentials=creds)
         
@@ -1210,13 +1215,32 @@ async def test_copy():
         target_folder_id = ESTIMATE_FOLDER_ID
         print(f"대상 폴더 ID: {target_folder_id}")
         
+        # 파일 존재 여부 확인
+        try:
+            file_info = service.files().get(fileId=test_file_id).execute()
+            print(f"✅ 소스 파일 존재 확인: {file_info.get('name', 'Unknown')}")
+        except Exception as e:
+            print(f"❌ 소스 파일 접근 실패: {e}")
+            return {"error": f"소스 파일 접근 실패: {str(e)}"}
+        
+        # 폴더 존재 여부 확인
+        try:
+            folder_info = service.files().get(fileId=target_folder_id).execute()
+            print(f"✅ 대상 폴더 존재 확인: {folder_info.get('name', 'Unknown')}")
+        except Exception as e:
+            print(f"❌ 대상 폴더 접근 실패: {e}")
+            return {"error": f"대상 폴더 접근 실패: {str(e)}"}
+        
         # 파일 복사 시도
+        copy_body = {
+            "name": f"복사된파일_테스트_{datetime.now().strftime('%Y%m%d_%H%M%S')}", 
+            "parents": [target_folder_id]
+        }
+        print(f"복사 요청 body: {copy_body}")
+        
         copied = service.files().copy(
             fileId=test_file_id,
-            body={
-                "name": f"복사된파일_테스트_{datetime.now().strftime('%Y%m%d_%H%M%S')}", 
-                "parents": [target_folder_id]
-            },
+            body=copy_body,
             supportsAllDrives=True  # 공유 드라이브 지원
         ).execute()
         
@@ -1242,6 +1266,8 @@ async def test_copy():
         
     except Exception as e:
         print(f"❌ 파일 복사 테스트 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "status": "error",
             "message": f"파일 복사 테스트 실패: {str(e)}",
@@ -1366,6 +1392,38 @@ async def test_folder_access():
         return {
             "status": "error",
             "message": f"폴더 접근 테스트 실패: {str(e)}"
+        }
+
+@app.get("/debug-env")
+async def debug_environment():
+    """환경 변수 디버깅 API"""
+    try:
+        print("=== 환경 변수 디버깅 API 호출 ===")
+        
+        env_info = {
+            "server_environment": os.environ.get('RENDER', 'Not Render'),
+            "current_directory": os.getcwd(),
+            "google_credentials_exists": 'GOOGLE_CREDENTIALS' in os.environ,
+            "google_credentials_length": len(os.environ.get('GOOGLE_CREDENTIALS', '')) if 'GOOGLE_CREDENTIALS' in os.environ else 0,
+            "template_sheet_id": TEMPLATE_SHEET_ID,
+            "estimate_folder_id": ESTIMATE_FOLDER_ID,
+            "pipedrive_api_exists": 'PIPEDRIVE_API_TOKEN' in os.environ,
+            "creds_file_exists": os.path.exists('creds.json'),
+            "creds_file_size": os.path.getsize('creds.json') if os.path.exists('creds.json') else 0
+        }
+        
+        print(f"환경 정보: {env_info}")
+        
+        return {
+            "status": "success",
+            "environment_info": env_info
+        }
+        
+    except Exception as e:
+        print(f"❌ 환경 변수 디버깅 실패: {e}")
+        return {
+            "status": "error",
+            "message": f"환경 변수 디버깅 실패: {str(e)}"
         }
 
 if __name__ == "__main__":
