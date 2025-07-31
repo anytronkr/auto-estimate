@@ -104,12 +104,11 @@ FOLDER_ID = get_google_drive_folder_id()
 TEMPLATE_SHEET_ID = os.environ.get("TEMPLATE_SHEET_ID", "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg")
 # TEMPLATE_SHEET_ID = "1Rf7dGonf0HgAfZ-XS3cW1Hp3V-NiOTWbt8m_qRtyzBY"  # 원래 ID (Service Account 접근 불가)
 # 견적서 저장 폴더 ID
-# "양식" 폴더 ID를 여기에 설정하세요
-# Google Drive에서 "양식" 폴더로 이동 후 URL에서 폴더 ID 확인
+# 실제 Google Drive 폴더 ID를 여기에 설정하세요
+# Google Drive에서 폴더로 이동 후 URL에서 폴더 ID 확인
 # 예: https://drive.google.com/drive/folders/1AbCDeFgHiJKlmNOpQRstuVWxyz1234567
-# 임시로 Service Account가 접근 가능한 폴더 사용
-ESTIMATE_FOLDER_ID = os.environ.get("ESTIMATE_FOLDER_ID", "1aItq8Vd9qAaEuN7EmOv5XYI_cf9nOX1kweOKfNMDZrg")
-# ESTIMATE_FOLDER_ID = "1g05Y9LbrGg9-uq9p1g_CI1ejeLaeInWB"  # 양식 폴더 (Service Account 접근 불가)
+# 주의: 파일 ID가 아닌 폴더 ID여야 합니다!
+ESTIMATE_FOLDER_ID = os.environ.get("ESTIMATE_FOLDER_ID", "1g05Y9LbrGg9-uq9p1g_CI1ejeLaeInWB")
 # ESTIMATE_FOLDER_ID = "1WNknyHABe-co_ypAM0uGM_Z9z_62STeS"  # 원래 폴더 (Service Account 접근 불가)
 
 def get_credentials():
