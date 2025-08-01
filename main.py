@@ -382,6 +382,219 @@ async def pdf_sharing():
     """PDF 공유 페이지"""
     return FileResponse("pdf-sharing.html")
 
+@app.post("/create-estimate-template")
+async def create_estimate_template():
+    """견적서 템플릿 스프레드시트를 복사하여 새 파일 생성"""
+    print("=== 견적서 템플릿 생성 API 호출됨 ===")
+    result = copy_estimate_template()
+    print("=== 견적서 템플릿 생성 결과:", result, "===")
+    return result
+
+@app.post("/collect-data")
+async def collect_data(request: Request):
+    """데이터 수집용 스프레드시트에 데이터 추가"""
+    print("=== /collect-data 엔드포인트 호출됨 ===")
+    try:
+        data = await request.json()
+        print(f"받은 데이터: {data}")
+        
+        # Google Sheets 연결
+        creds = get_credentials()
+        if not creds:
+            return {"status": "error", "msg": "Google Service Account 자격증명을 가져올 수 없습니다."}
+
+        sh = gspread.service_account(filename=CREDS_PATH)
+        sh = sh.open_by_key(DATA_COLLECTION_SHEET_ID)
+        ws = sh.sheet1
+        
+        # 견적서 링크 생성
+        estimate_link = f"https://docs.google.com/spreadsheets/d/{data.get('fileId', '')}/edit"
+        
+        # 제품 데이터 추출 (최대 8개)
+        products = data.get("products", [])
+        product_names = []
+        for i in range(8):  # 최대 8개 제품
+            if i < len(products) and products[i].get("name"):
+                product_names.append(products[i].get("name"))
+            else:
+                product_names.append("")  # 빈 제품은 빈 문자열
+        
+        # 최종견적 계산 (VAT 포함)
+        total_sum = sum(product.get("total", 0) for product in products if product.get("total"))
+        vat = round(total_sum * 0.1)
+        final_total = total_sum + vat
+        
+        # 한 행에 모든 데이터 배치
+        row_data = [
+            data.get("estimate_date", ""),      # A: 견적일자
+            data.get("estimate_number", ""),    # B: 견적번호
+            data.get("supplier_person", ""),    # C: 견적담당자
+            data.get("receiver_company", ""),   # D: 수신자-회사명
+            data.get("receiver_person", ""),    # E: 수신자-담당자
+            data.get("receiver_contact", ""),   # F: 수신자-연락처
+            data.get("product_category", ""),   # G: 견적제품
+            product_names[0],                   # H: 제품1
+            product_names[1],                   # I: 제품2
+            product_names[2],                   # J: 제품3
+            product_names[3],                   # K: 제품4
+            product_names[4],                   # L: 제품5
+            product_names[5],                   # M: 제품6
+            product_names[6],                   # N: 제품7
+            product_names[7],                   # O: 제품8
+            final_total,                        # P: 최종견적(VAT포함)
+            data.get("delivery_date", ""),      # Q: 납기일
+            estimate_link,                      # R: 견적파일(엑셀)
+            "",                                 # S: 견적파일(PDF) - 나중에 추가
+            ""                                  # T: Pipedrive 거래 ID - 나중에 추가
+        ]
+        ws.append_row(row_data)
+        
+        return {
+            "status": "success",
+            "message": "견적 데이터가 성공적으로 추가되었습니다.",
+            "estimate_link": estimate_link
+        }
+    except Exception as e:
+        print(f"데이터 수집 오류: {e}")
+        import traceback
+        print(f"상세 오류: {traceback.format_exc()}")
+        return {"status": "error", "message": f"데이터 수집 실패: {str(e)}"}
+
+@app.get("/test-drive-copy")
+async def test_copy():
+    """Google Drive 파일 복사 테스트 엔드포인트"""
+    try:
+        print("=== Google Drive 파일 복사 테스트 시작 ===")
+        
+        creds = get_credentials()
+        if not creds:
+            return {"error": "자격증명을 가져올 수 없습니다"}
+        
+        service = build("drive", "v3", credentials=creds)
+        
+        # 테스트할 파일 ID (현재 설정된 템플릿 파일)
+        test_file_id = TEMPLATE_SHEET_ID
+        print(f"테스트 파일 ID: {test_file_id}")
+        
+        # 복사될 폴더 ID
+        target_folder_id = ESTIMATE_FOLDER_ID
+        print(f"대상 폴더 ID: {target_folder_id}")
+        
+        # 파일 존재 여부 및 권한 확인
+        try:
+            file_info = service.files().get(
+                fileId=test_file_id,
+                fields='id,name,parents,owners,permissions'
+            ).execute()
+            print(f"✅ 소스 파일 존재 확인: {file_info.get('name', 'Unknown')}")
+            
+        except Exception as e:
+            print(f"❌ 소스 파일 접근 실패: {e}")
+            return {"error": f"소스 파일 접근 실패: {str(e)}"}
+        
+        # 폴더 존재 여부 및 권한 확인
+        try:
+            folder_info = service.files().get(
+                fileId=target_folder_id,
+                fields='id,name,owners,permissions'
+            ).execute()
+            print(f"✅ 대상 폴더 존재 확인: {folder_info.get('name', 'Unknown')}")
+            
+        except Exception as e:
+            print(f"❌ 대상 폴더 접근 실패: {e}")
+            return {"error": f"대상 폴더 접근 실패: {str(e)}"}
+        
+        return {
+            "status": "success",
+            "message": "파일 및 폴더 접근 테스트 성공",
+            "테스트파일ID": test_file_id,
+            "대상폴더ID": target_folder_id
+        }
+        
+    except Exception as e:
+        print(f"❌ 파일 복사 테스트 실패: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "message": f"파일 복사 테스트 실패: {str(e)}",
+            "테스트파일ID": TEMPLATE_SHEET_ID,
+            "대상폴더ID": ESTIMATE_FOLDER_ID
+        }
+
+@app.get("/setup-drive-permissions")
+async def setup_permissions():
+    """Google Drive 권한 설정 엔드포인트"""
+    return setup_drive_permissions()
+
+def setup_drive_permissions():
+    """Google Drive 파일 및 폴더에 Service Account 권한 설정"""
+    try:
+        print("=== Google Drive 권한 설정 시작 ===")
+        
+        creds = get_credentials()
+        if not creds:
+            return {"status": "error", "message": "자격증명을 가져올 수 없습니다."}
+        
+        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+        service_account_email = getattr(creds, 'service_account_email', '')
+        
+        if not service_account_email:
+            return {"status": "error", "message": "Service Account 이메일을 가져올 수 없습니다."}
+        
+        print(f"Service Account 이메일: {service_account_email}")
+        
+        # 템플릿 파일에 권한 추가
+        try:
+            template_permission = {
+                'type': 'user',
+                'role': 'writer',
+                'emailAddress': service_account_email
+            }
+            
+            service.permissions().create(
+                fileId=TEMPLATE_SHEET_ID,
+                body=template_permission,
+                fields='id'
+            ).execute()
+            print(f"✅ 템플릿 파일 권한 설정 완료")
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                print(f"⚠️ 템플릿 파일 권한이 이미 존재합니다: {e}")
+            else:
+                print(f"❌ 템플릿 파일 권한 설정 실패: {e}")
+        
+        # 대상 폴더에 권한 추가
+        try:
+            folder_permission = {
+                'type': 'user',
+                'role': 'writer',
+                'emailAddress': service_account_email
+            }
+            
+            service.permissions().create(
+                fileId=ESTIMATE_FOLDER_ID,
+                body=folder_permission,
+                fields='id'
+            ).execute()
+            print(f"✅ 대상 폴더 권한 설정 완료")
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                print(f"⚠️ 대상 폴더 권한이 이미 존재합니다: {e}")
+            else:
+                print(f"❌ 대상 폴더 권한 설정 실패: {e}")
+        
+        return {"status": "success", "message": "권한 설정이 완료되었습니다."}
+        
+    except Exception as e:
+        print(f"권한 설정 중 오류: {e}")
+        return {"status": "error", "message": f"권한 설정 실패: {str(e)}"}
+
+@app.get("/test")
+async def test_endpoint():
+    """간단한 테스트 엔드포인트"""
+    return {"status": "success", "message": "서버가 정상적으로 작동 중입니다."}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host=API_HOST, port=API_PORT) 
