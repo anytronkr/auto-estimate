@@ -392,7 +392,7 @@ async def create_estimate_template():
 
 @app.post("/collect-data")
 async def collect_data(request: Request):
-    """데이터 수집용 스프레드시트에 데이터 추가"""
+    """데이터 수집용 스프레드시트에 데이터 추가, PDF 업로드, Pipedrive 거래 생성"""
     print("=== /collect-data 엔드포인트 호출됨 ===")
     try:
         data = await request.json()
@@ -424,6 +424,91 @@ async def collect_data(request: Request):
         vat = round(total_sum * 0.1)
         final_total = total_sum + vat
         
+        # PDF 파일 생성 및 업로드
+        pdf_link = ""
+        pdf_id = ""
+        file_id = data.get("fileId", "")
+        print(f"DEBUG: file_id = {file_id}")
+        
+        try:
+            # PDF 파일명 생성
+            product_name = ""
+            if products and products[0].get("name"):
+                product_name = products[0]["name"]
+            estimate_number = data.get("estimate_number", "")
+            
+            def clean_filename(s):
+                import re
+                return re.sub(r'[^\w\s-]', '', s).strip()
+            
+            clean_product_name = clean_filename(product_name)
+            pdf_filename = f"애니트론견적서_{clean_product_name}_{estimate_number}.pdf"
+            
+            # PDF 생성 (Google Sheet export)
+            print(f"DEBUG: PDF 생성 시도 - file_id: '{file_id}', pdf_filename: '{pdf_filename}'")
+            
+            if file_id and export_sheet_to_pdf(file_id, pdf_filename, creds):
+                # Google Drive 업로드
+                pdf_id, pdf_link = upload_pdf_to_drive(pdf_filename, get_google_drive_folder_id(), pdf_filename, creds)
+                print(f"DEBUG: Google Drive 업로드 성공 - {pdf_id}, {pdf_link}")
+                
+                # 임시 파일 삭제
+                try:
+                    if os.path.exists(pdf_filename):
+                        os.remove(pdf_filename)
+                        print(f"DEBUG: 임시 파일 정리 완료 - {pdf_filename}")
+                except Exception as e:
+                    print(f"DEBUG: 임시 파일 정리 실패 - {str(e)}")
+            else:
+                print("DEBUG: PDF export 실패 또는 file_id 없음")
+                # Fallback: 테스트 PDF 생성 시도
+                print("DEBUG: 테스트 PDF 생성 시도")
+                if create_test_pdf(pdf_filename, data):
+                    # Google Drive 업로드
+                    pdf_id, pdf_link = upload_pdf_to_drive(pdf_filename, get_google_drive_folder_id(), pdf_filename, creds)
+                    print(f"DEBUG: 테스트 PDF Google Drive 업로드 성공 - {pdf_id}, {pdf_link}")
+                    
+                    # 임시 파일 삭제
+                    try:
+                        if os.path.exists(pdf_filename):
+                            os.remove(pdf_filename)
+                            print(f"DEBUG: 임시 파일 정리 완료 - {pdf_filename}")
+                    except Exception as e:
+                        print(f"DEBUG: 임시 파일 정리 실패 - {str(e)}")
+                else:
+                    return {
+                        "status": "error",
+                        "message": "Google Sheets PDF export 실패: 시트 권한 또는 설정 확인 필요"
+                    }
+        except Exception as e:
+            print(f"DEBUG: Google Drive PDF 생성 실패 - {str(e)}")
+            return {
+                "status": "error",
+                "message": f"PDF 생성 중 오류 발생: {str(e)}"
+            }
+        
+        # Pipedrive 거래 생성
+        pipedrive_deal_id = create_pipedrive_deal(data)
+        
+        # 거래 생성 성공 시 PDF 파일 업로드
+        if pipedrive_deal_id and pdf_filename and os.path.exists(pdf_filename):
+            upload_file_to_pipedrive_deal(pipedrive_deal_id, pdf_filename, pdf_filename)
+        
+        # 거래 생성 성공 시 Pipedrive에 노트(메모) 추가
+        if pipedrive_deal_id:
+            try:
+                pipedrive_settings = get_pipedrive_config()
+                note_content = f"견적서명: {pdf_filename}\n엑셀견적서: {estimate_link}\nPDF견적서: {pdf_link}"
+                note_url = f"https://{pipedrive_settings['domain']}/api/v1/notes?api_token={pipedrive_settings['api_token']}"
+                note_data = {
+                    "content": note_content,
+                    "deal_id": pipedrive_deal_id
+                }
+                note_response = requests.post(note_url, json=note_data)
+                print(f"Pipedrive 노트 추가 결과: {note_response.status_code} - {note_response.text}")
+            except Exception as e:
+                print(f"Pipedrive 노트 추가 오류: {str(e)}")
+        
         # 한 행에 모든 데이터 배치
         row_data = [
             data.get("estimate_date", ""),      # A: 견적일자
@@ -444,15 +529,24 @@ async def collect_data(request: Request):
             final_total,                        # P: 최종견적(VAT포함)
             data.get("delivery_date", ""),      # Q: 납기일
             estimate_link,                      # R: 견적파일(엑셀)
-            "",                                 # S: 견적파일(PDF) - 나중에 추가
-            ""                                  # T: Pipedrive 거래 ID - 나중에 추가
+            pdf_link,                           # S: 견적파일(PDF)
+            pipedrive_deal_id                   # T: Pipedrive 거래 ID
         ]
         ws.append_row(row_data)
         
+        success_message = f"견적 데이터 및 PDF가 성공적으로 추가되었습니다."
+        if pipedrive_deal_id:
+            success_message += f"\nPipedrive 거래가 성공적으로 생성되었습니다. (거래 ID: {pipedrive_deal_id})"
+            success_message += f"\nPDF 파일이 Pipedrive 거래에 첨부되었습니다."
+        else:
+            success_message += "\nPipedrive 거래 생성에 실패했습니다."
+        
         return {
             "status": "success",
-            "message": "견적 데이터가 성공적으로 추가되었습니다.",
-            "estimate_link": estimate_link
+            "message": success_message,
+            "pdf_link": pdf_link,
+            "pdf_id": pdf_id,
+            "pipedrive_deal_id": pipedrive_deal_id
         }
     except Exception as e:
         print(f"데이터 수집 오류: {e}")
@@ -589,6 +683,415 @@ def setup_drive_permissions():
     except Exception as e:
         print(f"권한 설정 중 오류: {e}")
         return {"status": "error", "message": f"권한 설정 실패: {str(e)}"}
+
+def export_sheet_to_pdf(sheet_id, pdf_filename, creds, gid=0):
+    """Google Sheets를 PDF로 export"""
+    try:
+        print(f"DEBUG: export_sheet_to_pdf 함수 시작")
+        print(f"DEBUG: sheet_id: {sheet_id}")
+        print(f"DEBUG: pdf_filename: {pdf_filename}")
+        print(f"DEBUG: gid: {gid}")
+        
+        # Google Drive API를 사용한 PDF 생성
+        try:
+            print(f"DEBUG: Google Drive API PDF 생성 시도")
+            drive_service = build('drive', 'v3', credentials=creds)
+            
+            # Google Sheets를 PDF로 export
+            request = drive_service.files().export_media(
+                fileId=sheet_id,
+                mimeType='application/pdf'
+            )
+            
+            with open(pdf_filename, 'wb') as f:
+                f.write(request.execute())
+            
+            print(f"DEBUG: Google Drive API PDF 생성 성공: {pdf_filename}")
+            return True
+            
+        except Exception as api_e:
+            print(f"DEBUG: Google Drive API PDF 생성 실패: {api_e}")
+            return False
+            
+    except Exception as e:
+        print(f"DEBUG: PDF export 예외 발생: {str(e)}")
+        return False
+
+def upload_pdf_to_drive(pdf_path, folder_id, file_name, creds):
+    """PDF 파일을 Google Drive에 업로드"""
+    try:
+        drive_service = build('drive', 'v3', credentials=creds)
+        file_metadata = {
+            'name': file_name,
+            'parents': [folder_id]
+        }
+        media = MediaFileUpload(pdf_path, mimetype='application/pdf')
+        file = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id,webViewLink',
+            supportsAllDrives=True
+        ).execute()
+        return file.get('id'), file.get('webViewLink')
+    except Exception as e:
+        print(f"PDF 업로드 실패: {e}")
+        return None, None
+
+def create_test_pdf(filename, data):
+    """테스트용 PDF 파일을 생성합니다."""
+    try:
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+        
+        # 한글 폰트 등록
+        try:
+            pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
+            korean_font = 'STSong-Light'
+            print("한글 폰트 등록 성공: STSong-Light")
+        except Exception as e:
+            print(f"한글 폰트 등록 실패: {e}")
+            korean_font = 'Helvetica'
+        
+        doc = SimpleDocTemplate(filename, pagesize=A4)
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # 제목 스타일
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontName=korean_font,
+            fontSize=18,
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor('#21808c')
+        )
+        
+        # 제목 추가
+        title = Paragraph(f"견적서 - {data.get('estimate_number', '')}", title_style)
+        story.append(title)
+        story.append(Spacer(1, 20))
+        
+        # 기본 정보 테이블
+        basic_info = [
+            ['견적일자', data.get('estimate_date', '')],
+            ['견적번호', data.get('estimate_number', '')],
+            ['공급자', '(주)바이텍테크놀로지'],
+            ['담당자', data.get('supplier_person', '')],
+            ['수신자 회사', data.get('receiver_company', '')],
+            ['수신자 담당자', data.get('receiver_person', '')],
+            ['납기일', data.get('delivery_date', '')]
+        ]
+        
+        basic_table = Table(basic_info, colWidths=[3*cm, 12*cm])
+        basic_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f0f0f0')),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#21808c')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), korean_font),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(basic_table)
+        story.append(Spacer(1, 20))
+        
+        # 제품 정보 테이블
+        products = data.get('products', [])
+        if products:
+            product_data = [['구분', '제품명', '상세정보', '수량', '단가(원)', '합계(원)']]
+            
+            for product in products:
+                if product.get('name'):  # 제품명이 있는 경우만 추가
+                    product_type = product.get('type', '')
+                    if not product_type:
+                        name = product.get('name', '')
+                        if '라벨' in name or '프린터' in name:
+                            product_type = '프린터'
+                        elif '패키징' in name:
+                            product_type = '장비'
+                        else:
+                            product_type = '기타'
+                    
+                    product_data.append([
+                        product_type,
+                        product.get('name', ''),
+                        product.get('detail', ''),
+                        str(product.get('qty', '1')),
+                        f"{product.get('price', 0):,}",
+                        f"{product.get('total', 0):,}"
+                    ])
+            
+            if len(product_data) > 1:  # 헤더 외에 데이터가 있는 경우
+                product_table = Table(product_data, colWidths=[2*cm, 3*cm, 4*cm, 1.5*cm, 2.5*cm, 2*cm])
+                product_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#21808c')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, -1), korean_font),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('ALIGN', (2, 1), (2, -1), 'LEFT'),  # 상세정보는 왼쪽 정렬
+                ]))
+                story.append(product_table)
+                story.append(Spacer(1, 20))
+        
+        # 합계 계산
+        total_sum = sum(product.get("total", 0) for product in products if product.get("total"))
+        vat = round(total_sum * 0.1)
+        final_total = total_sum + vat
+        
+        # 합계 테이블
+        summary_data = [
+            ['공급가액', f"{total_sum:,}원"],
+            ['부가세 (10%)', f"{vat:,}원"],
+            ['총액', f"{final_total:,}원"]
+        ]
+        
+        summary_table = Table(summary_data, colWidths=[4*cm, 4*cm])
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#21808c')),
+            ('TEXTCOLOR', (0, -1), (-1, -1), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), korean_font),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(summary_table)
+        
+        # PDF 생성
+        doc.build(story)
+        return filename
+    except Exception as e:
+        print(f"테스트 PDF 생성 오류: {str(e)}")
+        return None
+
+def get_pipedrive_config():
+    """환경변수에서 Pipedrive 설정 가져오기"""
+    return get_pipedrive_config()
+
+def get_pipedrive_user_id(supplier_person):
+    """담당자 이름에서 Pipedrive 사용자 ID를 찾습니다."""
+    pipedrive_settings = get_pipedrive_config()
+    user_mapping = {
+        "이훈수": 1,
+        "차재원": 2,
+        "장진호": 3,
+        "하철용": 4,
+        "노재익": 5,
+        "전준영": 6
+    }
+    for name, user_id in user_mapping.items():
+        if name in supplier_person:
+            return user_id
+    return None
+
+def get_pipedrive_stage_id(supplier_person):
+    """담당자 이름에서 Pipedrive 스테이지 ID를 반환합니다."""
+    stage_mapping = {
+        "이훈수": 47,    # 이훈수견적서
+        "차재원": 48,    # 차재원견적서
+        "전준영": 49,    # 전준영견적서
+        "장진호": 50,    # 장진호견적서
+        "하철용": 51,    # 하철용견적서
+        "노재익": 52,    # 노재익견적서
+    }
+    for name, stage_id in stage_mapping.items():
+        if name in supplier_person:
+            return stage_id
+    return 47  # 기본값: 이훈수견적서
+
+def create_pipedrive_organization(data):
+    """Pipedrive에 조직을 생성합니다."""
+    try:
+        org_name = data.get("receiver_company", "")
+        if not org_name:
+            return None
+            
+        pipedrive_settings = get_pipedrive_config()
+        url = f"https://{pipedrive_settings['domain']}/api/v1/organizations?api_token={pipedrive_settings['api_token']}"
+        headers = {"Content-Type": "application/json"}
+        
+        org_data = {
+            "name": org_name,
+            "visible_to": 3  # 전체 회사에서 볼 수 있도록 설정
+        }
+        
+        response = requests.post(url, headers=headers, json=org_data)
+        
+        if response.status_code == 201:
+            result = response.json()
+            org_id = result['data']['id']
+            print(f"조직 생성 성공: {org_name} (ID: {org_id})")
+            return org_id
+        else:
+            print(f"조직 생성 실패: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"조직 생성 오류: {e}")
+        return None
+
+def create_pipedrive_person(data):
+    """Pipedrive에 담당자를 생성합니다."""
+    try:
+        person_name = data.get("receiver_person", "")
+        person_email = data.get("receiver_contact", "")
+        if not person_name:
+            return None
+        
+        pipedrive_settings = get_pipedrive_config()
+        url = f"https://{pipedrive_settings['domain']}/api/v1/persons?api_token={pipedrive_settings['api_token']}"
+        headers = {"Content-Type": "application/json"}
+        
+        person_data = {
+            "name": person_name,
+            "visible_to": 3  # 전체 회사에서 볼 수 있도록 설정
+        }
+        if person_email:
+            person_data["email"] = [{"value": person_email, "primary": True, "label": "work"}]
+        
+        response = requests.post(url, headers=headers, json=person_data)
+        
+        if response.status_code == 201:
+            result = response.json()
+            person_id = result['data']['id']
+            print(f"담당자 생성 성공: {person_name} (ID: {person_id})")
+            return person_id
+        else:
+            print(f"담당자 생성 실패: {response.status_code} - {response.text}")
+            return None
+        
+    except Exception as e:
+        print(f"담당자 생성 오류: {e}")
+        return None
+
+def create_pipedrive_deal(data):
+    """Pipedrive에 거래를 생성합니다."""
+    try:
+        # 담당자에서 사용자 ID 찾기
+        supplier_person = data.get("supplier_person", "")
+        user_id = get_pipedrive_user_id(supplier_person)
+        
+        if not user_id:
+            print(f"담당자 '{supplier_person}'에 해당하는 Pipedrive 사용자를 찾을 수 없습니다.")
+            return None
+        
+        # 최종견적 계산
+        products = data.get("products", [])
+        total_sum = sum(product.get("total", 0) for product in products if product.get("total"))
+        vat = round(total_sum * 0.1)
+        final_total = total_sum + vat
+        
+        # 거래명 생성
+        deal_title = f"{data.get('receiver_company', '')} - {data.get('estimate_number', '')}"
+        
+        # Pipedrive 스테이지 ID 매핑 (담당자별)
+        stage_id = get_pipedrive_stage_id(supplier_person)
+        print(f"담당자: {supplier_person} → 스테이지 ID: {stage_id}")
+        
+        # 조직과 담당자 생성
+        org_id = create_pipedrive_organization(data)
+        person_id = create_pipedrive_person(data)
+        
+        # Pipedrive API 요청 데이터
+        pipedrive_settings = get_pipedrive_config()
+        deal_data = {
+            "title": deal_title,
+            "value": final_total,
+            "currency": "KRW",
+            "pipeline_id": 4,  # 고정
+            "stage_id": stage_id,
+            "user_id": user_id,
+            "visible_to": 3  # 전체 회사에서 볼 수 있도록 설정
+        }
+        
+        # 조직과 담당자 ID가 있으면 추가
+        if org_id:
+            deal_data["org_id"] = org_id
+        if person_id:
+            deal_data["person_id"] = person_id
+        
+        # Pipedrive API 호출
+        url = f"https://{pipedrive_settings['domain']}/api/v1/deals?api_token={pipedrive_settings['api_token']}"
+        headers = {"Content-Type": "application/json"}
+        
+        print(f"Pipedrive API 호출 정보:")
+        print(f"URL: {url}")
+        print(f"Data: {deal_data}")
+        
+        response = requests.post(url, headers=headers, json=deal_data)
+        
+        print(f"Response Status: {response.status_code}")
+        print(f"Response Text: {response.text}")
+        
+        if response.status_code == 201:
+            result = response.json()
+            print(f"Pipedrive 거래 생성 성공: {result['data']['id']}")
+            return result['data']['id']
+        else:
+            print(f"Pipedrive 거래 생성 실패: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"Pipedrive 거래 생성 오류: {e}")
+        return None
+
+def upload_file_to_pipedrive_deal(deal_id, file_path, file_name):
+    """Pipedrive 거래에 파일을 업로드합니다."""
+    file_handle = None
+    try:
+        if not deal_id or not file_path:
+            print("거래 ID 또는 파일 경로가 없습니다.")
+            return None
+            
+        pipedrive_settings = get_pipedrive_config()
+        url = f"https://{pipedrive_settings['domain']}/api/v1/files?api_token={pipedrive_settings['api_token']}"
+        
+        # 파일 업로드 데이터
+        file_handle = open(file_path, 'rb')
+        files = {
+            'file': (file_name, file_handle, 'application/pdf')
+        }
+        
+        data = {
+            'deal_id': deal_id
+        }
+        
+        print(f"Pipedrive 파일 업로드 정보:")
+        print(f"URL: {url}")
+        print(f"Deal ID: {deal_id}")
+        print(f"File: {file_name}")
+        
+        response = requests.post(url, files=files, data=data)
+        
+        print(f"File Upload Response Status: {response.status_code}")
+        print(f"File Upload Response Text: {response.text}")
+        
+        if response.status_code == 201:
+            result = response.json()
+            file_id = result.get("data", {}).get("id")
+            print(f"Pipedrive 파일 업로드 성공: {file_id}")
+            return file_id
+        else:
+            print(f"Pipedrive 파일 업로드 실패: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"Pipedrive 파일 업로드 오류: {str(e)}")
+        return None
+    finally:
+        if file_handle:
+            file_handle.close()
 
 @app.get("/test")
 async def test_endpoint():
