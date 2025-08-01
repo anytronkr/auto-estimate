@@ -82,7 +82,7 @@ CELL_MAP = {
     "products[7][qty]": "D22",       # 수량
     "products[7][price]": "E22",     # 단가
     "products[7][total]": "F22",     # 합계
-    "delivery_date": "G22",          # 납기일 (제품8의 note 필드 사용)
+    "delivery_date": "B30",          # 납기일 (올바른 위치)
     
     # 기존 호환성을 위한 별칭
     "company_name": "F5",
