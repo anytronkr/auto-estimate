@@ -290,30 +290,44 @@ async def fill_estimate(request: Request):
             else:
                 print(f"❌ CELL_MAP에 'estimate_date' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
         
-        # estimate_number 자동 생성
-        from datetime import datetime
-        current_date_short = datetime.now().strftime("%y%m%d")
-        supplier_person = data.get("supplier_person", "UNKNOWN")
+        # estimate_number 처리 (사용자 입력값 우선, 없으면 자동 생성)
+        estimate_number = data.get("estimate_number", "").strip()
         
-        # 담당자 ID 매핑
-        person_id_map = {
-            "이훈수": "1", "차재원": "2", "장진호": "3", 
-            "하철용": "4", "노재익": "5", "전준영": "6"
-        }
-        person_id = person_id_map.get(supplier_person, "0")
-        
-        # 오늘 발행 횟수 (현재 시간의 분으로 대체)
-        today_count = datetime.now().minute
-        
-        auto_estimate_number = f"DLP{current_date_short}-{person_id}-{today_count}"
-        if "estimate_number" in CELL_MAP:
-            updates.append({
-                "range": CELL_MAP["estimate_number"],
-                "values": [[auto_estimate_number]]
-            })
-            print(f"estimate_number 자동 생성: {auto_estimate_number}")
+        if estimate_number:
+            # 사용자가 입력한 견적번호 사용
+            if "estimate_number" in CELL_MAP:
+                updates.append({
+                    "range": CELL_MAP["estimate_number"],
+                    "values": [[estimate_number]]
+                })
+                print(f"사용자 입력 견적번호 사용: {estimate_number}")
+            else:
+                print(f"❌ CELL_MAP에 'estimate_number' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
         else:
-            print(f"❌ CELL_MAP에 'estimate_number' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
+            # 견적번호가 없으면 자동 생성
+            from datetime import datetime
+            current_date_short = datetime.now().strftime("%y%m%d")
+            supplier_person = data.get("supplier_person", "UNKNOWN")
+            
+            # 담당자 ID 매핑
+            person_id_map = {
+                "이훈수": "1", "차재원": "2", "장진호": "3", 
+                "하철용": "4", "노재익": "5", "전준영": "6"
+            }
+            person_id = person_id_map.get(supplier_person, "0")
+            
+            # 오늘 발행 횟수 (현재 시간의 분으로 대체)
+            today_count = datetime.now().minute
+            
+            auto_estimate_number = f"DLP{current_date_short}-{person_id}-{today_count}"
+            if "estimate_number" in CELL_MAP:
+                updates.append({
+                    "range": CELL_MAP["estimate_number"],
+                    "values": [[auto_estimate_number]]
+                })
+                print(f"estimate_number 자동 생성: {auto_estimate_number}")
+            else:
+                print(f"❌ CELL_MAP에 'estimate_number' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
 
         # 제품 정보
         products = data.get("products", [])
