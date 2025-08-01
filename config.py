@@ -3,14 +3,94 @@ import os
 # Google Sheets 설정
 CREDS_PATH = "creds.json"
 CELL_MAP = {
-    "company_name": "B3",
-    "contact_person": "B4", 
-    "contact_email": "B5",
-    "contact_phone": "B6",
-    "project_name": "B7",
-    "supplier_person": "B8",
-    "total_amount": "B9",
-    "products": "B10"
+    # 기본 정보
+    "estimate_date": "F5",           # 견적일자
+    "estimate_number": "F6",         # 견적번호
+    "supplier_person": "B11",        # 공급자-담당자
+    "supplier_contact": "B12",       # 공급자-연락처
+    "receiver_company": "D10",       # 수신자-회사명
+    "receiver_person": "E11",        # 수신자-담당자
+    "receiver_contact": "E12",       # 수신자-연락처
+    
+    # 제품1 (A15-G15)
+    "products[0][type]": "A15",      # 구분
+    "products[0][name]": "B15",      # 제품명
+    "products[0][detail]": "C15",    # 상세정보
+    "products[0][qty]": "D15",       # 수량
+    "products[0][price]": "E15",     # 단가
+    "products[0][total]": "F15",     # 합계
+    "products[0][note]": "G15",      # 비고
+    
+    # 제품2 (A16-G16)
+    "products[1][type]": "A16",      # 구분
+    "products[1][name]": "B16",      # 제품명
+    "products[1][detail]": "C16",    # 상세정보
+    "products[1][qty]": "D16",       # 수량
+    "products[1][price]": "E16",     # 단가
+    "products[1][total]": "F16",     # 합계
+    "products[1][note]": "G16",      # 비고
+    
+    # 제품3 (A17-G17)
+    "products[2][type]": "A17",      # 구분
+    "products[2][name]": "B17",      # 제품명
+    "products[2][detail]": "C17",    # 상세정보
+    "products[2][qty]": "D17",       # 수량
+    "products[2][price]": "E17",     # 단가
+    "products[2][total]": "F17",     # 합계
+    "products[2][note]": "G17",      # 비고
+    
+    # 제품4 (A18-G18)
+    "products[3][type]": "A18",      # 구분
+    "products[3][name]": "B18",      # 제품명
+    "products[3][detail]": "C18",    # 상세정보
+    "products[3][qty]": "D18",       # 수량
+    "products[3][price]": "E18",     # 단가
+    "products[3][total]": "F18",     # 합계
+    "products[3][note]": "G18",      # 비고
+    
+    # 제품5 (A19-G19)
+    "products[4][type]": "A19",      # 구분
+    "products[4][name]": "B19",      # 제품명
+    "products[4][detail]": "C19",    # 상세정보
+    "products[4][qty]": "D19",       # 수량
+    "products[4][price]": "E19",     # 단가
+    "products[4][total]": "F19",     # 합계
+    "products[4][note]": "G19",      # 비고
+    
+    # 제품6 (A20-G20)
+    "products[5][type]": "A20",      # 구분
+    "products[5][name]": "B20",      # 제품명
+    "products[5][detail]": "C20",    # 상세정보
+    "products[5][qty]": "D20",       # 수량
+    "products[5][price]": "E20",     # 단가
+    "products[5][total]": "F20",     # 합계
+    "products[5][note]": "G20",      # 비고
+    
+    # 제품7 (A21-G21)
+    "products[6][type]": "A21",      # 구분
+    "products[6][name]": "B21",      # 제품명
+    "products[6][detail]": "C21",    # 상세정보
+    "products[6][qty]": "D21",       # 수량
+    "products[6][price]": "E21",     # 단가
+    "products[6][total]": "F21",     # 합계
+    "products[6][note]": "G21",      # 비고
+    
+    # 제품8 (A22-G22) - 마지막 제품은 납기일로 사용
+    "products[7][type]": "A22",      # 구분
+    "products[7][name]": "B22",      # 제품명
+    "products[7][detail]": "C22",    # 상세정보
+    "products[7][qty]": "D22",       # 수량
+    "products[7][price]": "E22",     # 단가
+    "products[7][total]": "F22",     # 합계
+    "delivery_date": "G22",          # 납기일 (제품8의 note 필드 사용)
+    
+    # 기존 호환성을 위한 별칭
+    "company_name": "F5",
+    "contact_person": "F6", 
+    "contact_email": "B11",
+    "contact_phone": "B12",
+    "project_name": "D10",
+    "total_amount": "F22"
 }
 
 # API 설정
@@ -18,7 +98,7 @@ API_HOST = "0.0.0.0"
 API_PORT = int(os.environ.get("PORT", 9000))
 
 # Google Sheets ID
-DATA_COLLECTION_SHEET_ID = "1ExR_ZCrqxPgd9GJQQ6P3CXx8Hec0KA1l_W_Hw03_gRE"
+DATA_COLLECTION_SHEET_ID = os.environ.get("DATA_COLLECTION_SHEET_ID", "1lanDTaqOzAXFQaZcqj91X6kknbpHXREH3bLQrTeVq6Q")
 DATA_COLLECTION_COLUMNS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
 # Render.com 환경변수에서 설정 읽기
@@ -100,4 +180,4 @@ def get_pipedrive_config():
 
 def get_google_drive_folder_id():
     """환경변수에서 Google Drive 폴더 ID 읽기"""
-    return os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "1uMd2VH07SP1qNsrrwh8IUH4eQuQf6Z9X") 
+    return os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "1uMd2VH07SP1qNsrrwh8IUH4eQuQf6Z9X")
