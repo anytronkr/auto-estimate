@@ -263,10 +263,13 @@ async def fill_estimate(request: Request):
         for key in ["supplier_person", "supplier_contact", 
                     "receiver_company", "receiver_person", "receiver_contact", "delivery_date"]:
             if key in data:
+                print(f"DEBUG: {key} 처리 중 - 값: '{data[key]}', CELL_MAP 위치: '{CELL_MAP.get(key, 'NOT_FOUND')}'")
                 updates.append({
                     "range": CELL_MAP[key],
                     "values": [[data[key]]]
                 })
+            else:
+                print(f"DEBUG: {key}가 데이터에 없습니다.")
         
         # estimate_date 처리 (사용자 입력값)
         if "estimate_date" in data and data.get("estimate_date"):
@@ -349,6 +352,10 @@ async def fill_estimate(request: Request):
                 else:
                     print(f"❌ CELL_MAP에 '{cell_key}' 키가 없습니다.")
 
+        print(f"DEBUG: 총 {len(updates)}개의 셀 업데이트 예정")
+        for i, update in enumerate(updates):
+            print(f"DEBUG: 업데이트 {i+1}: {update['range']} = {update['values']}")
+        
         ws.batch_update(updates)
         return {"status": "success"}
         
@@ -451,17 +458,15 @@ async def collect_data(request: Request):
         
         try:
             # PDF 파일명 생성
-            product_name = ""
-            if products and products[0].get("name"):
-                product_name = products[0]["name"]
+            receiver_company = data.get("receiver_company", "")
             estimate_number = data.get("estimate_number", "")
             
             def clean_filename(s):
                 import re
                 return re.sub(r'[^\w\s-]', '', s).strip()
             
-            clean_product_name = clean_filename(product_name)
-            pdf_filename = f"애니트론견적서_{clean_product_name}_{estimate_number}.pdf"
+            clean_company_name = clean_filename(receiver_company)
+            pdf_filename = f"애니트론견적서_{clean_company_name}_{estimate_number}.pdf"
             
             # PDF 생성 (Google Sheet export)
             print(f"DEBUG: PDF 생성 시도 - file_id: '{file_id}', pdf_filename: '{pdf_filename}'")
@@ -896,18 +901,22 @@ def create_test_pdf(filename, data):
 
 def get_pipedrive_config():
     """환경변수에서 Pipedrive 설정 가져오기"""
-    return get_pipedrive_config()
+    import os
+    return {
+        "api_token": os.environ.get("PIPEDRIVE_API_TOKEN", ""),
+        "domain": os.environ.get("PIPEDRIVE_DOMAIN", "api.pipedrive.com")
+    }
 
 def get_pipedrive_user_id(supplier_person):
     """담당자 이름에서 Pipedrive 사용자 ID를 찾습니다."""
     pipedrive_settings = get_pipedrive_config()
     user_mapping = {
-        "이훈수": 1,
-        "차재원": 2,
-        "장진호": 3,
-        "하철용": 4,
-        "노재익": 5,
-        "전준영": 6
+        "이훈수": 23659842,    # hslee@bitekps.com
+        "차재원": 23787233,    # cjw@bitekps.com
+        "장진호": 23823247,    # jhjang@bitekps.com
+        "전준영": 23839164,    # methu78@bitekps.com
+        "하철용": 23839131,    # cyha@bitekps.com
+        "노재익": 23839109     # jake@bitekps.com
     }
     for name, user_id in user_mapping.items():
         if name in supplier_person:
