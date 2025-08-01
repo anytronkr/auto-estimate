@@ -180,6 +180,8 @@ def copy_estimate_template():
     """견적서 템플릿 스프레드시트를 복사하여 새 파일 생성"""
     try:
         print("견적서 템플릿 복사 시작...")
+        print(f"템플릿 파일 ID: {TEMPLATE_SHEET_ID}")
+        print(f"대상 폴더 ID: {ESTIMATE_FOLDER_ID}")
         
         # 시간 동기화 진단
         current_time = datetime.now()
@@ -210,11 +212,39 @@ def copy_estimate_template():
         # Google Drive API 서비스 생성 (타임아웃 설정 추가)
         service = build('drive', 'v3', credentials=creds, cache_discovery=False)
         
-        # 현재 시간을 YYMMDD HHmm 형식으로 포맷
-        now = datetime.now()
-        formatted_date = now.strftime("%y%m%d %H%M")
+        # 먼저 템플릿 파일에 접근 가능한지 확인
+        try:
+            template_file = service.files().get(
+                fileId=TEMPLATE_SHEET_ID,
+                fields='id,name,parents'
+            ).execute()
+            print(f"템플릿 파일 접근 성공: {template_file.get('name', 'Unknown')}")
+        except Exception as template_error:
+            print(f"템플릿 파일 접근 실패: {template_error}")
+            return {
+                "status": "error", 
+                "message": f"템플릿 파일에 접근할 수 없습니다: {str(template_error)}"
+            }
         
-        # 새 파일명 생성
+        # 대상 폴더에 접근 가능한지 확인
+        try:
+            target_folder = service.files().get(
+                fileId=ESTIMATE_FOLDER_ID,
+                fields='id,name'
+            ).execute()
+            print(f"대상 폴더 접근 성공: {target_folder.get('name', 'Unknown')}")
+        except Exception as folder_error:
+            print(f"대상 폴더 접근 실패: {folder_error}")
+            return {
+                "status": "error", 
+                "message": f"대상 폴더에 접근할 수 없습니다: {str(folder_error)}"
+            }
+        
+        # 현재 시간을 YYMMDD_HHMMSS 형식으로 포맷
+        now = datetime.now()
+        formatted_date = now.strftime("%y%m%d_%H%M%S")
+        
+        # 새 파일명 생성 (요구사항: 견적서_DLP_YYMMDD_HHMMSS)
         new_filename = f"견적서_DLP_{formatted_date}"
         
         # 파일 복사 요청
@@ -223,30 +253,123 @@ def copy_estimate_template():
             'parents': [ESTIMATE_FOLDER_ID]  # 지정된 폴더에 저장
         }
         
-        # 스프레드시트 복사
+        print("파일 복사 시도 중...")
+        
+        # 스프레드시트 복사 (더 강력한 오류 처리)
+        try:
         copied_file = service.files().copy(
             fileId=TEMPLATE_SHEET_ID,
             body=copy_metadata,
-            supportsAllDrives=True  # 공유 드라이브 지원
+                supportsAllDrives=True,  # 공유 드라이브 지원
+                fields='id,name,webViewLink'
         ).execute()
         
         new_file_id = copied_file['id']
+            web_view_link = copied_file.get('webViewLink', '')
         
         print(f"견적서 템플릿 복사 완료: {new_filename} (ID: {new_file_id})")
+            print(f"웹 뷰 링크: {web_view_link}")
         
         return {
             "status": "success",
             "file_id": new_file_id,
             "filename": new_filename,
+                "web_view_link": web_view_link,
             "message": "견적서 템플릿이 성공적으로 복사되었습니다."
+            }
+            
+        except Exception as copy_error:
+            print(f"파일 복사 실패: {copy_error}")
+            
+            # 더 자세한 오류 정보 제공
+            error_msg = str(copy_error)
+            if "403" in error_msg:
+                return {
+                    "status": "error",
+                    "message": "권한이 없습니다. Service Account가 템플릿 파일과 대상 폴더에 대한 편집 권한이 필요합니다."
+                }
+            elif "404" in error_msg:
+                return {
+                    "status": "error", 
+                    "message": "파일 또는 폴더를 찾을 수 없습니다. ID를 확인해주세요."
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": f"파일 복사 중 오류가 발생했습니다: {error_msg}"
         }
         
     except Exception as e:
         print(f"견적서 템플릿 복사 중 오류: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             "status": "error",
             "message": f"견적서 템플릿 복사 중 오류가 발생했습니다: {str(e)}"
         }
+
+def setup_drive_permissions():
+    """Google Drive 파일 및 폴더에 Service Account 권한 설정"""
+    try:
+        print("=== Google Drive 권한 설정 시작 ===")
+        
+        creds = get_credentials()
+        if not creds:
+            return {"status": "error", "message": "자격증명을 가져올 수 없습니다."}
+        
+        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+        service_account_email = getattr(creds, 'service_account_email', '')
+        
+        if not service_account_email:
+            return {"status": "error", "message": "Service Account 이메일을 가져올 수 없습니다."}
+        
+        print(f"Service Account 이메일: {service_account_email}")
+        
+        # 템플릿 파일에 권한 추가
+        try:
+            template_permission = {
+                'type': 'user',
+                'role': 'writer',
+                'emailAddress': service_account_email
+            }
+            
+            service.permissions().create(
+                fileId=TEMPLATE_SHEET_ID,
+                body=template_permission,
+                fields='id'
+            ).execute()
+            print(f"✅ 템플릿 파일 권한 설정 완료")
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                print(f"⚠️ 템플릿 파일 권한이 이미 존재합니다: {e}")
+            else:
+                print(f"❌ 템플릿 파일 권한 설정 실패: {e}")
+        
+        # 대상 폴더에 권한 추가
+        try:
+            folder_permission = {
+                'type': 'user',
+                'role': 'writer',
+                'emailAddress': service_account_email
+            }
+            
+            service.permissions().create(
+                fileId=ESTIMATE_FOLDER_ID,
+                body=folder_permission,
+                fields='id'
+            ).execute()
+            print(f"✅ 대상 폴더 권한 설정 완료")
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                print(f"⚠️ 대상 폴더 권한이 이미 존재합니다: {e}")
+            else:
+                print(f"❌ 대상 폴더 권한 설정 실패: {e}")
+        
+        return {"status": "success", "message": "권한 설정이 완료되었습니다."}
+        
+    except Exception as e:
+        print(f"권한 설정 중 오류: {e}")
+        return {"status": "error", "message": f"권한 설정 실패: {str(e)}"}
 
 def get_pipedrive_settings():
     """환경변수에서 Pipedrive 설정 가져오기"""
@@ -418,6 +541,35 @@ def count_pdf_today():
     with open(COUNT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
     return count
+
+def get_today_estimate_count():
+    """오늘 생성된 견적서 수를 반환 (견적번호 생성용)"""
+    try:
+        creds = get_credentials()
+        if not creds:
+            return 1
+        
+        sh = gspread.service_account(filename=CREDS_PATH)
+        sh = sh.open_by_key(DATA_COLLECTION_SHEET_ID)
+        ws = sh.sheet1
+        
+        # 오늘 날짜
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # 모든 데이터 가져오기
+        all_data = ws.get_all_values()
+        
+        # 헤더 제외하고 오늘 날짜의 견적서 수 계산
+        today_count = 0
+        for row in all_data[1:]:  # 헤더 제외
+            if row and len(row) > 0 and row[0] == today:  # 첫 번째 컬럼이 견적일자
+                today_count += 1
+        
+        return today_count + 1  # 다음 번호
+        
+    except Exception as e:
+        print(f"오늘 견적서 수 계산 실패: {e}")
+        return 1
 
 # Pipedrive API 함수들
 def get_pipedrive_user_id(supplier_person):
@@ -954,7 +1106,20 @@ async def test_pipedrive(request: Request):
 
 @app.post("/estimate")
 async def fill_estimate(request: Request):
+    try:
     data = await request.json()
+        print(f"=== /estimate 엔드포인트 호출됨 ===")
+        print(f"받은 데이터: {data}")
+        print(f"estimate_date 존재: {'estimate_date' in data}")
+        if 'estimate_date' in data:
+            print(f"estimate_date 값: {data.get('estimate_date')}")
+        
+        # CELL_MAP 디버깅
+        print(f"CELL_MAP 키 개수: {len(CELL_MAP)}")
+        print(f"CELL_MAP 키 목록: {list(CELL_MAP.keys())}")
+        print(f"'estimate_date' in CELL_MAP: {'estimate_date' in CELL_MAP}")
+        print(f"'estimate_number' in CELL_MAP: {'estimate_number' in CELL_MAP}")
+        
     file_id = data.get("fileId")
     
     # fileId가 없거나 템플릿 변수인 경우 새로운 템플릿 생성
@@ -989,14 +1154,61 @@ async def fill_estimate(request: Request):
 
     updates = []
 
-    # 일반 필드
-    for key in ["estimate_date", "estimate_number", "supplier_person", "supplier_contact", 
+        # 일반 필드 (estimate_date는 사용자 입력, estimate_number는 자동 생성)
+        for key in ["supplier_person", "supplier_contact", 
                 "receiver_company", "receiver_person", "receiver_contact", "delivery_date"]:
         if key in data:
             updates.append({
                 "range": CELL_MAP[key],
                 "values": [[data[key]]]
             })
+        
+        # estimate_date 처리 (사용자 입력값)
+        if "estimate_date" in data and data.get("estimate_date"):
+            if "estimate_date" in CELL_MAP:
+                updates.append({
+                    "range": CELL_MAP["estimate_date"],
+                    "values": [[data["estimate_date"]]]
+                })
+            else:
+                print(f"❌ CELL_MAP에 'estimate_date' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
+        else:
+            # estimate_date가 없으면 현재 날짜로 설정
+            from datetime import datetime
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            if "estimate_date" in CELL_MAP:
+                updates.append({
+                    "range": CELL_MAP["estimate_date"],
+                    "values": [[current_date]]
+                })
+                print(f"estimate_date가 없어서 현재 날짜로 설정: {current_date}")
+            else:
+                print(f"❌ CELL_MAP에 'estimate_date' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
+        
+        # estimate_number 자동 생성
+        from datetime import datetime
+        current_date_short = datetime.now().strftime("%y%m%d")
+        supplier_person = data.get("supplier_person", "UNKNOWN")
+        
+        # 담당자 ID 매핑
+        person_id_map = {
+            "이훈수": "1", "차재원": "2", "장진호": "3", 
+            "하철용": "4", "노재익": "5", "전준영": "6"
+        }
+        person_id = person_id_map.get(supplier_person, "0")
+        
+        # 오늘 발행 횟수 (현재 시간의 분으로 대체)
+        today_count = datetime.now().minute
+        
+        auto_estimate_number = f"DLP{current_date_short}-{person_id}-{today_count}"
+        if "estimate_number" in CELL_MAP:
+            updates.append({
+                "range": CELL_MAP["estimate_number"],
+                "values": [[auto_estimate_number]]
+            })
+            print(f"estimate_number 자동 생성: {auto_estimate_number}")
+        else:
+            print(f"❌ CELL_MAP에 'estimate_number' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
 
     # 제품 정보
     products = data.get("products", [])
@@ -1005,13 +1217,22 @@ async def fill_estimate(request: Request):
         for field in ["type", "name", "detail", "qty", "price", "total", "note"]:
             cell_key = f"products[{i}][{field}]"
             value = product.get(field, "")
+                if cell_key in CELL_MAP:
             updates.append({
                 "range": CELL_MAP[cell_key],
                 "values": [[value]]
             })
+                else:
+                    print(f"❌ CELL_MAP에 '{cell_key}' 키가 없습니다.")
 
     ws.batch_update(updates)
     return {"status": "success"}
+        
+    except Exception as e:
+        print(f"❌ fill_estimate 함수에서 오류 발생: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": f"견적서 생성 중 오류가 발생했습니다: {str(e)}"}
 
 @app.post("/collect-data")
 async def collect_data(request: Request):
@@ -1205,6 +1426,7 @@ async def test_copy():
         
         print(f"자격증명 타입: {type(creds)}")
         print(f"자격증명 만료 시간: {creds.expiry}")
+        print(f"Service Account 이메일: {getattr(creds, 'service_account_email', 'N/A')}")
         
         service = build("drive", "v3", credentials=creds)
         
@@ -1216,18 +1438,46 @@ async def test_copy():
         target_folder_id = ESTIMATE_FOLDER_ID
         print(f"대상 폴더 ID: {target_folder_id}")
         
-        # 파일 존재 여부 확인
+        # 파일 존재 여부 및 권한 확인
         try:
-            file_info = service.files().get(fileId=test_file_id).execute()
+            file_info = service.files().get(
+                fileId=test_file_id,
+                fields='id,name,parents,owners,permissions'
+            ).execute()
             print(f"✅ 소스 파일 존재 확인: {file_info.get('name', 'Unknown')}")
+            print(f"소스 파일 소유자: {[owner.get('emailAddress') for owner in file_info.get('owners', [])]}")
+            
+            # 파일 권한 확인
+            file_permissions = service.permissions().list(
+                fileId=test_file_id,
+                fields='permissions(id,emailAddress,role,type)'
+            ).execute()
+            print("소스 파일 권한:")
+            for perm in file_permissions.get('permissions', []):
+                print(f"  - {perm.get('emailAddress', 'N/A')}: {perm.get('role')} ({perm.get('type')})")
+                
         except Exception as e:
             print(f"❌ 소스 파일 접근 실패: {e}")
             return {"error": f"소스 파일 접근 실패: {str(e)}"}
         
-        # 폴더 존재 여부 확인
+        # 폴더 존재 여부 및 권한 확인
         try:
-            folder_info = service.files().get(fileId=target_folder_id).execute()
+            folder_info = service.files().get(
+                fileId=target_folder_id,
+                fields='id,name,owners,permissions'
+            ).execute()
             print(f"✅ 대상 폴더 존재 확인: {folder_info.get('name', 'Unknown')}")
+            print(f"대상 폴더 소유자: {[owner.get('emailAddress') for owner in folder_info.get('owners', [])]}")
+            
+            # 폴더 권한 확인
+            folder_permissions = service.permissions().list(
+                fileId=target_folder_id,
+                fields='permissions(id,emailAddress,role,type)'
+            ).execute()
+            print("대상 폴더 권한:")
+            for perm in folder_permissions.get('permissions', []):
+                print(f"  - {perm.get('emailAddress', 'N/A')}: {perm.get('role')} ({perm.get('type')})")
+                
         except Exception as e:
             print(f"❌ 대상 폴더 접근 실패: {e}")
             return {"error": f"대상 폴더 접근 실패: {str(e)}"}
@@ -1425,6 +1675,34 @@ async def debug_environment():
         return {
             "status": "error",
             "message": f"환경 변수 디버깅 실패: {str(e)}"
+        }
+
+@app.get("/setup-drive-permissions")
+async def setup_permissions():
+    """Google Drive 권한 설정 엔드포인트"""
+    return setup_drive_permissions()
+
+@app.get("/test-cell-map")
+async def test_cell_map():
+    """CELL_MAP 상태 확인용 엔드포인트"""
+    try:
+        return {
+            "status": "success",
+            "cell_map_keys": list(CELL_MAP.keys()),
+            "cell_map_count": len(CELL_MAP),
+            "estimate_date_exists": "estimate_date" in CELL_MAP,
+            "estimate_number_exists": "estimate_number" in CELL_MAP,
+            "sample_keys": {
+                "estimate_date": CELL_MAP.get("estimate_date", "NOT_FOUND"),
+                "estimate_number": CELL_MAP.get("estimate_number", "NOT_FOUND"),
+                "supplier_person": CELL_MAP.get("supplier_person", "NOT_FOUND")
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "cell_map_type": str(type(CELL_MAP))
         }
 
 if __name__ == "__main__":
