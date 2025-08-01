@@ -180,4 +180,4 @@ def get_pipedrive_config():
 
 def get_google_drive_folder_id():
     """환경변수에서 Google Drive 폴더 ID 읽기"""
-    return os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "1uMd2VH07SP1qNsrrwh8IUH4eQuQf6Z9X")
+    return os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "1uMd2VH07SP1qNsrrwh8IUH4eQuQf6Z9X") 
