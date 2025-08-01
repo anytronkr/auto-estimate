@@ -323,9 +323,8 @@ async def fill_estimate(request: Request):
             }
             person_id = person_id_map.get(supplier_person, "B")  # 기본값 B
             
-            # 오늘 발행 횟수 (실제 카운팅 - 임시로 1로 설정)
-            # TODO: 실제 PDF 생성 횟수 카운팅 구현 필요
-            today_count = 1
+            # 오늘 발행 횟수 (실제 PDF 생성 횟수 카운팅)
+            today_count = get_today_pdf_count()
             
             auto_estimate_number = f"DLP{current_date_short}-{person_id}-{today_count}"
             if "estimate_number" in CELL_MAP:
@@ -1120,6 +1119,36 @@ def upload_file_to_pipedrive_deal(deal_id, file_path, file_name):
     finally:
         if file_handle:
             file_handle.close()
+
+def get_today_pdf_count():
+    """오늘 PDF 생성 횟수를 가져오고 +1 증가시킵니다."""
+    try:
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+        
+        # pdf_count.json 파일 읽기
+        if os.path.exists("pdf_count.json"):
+            with open("pdf_count.json", "r", encoding="utf-8") as f:
+                count_data = json.load(f)
+        else:
+            count_data = {}
+        
+        # 오늘 카운트 가져오기 (없으면 0)
+        today_count = count_data.get(today, 0)
+        
+        # 카운트 +1 증가
+        count_data[today] = today_count + 1
+        
+        # 파일에 저장
+        with open("pdf_count.json", "w", encoding="utf-8") as f:
+            json.dump(count_data, f, ensure_ascii=False, indent=2)
+        
+        print(f"오늘 PDF 생성 횟수: {today_count + 1}")
+        return today_count + 1
+        
+    except Exception as e:
+        print(f"PDF 카운트 처리 오류: {e}")
+        return 1  # 오류 시 기본값 1
 
 @app.get("/test")
 async def test_endpoint():
