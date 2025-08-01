@@ -313,15 +313,16 @@ async def fill_estimate(request: Request):
             current_date_short = datetime.now().strftime("%y%m%d")
             supplier_person = data.get("supplier_person", "UNKNOWN")
             
-            # 담당자 ID 매핑
+            # 담당자 ID 매핑 (A, B, C, D, E, F) - 이미지 기준
             person_id_map = {
-                "이훈수": "1", "차재원": "2", "장진호": "3", 
-                "하철용": "4", "노재익": "5", "전준영": "6"
+                "이훈수": "A", "차재원": "B", "하철용": "C", 
+                "노재익": "D", "전준영": "E", "장진호": "F"
             }
-            person_id = person_id_map.get(supplier_person, "0")
+            person_id = person_id_map.get(supplier_person, "B")  # 기본값 B
             
-            # 오늘 발행 횟수 (현재 시간의 분으로 대체)
-            today_count = datetime.now().minute
+            # 오늘 발행 횟수 (실제 카운팅 - 임시로 1로 설정)
+            # TODO: 실제 PDF 생성 횟수 카운팅 구현 필요
+            today_count = 1
             
             auto_estimate_number = f"DLP{current_date_short}-{person_id}-{today_count}"
             if "estimate_number" in CELL_MAP:
