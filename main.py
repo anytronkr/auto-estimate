@@ -292,6 +292,9 @@ async def fill_estimate(request: Request):
         
         # estimate_number 처리 (사용자 입력값 우선, 없으면 자동 생성)
         estimate_number = data.get("estimate_number", "").strip()
+        print(f"DEBUG: 받은 estimate_number 데이터: '{estimate_number}'")
+        print(f"DEBUG: estimate_number 타입: {type(estimate_number)}")
+        print(f"DEBUG: estimate_number 길이: {len(estimate_number) if estimate_number else 0}")
         
         if estimate_number:
             # 사용자가 입력한 견적번호 사용
@@ -305,6 +308,7 @@ async def fill_estimate(request: Request):
                 print(f"❌ CELL_MAP에 'estimate_number' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
         else:
             # 견적번호가 없으면 자동 생성
+            print(f"DEBUG: estimate_number가 비어있어서 자동 생성합니다.")
             from datetime import datetime
             current_date_short = datetime.now().strftime("%y%m%d")
             supplier_person = data.get("supplier_person", "UNKNOWN")
