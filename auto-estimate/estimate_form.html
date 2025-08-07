@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>견적내용 입력</title>
+  <style>
+    body { background: #f8f8f8; }
+    .container { max-width:400px; margin:40px auto; font-family:'Pretendard',sans-serif; border-radius:24px; border:1px solid #eee; padding:24px; background:#fff; }
+    h2 { text-align:center; margin-bottom:24px; }
+    label { color:#1cc7b6; font-weight:bold; }
+    input, select { width:100%; padding:8px; margin-top:4px; border-radius:6px; border:1px solid #aaa; box-sizing:border-box; }
+    hr { margin:16px 0; }
+    .section-title { color:#1cc7b6; font-weight:bold; margin-bottom:8px; }
+    .product-set { border:1px solid #eee; padding:12px; margin-top:12px; border-radius:8px; position:relative; background:#fafafa; }
+    .product-set > div:first-child { font-weight:bold; margin-bottom:8px; }
+    .remove-btn { float:right; background:#eee; border:none; border-radius:4px; padding:2px 8px; cursor:pointer; }
+    .product-row { display:flex; gap:8px; margin-bottom:6px; }
+    .product-row input, .product-row select { flex:1; margin-top:0; }
+    .add-btn { margin-top:8px; background:#1cc7b6; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; }
+    .preview-btn { width:100%; margin-top:24px; background:#1cc7b6; color:#fff; border:none; padding:12px 0; border-radius:8px; font-size:1.1em; cursor:pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>견적내용 입력</h2>
+  <div style="margin-bottom:16px;">
+    <label>견적일자<span style="color:red">*</span></label>
+    <input type="date" id="date">
+  </div>
+  <div style="margin-bottom:16px;">
+    <label>견적번호<span style="color:red">*</span></label>
+    <input type="text" id="number" placeholder="예시) DLP_250707-1">
+  </div>
+  <hr>
+  <div style="margin-bottom:16px;">
+    <div class="section-title">공급자</div>
+    <div style="margin-bottom:4px;">공급자: <b>(주)바이텍테크놀로지</b></div>
+    <!-- 담당자 선택란 (너비 줄임) -->
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <label for="supplier-person" style="min-width:70px;">담당자</label>
+      <select id="supplier-person" required style="width:180px; margin-right:8px;">
+        <option value="" data-contact="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
+        <option value="애니트론사업부 이훈수 이사" data-contact="hslee@bitekps.com / 010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
+        <option value="애니트론사업부 차재원 차장" data-contact="cjw@bitekps.com / 010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
+        <option value="애니트론사업부 하철용 차장" data-contact="cyha@bitekps.com / 010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
+        <option value="애니트론사업부 노재익 차장" data-contact="jake@bitekps.com / 010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
+        <option value="애니트론사업부 전준영 과장" data-contact="methu@bitekps.com / 010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
+        <option value="애니트론사업부 장진호 대리" data-contact="jhjang@bitekps.com / 010-9999-4401" data-id="F">애니트론사업부 장진호 대리</option>
+      </select>
+      <!-- 담당자ID 표시란 -->
+      <input id="supplier-person-id" type="text" style="width:30px; text-align:center; background:#f0f0f0;" readonly placeholder="ID">
+    </div>
+
+    <!-- 연락처 자동 표시란 -->
+    <div style="margin-bottom:16px;">
+      <label for="supplier-contact">연락처</label>
+      <input id="supplier-contact" type="text" style="width:100%;" readonly>
+    </div>
+  </div>
+  <hr>
+  <div style="margin-bottom:16px;">
+    <div class="section-title">수신자</div>
+    <div style="margin-bottom:4px;">
+      회사명:<span style="color:red">*</span>
+      <input type="text" id="receiver-company" placeholder="회사명을 적어주세요" style="width:70%; display:inline-block;">
+    </div>
+    <div style="margin-bottom:4px;">
+      담당자:
+      <input type="text" id="receiver-person" placeholder="담당자명을 적어주세요" style="width:70%; display:inline-block;">
+    </div>
+    <div>
+      연락처:
+      <input type="text" id="receiver-contact" placeholder="이메일 or 전화번호" style="width:70%; display:inline-block;">
+    </div>
+  </div>
+  <!-- 견적제품 선택 드롭다운 추가 -->
+  <div style="margin-bottom:16px;">
+    <label for="product-category">견적제품 선택<span style="color:red">*</span></label>
+    <select id="product-category" required style="width:100%;">
+      <option value="">견적제품을 선택해주세요</option>
+      <option value="장비">장비</option>
+      <option value="소모품">소모품</option>
+      <option value="기타">기타</option>
+    </select>
+  </div>
+  <hr>
+  <div>
+    <div class="section-title">제품정보(8개까지 추가 가능)<span style="color:red">*</span></div>
+    <div id="products-area"></div>
+    <button type="button" id="add-product" class="add-btn">+제품추가</button>
+    <div style="margin-top:16px;">
+      <label>납기일<span style="color:red">*</span></label>
+      <input type="text" id="delivery-date" placeholder="납기일을 입력해 주세요" value="입금확인일로부터 2주 이내">
+    </div>
+  </div>
+  <button type="button" class="preview-btn" id="preview-btn">견적서 생성하기</button>
+</div>
+<script>
+// 1. 데이터 구조화
+const productData = {
+  "컬러라벨프린터": [
+    { name: "1040 4색", detail: "산업용 레이저 컬러라벨프린터 CMYK4색", price: 10000000 },
+    { name: "1050 5색", detail: "산업용 레이저 컬러라벨프린터 CMYKW 5색", price: 12000000 },
+    { name: "EPSON CW-C4040A(4인치)", detail: "4인치 잉크젯 컬러라벨프린터", price: 2990000 },
+    { name: "EPSON CW-C6040A(4인치)", detail: "4인치 고성능 잉크젯 컬러라벨프린터", price: 2000000 },
+    { name: "EPSON CW-C6540A(8인치)", detail: "8인치 고성능 잉크젯 컬러라벨프린터", price: 3000000 },
+    { name: "AT-1", detail: "디지털 레이저 낱장형 컬러라벨프린터", price: 9900000 }
+  ],
+  "디지털패키징장비": [
+    { name: "ANY-PACK", detail: "디지털 레이저 낱장형 풀컬러인쇄 패키징 프린터", price: 30000000 }
+  ],
+  "바코드라벨프린터": [
+    { name: "BT-200", detail: "열전사/감열방식 바코드라벨 프린터", price: 2500000 },
+    { name: "BT-100", detail: "열전사/감열방식 바코드라벨 프린터", price: 2000000 }
+  ],
+  "소모품-컬러라벨프린터": [
+    { name: "1040/1050 토너", detail: "CYAN 토너 카트리지(농도20% A6 기준 약 9,000~10,000매 사용)", price: 225000 },
+    { name: "1040/1050 토너", detail: "MAGANETA 토너 카트리지(농도20% A6 기준 약 9,000~10,000매 사용)", price: 225000 },
+    { name: "1040/1050 토너", detail: "YELLOW 토너 카트리지(농도20% A6 기준 약 9,000~10,000매 사용)", price: 225000 },
+    { name: "1040/1050 토너", detail: "K(BLACK) 토너 카트리지(농도20% A6 기준 약 9,000~10,000매 사용)", price: 225000 },
+    { name: "1040/1050 토너", detail: "WHITE 토너 카트리지", price: 300000 }
+  ]
+};
+
+// 소모품별 제품명 매핑 (이미지 표 기준)
+const consumableProducts = {
+  "1040 4색": [
+    "1040 CYAN TONER",
+    "1040 MAGENTA TONER",
+    "1040 YELLOW TONER",
+    "1040 K TONER",
+    "1040 Fuser(정착기)",
+    "1040 Belt(벨트)",
+    "1040 폐토너통"
+  ],
+  "1050 5색": [
+    "1050 CYAN TONER",
+    "1050 MAGENTA TONER",
+    "1050 YELLOW TONER",
+    "1050 K TONER",
+    "1050 WHITE TONER",
+    "1050 Fuser(정착기)",
+    "1050 Belt(벨트)",
+    "1050 폐토너통"
+  ]
+};
+const consumableModelList = ["1040 4색", "1050 5색"];
+
+// 소모품별 제품명, 상세정보, 단가 매핑 (이미지 표 기준)
+const consumableProductDetails = {
+  "1040 CYAN TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1040 MAGENTA TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1040 YELLOW TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1040 K TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1040 Fuser(정착기)": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1040 Belt(벨트)": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1040 폐토너통": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1050 CYAN TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1050 MAGENTA TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1050 YELLOW TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1050 K TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1050 WHITE TONER": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1050 Fuser(정착기)": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1050 Belt(벨트)": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 },
+  "1050 폐토너통": { detail: "농도20% A6 기준 약 9,000~10,000매 사용", price: 20000 }
+};
+
+let productCount = 0;
+const maxProducts = 8;
+
+function createProductSet(idx) {
+  // 구분 옵션 (직접 명시)
+  const typeOptions = [
+    '<option value="">구분(선택)</option>',
+    '<option value="컬러라벨프린터">컬러라벨프린터</option>',
+    '<option value="디지털패키징장비">디지털패키징장비</option>',
+    '<option value="바코드라벨프린터">바코드라벨프린터</option>',
+    '<option value="소모품">소모품</option>'
+  ].join('');
+  return `
+  <div class="product-set">
+    <div>제품 ${idx+1}
+      ${idx>0?'<button type="button" onclick="removeProduct(this)" class="remove-btn">삭제</button>':''}
+    </div>
+    <div class="product-row">
+      <select class="product-type">
+        ${typeOptions}
+      </select>
+      <!-- 소모품 모델 드롭다운 동적 생성 위치 -->
+      <select class="product-name">
+        <option value="">제품명</option>
+      </select>
+    </div>
+    <input class="product-detail" type="text" placeholder="제품상세정보">
+    <div class="product-row">
+      <input class="product-qty" type="number" min="1" placeholder="수량">
+      <input class="product-price" type="number" min="0" placeholder="공급단가(원)">
+    </div>
+    <input class="product-total" type="text" placeholder="합계(VAT별도가격)" readonly>
+    <input class="product-note" type="text" maxlength="20" placeholder="비고(20자까지 입력가능)">
+  </div>
+  `;
+}
+
+function updateProductNameOptions(typeSelect, nameSelect, consumableSelect) {
+  const type = typeSelect.value;
+  nameSelect.innerHTML = '<option value="">제품명</option>';
+
+  // 소모품일 때
+  if(type === "소모품") {
+    // 소모품 모델 드롭다운이 없으면 추가
+    if(!consumableSelect) {
+      consumableSelect = document.createElement('select');
+      consumableSelect.className = 'consumable-model';
+      consumableSelect.style.marginRight = '8px';
+      consumableSelect.innerHTML = '<option value="">소모품 모델 선택</option>' +
+        consumableModelList.map(m => `<option value="${m}">${m}</option>`).join('');
+      typeSelect.parentNode.insertBefore(consumableSelect, nameSelect);
+      consumableSelect.addEventListener('change', function() {
+        updateProductNameOptions(typeSelect, nameSelect, consumableSelect);
+      });
+    }
+    // 모델 선택 시 제품명 옵션 변경
+    const selectedModel = consumableSelect.value;
+    if(consumableProducts[selectedModel]) {
+      consumableProducts[selectedModel].forEach(name=>{
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        nameSelect.appendChild(opt);
+      });
+    }
+  } else {
+    // 소모품이 아니면 기존 방식
+    if(consumableSelect) consumableSelect.remove();
+    if(productData[type]) {
+      const names = [...new Set(productData[type].map(item=>item.name))];
+      names.forEach(name=>{
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        nameSelect.appendChild(opt);
+      });
+    }
+  }
+}
+
+function updateProductDetail(typeSelect, nameSelect, detailInput, priceInput) {
+  const type = typeSelect.value;
+  const name = nameSelect.value;
+  // 소모품일 때는 별도 처리
+  if(type === "소모품") {
+    if(consumableProductDetails[name]) {
+      detailInput.value = consumableProductDetails[name].detail;
+      priceInput.value = consumableProductDetails[name].price;
+    } else {
+      detailInput.value = '';
+      priceInput.value = '';
+    }
+    return;
+  }
+  if(productData[type]) {
+    const found = productData[type].find(item=>item.name===name);
+    if(found) {
+      detailInput.value = found.detail;
+      priceInput.value = found.price;
+    } else {
+      detailInput.value = '';
+      priceInput.value = '';
+    }
+  }
+}
+
+function updateProductTotal(qtyInput, priceInput, totalInput) {
+  const qty = Number(qtyInput.value);
+  const price = Number(priceInput.value);
+  if(qty && price) {
+    totalInput.value = (qty * price).toLocaleString();
+  } else {
+    totalInput.value = '';
+  }
+}
+
+function removeProduct(btn) {
+  btn.closest('.product-set').remove();
+  productCount--;
+  document.getElementById('add-product').disabled = false;
+  // 제품 번호 다시 매기기
+  document.querySelectorAll('.product-set').forEach((el, idx)=>{
+    el.querySelector('div').innerHTML = `제품 ${idx+1} ${idx>0?'<button type=\"button\" onclick=\"removeProduct(this)\" class=\"remove-btn\">삭제</button>':''}`;
+  });
+}
+
+function addProductSet() {
+  if(productCount >= maxProducts) return;
+  const area = document.getElementById('products-area');
+  area.insertAdjacentHTML('beforeend', createProductSet(productCount));
+  productCount++;
+  if(productCount >= maxProducts) {
+    document.getElementById('add-product').disabled = true;
+  }
+  // 이벤트 바인딩
+  const sets = area.querySelectorAll('.product-set');
+  const lastSet = sets[sets.length-1];
+  const typeSelect = lastSet.querySelector('.product-type');
+  const nameSelect = lastSet.querySelector('.product-name');
+  const detailInput = lastSet.querySelector('.product-detail');
+  const qtyInput = lastSet.querySelector('.product-qty');
+  const priceInput = lastSet.querySelector('.product-price');
+  const totalInput = lastSet.querySelector('.product-total');
+  const noteInput = lastSet.querySelector('.product-note');
+
+  // 소모품 모델 드롭다운 동적 처리
+  typeSelect.addEventListener('change', ()=>{
+    updateProductNameOptions(typeSelect, nameSelect, typeSelect.parentNode.querySelector('.consumable-model'));
+    detailInput.value = '';
+    priceInput.value = '';
+    nameSelect.value = '';
+  });
+  nameSelect.addEventListener('change', ()=>{
+    updateProductDetail(typeSelect, nameSelect, detailInput, priceInput);
+    updateProductTotal(qtyInput, priceInput, totalInput);
+  });
+  qtyInput.addEventListener('input', ()=>updateProductTotal(qtyInput, priceInput, totalInput));
+  priceInput.addEventListener('input', ()=>updateProductTotal(qtyInput, priceInput, totalInput));
+  noteInput.addEventListener('input', ()=>{ if(noteInput.value.length>20) noteInput.value=noteInput.value.slice(0,20); });
+}
+
+document.getElementById('add-product').addEventListener('click', addProductSet);
+addProductSet(); // 최초 1개 세트 표시
+
+// 담당자-연락처 매핑
+const supplierContacts = {
+  "이훈수": "hslee@bitekps.com / 010-3252-0593",
+  "차재원": "cjw@bitekps.com / 010-5035-7791",
+  "장진호": "jhjang@bitekps.com / 010-9999-4401",
+  "하철용": "cyha@bitekps.com / 010-6206-7656",
+  "노재익": "jake@bitekps.com / 010-6419-0945",
+  "전준영": "methu78@bitekps.com / 010-2866-4914"
+};
+
+document.getElementById('supplier-person').addEventListener('change', function() {
+  const selected = this.options[this.selectedIndex];
+  // 연락처 자동 표시
+  document.getElementById('supplier-contact').value = selected.getAttribute('data-contact') || '';
+  // 담당자ID 자동 표시
+  document.getElementById('supplier-person-id').value = selected.getAttribute('data-id') || '';
+});
+
+// 견적번호 자동생성 함수
+async function autoFillEstimateNumber() {
+  const dateVal = document.getElementById('date').value;
+  const supplierSelect = document.getElementById('supplier-person');
+  const supplierId = supplierSelect.options[supplierSelect.selectedIndex]?.getAttribute('data-id') || '';
+  if (!dateVal || !supplierId) return;
+
+  // 날짜 YYMMDD 변환
+  const yymmdd = dateVal.replace(/-/g, '').slice(2);
+
+  // 오늘 PDF생성횟수 가져오기 (임시로 +1, 실제는 서버에서 받아야 정확)
+  let count = 1;
+  try {
+    const res = await fetch('http://localhost:9000/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ check_only: true })
+    });
+    const result = await res.json();
+    if (result.pdf_count_today) count = result.pdf_count_today + 1;
+  } catch (e) {}
+
+  document.getElementById('number').value = `DLP${yymmdd}-${supplierId}-${count}`;
+}
+
+// 견적일자, 담당자 변경 시 자동생성
+document.getElementById('date').addEventListener('change', autoFillEstimateNumber);
+document.getElementById('supplier-person').addEventListener('change', autoFillEstimateNumber);
+
+function collectEstimateData() {
+  return {
+    estimate_date: document.getElementById('date').value,
+    estimate_number: document.getElementById('number').value,
+    supplier_person: document.getElementById('supplier-person').options[document.getElementById('supplier-person').selectedIndex].text,
+    supplier_contact: document.getElementById('supplier-contact').value,
+    receiver_company: document.getElementById('receiver-company').value,
+    receiver_person: document.getElementById('receiver-person').value,
+    receiver_contact: document.getElementById('receiver-contact').value,
+    delivery_date: document.getElementById('delivery-date').value,
+    products: Array.from(document.querySelectorAll('.product-set')).map(function(set) {
+      return {
+        type: set.querySelector('.product-type').value,
+        name: set.querySelector('.product-name').value,
+        detail: set.querySelector('.product-detail').value,
+        qty: Number(set.querySelector('.product-qty').value),
+        price: Number(set.querySelector('.product-price').value.replace(/,/g, "")),
+        total: Number(set.querySelector('.product-total').value.replace(/,/g, "")),
+        note: set.querySelector('.product-note').value
+      };
+    })
+  };
+}
+
+function validateEstimateForm() {
+  // 필수 입력값 체크
+  if (!document.getElementById('date').value) {
+    alert('견적일자를 입력해 주세요.');
+    return false;
+  }
+  if (!document.getElementById('number').value) {
+    alert('견적번호를 입력해 주세요.');
+    return false;
+  }
+  if (!document.getElementById('supplier-person').value) {
+    alert('공급자 담당자를 선택해 주세요.');
+    return false;
+  }
+  if (!document.getElementById('receiver-company').value) {
+    alert('수신자 회사명을 입력해 주세요.');
+    return false;
+  }
+  // 견적제품 선택 필수
+  if (!document.getElementById('product-category').value) {
+    alert('견적제품을 선택해 주세요.');
+    return false;
+  }
+  // 제품정보 필수값 체크 (비고 제외)
+  const sets = document.querySelectorAll('.product-set');
+  if (sets.length === 0) {
+    alert('제품정보를 1개 이상 입력해 주세요.');
+    return false;
+  }
+  for (let i = 0; i < sets.length; i++) {
+    const set = sets[i];
+    const type = set.querySelector('.product-type').value;
+    const name = set.querySelector('.product-name').value;
+    const detail = set.querySelector('.product-detail').value;
+    const qty = set.querySelector('.product-qty').value;
+    const price = set.querySelector('.product-price').value;
+    const total = set.querySelector('.product-total').value;
+    if (!type) {
+      alert(`제품 ${i+1}의 구분을 선택해 주세요.`);
+      return false;
+    }
+    if (!name) {
+      alert(`제품 ${i+1}의 제품명을 선택해 주세요.`);
+      return false;
+    }
+    if (!detail) {
+      alert(`제품 ${i+1}의 상세정보를 입력해 주세요.`);
+      return false;
+    }
+    if (!qty) {
+      alert(`제품 ${i+1}의 수량을 입력해 주세요.`);
+      return false;
+    }
+    if (!price) {
+      alert(`제품 ${i+1}의 공급단가를 입력해 주세요.`);
+      return false;
+    }
+    if (!total) {
+      alert(`제품 ${i+1}의 합계를 입력해 주세요.`);
+      return false;
+    }
+  }
+  // 납기일 필수
+  if (!document.getElementById('delivery-date').value) {
+    alert('납기일을 입력해 주세요.');
+    return false;
+  }
+  return true;
+}
+
+function sendEstimateToFastAPI() {
+  if (!validateEstimateForm()) return;
+  const data = collectEstimateData();
+  const fileId = new URLSearchParams(window.location.search).get("id");
+  data.fileId = fileId;
+
+  // 견적제품 선택 값 저장
+  const productCategory = document.getElementById('product-category').value;
+  localStorage.setItem('productCategory', productCategory);
+
+  fetch('http://localhost:9000/estimate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  .then(res => res.json())
+  .then(result => {
+    if(result.status === "success") {
+      alert('견적서가 성공적으로 생성되었습니다!');
+      // localStorage에 데이터 저장 후 미리보기로 이동
+      const dataToStore = JSON.stringify(data);
+      console.log('저장할 데이터:', dataToStore);
+      localStorage.setItem('estimateData', dataToStore);
+      console.log('localStorage 저장 완료');
+      window.location.href = `preview.html?id=${fileId}`;
+    } else {
+      alert('전송 실패! 다시 시도해 주세요.');
+    }
+  })
+  .catch(() => alert('전송 중 오류가 발생했습니다.'));
+}
+
+document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
+</script>
+</body>
+</html>

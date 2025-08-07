@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: auto-estimate
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: PORT
+        value: 10000
+      - key: TEMPLATE_SHEET_ID
+        value: 1Rf7dGonf0HgAfZ-XS3cW1Hp3V-NiOTWbt8m_qRtyzBY
+      - key: ESTIMATE_FOLDER_ID
+        value: 1WNknyHABe-co_ypAM0uGM_Z9z_62STeS
+      - key: DATA_COLLECTION_SHEET_ID
+        value: 1lanDTaqOzAXFQaZcqj91X6kknbpHXREH3bLQrTeVq6Q
+      - key: GOOGLE_DRIVE_FOLDER_ID
+        value: 1uMd2VH07SP1qNsrrwh8IUH4eQuQf6Z9X
+    healthCheckPath: /health
+    healthCheckTimeout: 300
+    autoDeploy: true 

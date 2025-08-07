@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>애니트론 견적서 생성</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            padding: 60px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(44, 62, 80, 0.3);
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+            line-height: 1.5;
+        }
+
+        .start-button {
+            background: linear-gradient(135deg, #16a085, #1abc9c);
+            color: white;
+            padding: 18px 40px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.3em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(22, 160, 133, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(22, 160, 133, 0.4);
+        }
+
+        .start-button:active {
+            transform: translateY(0);
+        }
+
+        .start-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .features {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .feature {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .quick-links {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .quick-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            color: #666;
+            text-decoration: none;
+            border-radius: 25px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .quick-link:hover {
+            background: #e9ecef;
+            color: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .link-icon {
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 40px 20px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .start-button {
+                padding: 15px 30px;
+                font-size: 1.1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <img src="https://yt3.googleusercontent.com/s7VsIPqvAChTQjSDxEphkx913wzI4BVTiS6ZOQPZbPpCClgrZQBb9YAS4yJFmfoMK2-vftRXfw=s160-c-k-c0x00ffffff-no-rj" alt="애니트론 로고">
+        </div>
+        <h1>애니트론 견적서 생성 시스템</h1>
+        <button id="startButton" class="start-button">
+            견적서 생성 시작
+        </button>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>견적서 생성 준비 중...</p>
+        </div>
+
+        <div class="quick-links">
+            <a href="https://drive.google.com/drive/folders/1aRR0m61B_a4B6ag76GrYt-8bdxiyYRC6?ths=true" target="_blank" class="quick-link">
+                <span class="link-icon">📁</span>
+                구글드라이브 바로가기
+            </a>
+            <a href="https://docs.google.com/spreadsheets/d/1lanDTaqOzAXFQaZcqj91X6kknbpHXREH3bLQrTeVq6Q/edit?gid=0#gid=0" target="_blank" class="quick-link">
+                <span class="link-icon">📊</span>
+                견적발행목록 바로가기
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('startButton').addEventListener('click', async function() {
+            const button = this;
+            const loading = document.getElementById('loading');
+
+            // 버튼 비활성화 및 로딩 표시
+            button.disabled = true;
+            button.textContent = '견적서 템플릿 생성 중...';
+            loading.style.display = 'block';
+
+            try {
+                console.log('=== 견적서 템플릿 생성 시작 ===');
+                
+                // 견적서 템플릿 생성 API 호출
+                const response = await fetch('/create-estimate-template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                console.log('API 응답 상태:', response.status);
+                const result = await response.json();
+                console.log('API 응답 결과:', result);
+                
+                if (result.status === 'success') {
+                    console.log('견적서 템플릿 생성 성공:', result.file_id);
+                    
+                    // fileId와 함께 estimate_form.html로 이동
+                    window.location.href = `/estimate_form.html?id=${result.file_id}`;
+                } else {
+                    console.error('견적서 템플릿 생성 실패:', result.message);
+                    alert('견적서 템플릿 생성에 실패했습니다: ' + result.message);
+                    
+                    // 실패 시 버튼 상태 복원
+                    button.disabled = false;
+                    button.textContent = '견적서 생성 시작';
+                    loading.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('견적서 템플릿 생성 중 오류:', error);
+                alert('견적서 템플릿 생성 중 오류가 발생했습니다.');
+                
+                // 오류 시 버튼 상태 복원
+                button.disabled = false;
+                button.textContent = '견적서 생성 시작';
+                loading.style.display = 'none';
+            }
+        });
+
+        // 페이지 로드 시 애니메이션
+        window.addEventListener('load', function() {
+            const container = document.querySelector('.container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                container.style.transition = 'all 0.6s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
+        });
+
+        // 서버 활성 상태 유지 (10분마다 ping)
+        function keepAlive() {
+            fetch('/ping')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Keep-alive ping:', data.pong);
+                })
+                .catch(error => {
+                    console.error('Keep-alive failed:', error);
+                });
+        }
+
+        // 페이지 로드 시 즉시 실행
+        keepAlive();
+
+        // 주기적으로 실행 (10분마다)
+        setInterval(keepAlive, 10 * 60 * 1000);
+    </script>
+</body>
+</html> 
