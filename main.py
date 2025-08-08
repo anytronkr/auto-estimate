@@ -260,8 +260,8 @@ async def fill_estimate(request: Request):
         updates = []
 
         # 일반 필드 (estimate_date는 사용자 입력, estimate_number는 자동 생성)
-        for key in ["supplier_person", "supplier_contact", 
-                    "receiver_company", "receiver_person", "receiver_contact", "delivery_date"]:
+        for key in ["supplier_person", "supplier_email", "supplier_phone", 
+                    "receiver_company", "receiver_person", "receiver_email", "receiver_phone", "delivery_date"]:
             if key in data:
                 print(f"DEBUG: {key} 처리 중 - 값: '{data[key]}', CELL_MAP 위치: '{CELL_MAP.get(key, 'NOT_FOUND')}'")
                 updates.append({
@@ -344,15 +344,12 @@ async def fill_estimate(request: Request):
                 cell_key = f"products[{i}][{field}]"
                 value = product.get(field, "")
                 
-                # 제품상세정보(detail) 필드의 경우 줄바꿈 처리 및 위아래 여백 추가
+                # 제품상세정보(detail) 필드의 경우 줄바꿈 처리
                 if field == "detail" and value:
                     # HTML의 <br> 태그를 줄바꿈으로 변환
                     value = value.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
                     # 연속된 줄바꿈을 하나로 정리
                     value = '\n'.join(line.strip() for line in value.split('\n') if line.strip())
-                    # 위아래 여백 추가 (빈 줄 추가)
-                    if value.strip():
-                        value = f"\n{value}\n"
                 
                 if cell_key in CELL_MAP:
                     updates.append({
@@ -378,40 +375,6 @@ async def fill_estimate(request: Request):
             print(f"✅ 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용 완료: {detail_cells}")
         except Exception as e:
             print(f"⚠️ 셀 포맷 적용 중 오류 (무시됨): {e}")
-        
-        # 페이지 나누기 및 레이아웃 최적화
-        try:
-            # 1. 명판/인감 영역 (B36:F37)을 하나의 셀로 병합하여 분할 방지
-            # 2. "본 견적서 기재물건의 주의사항을 숙지하고~" 섹션 앞에 빈 행 추가하여 여백 확보
-            
-            # 명판/인감 영역 병합
-            try:
-                # B36:F37 영역을 병합
-                ws.merge_cells('B36:F37')
-                print("✅ 명판/인감 영역 병합 완료 (B36:F37)")
-                
-                # 병합된 셀에 텍스트 정렬 설정
-                ws.format('B36', {
-                    "horizontalAlignment": "CENTER",
-                    "verticalAlignment": "MIDDLE",
-                    "wrapStrategy": "WRAP"
-                })
-                print("✅ 명판/인감 셀 포맷 설정 완료")
-                
-            except Exception as e:
-                print(f"⚠️ 명판/인감 영역 병합 중 오류 (무시됨): {e}")
-            
-            # "본 견적서 기재물건의 주의사항을 숙지하고~" 섹션 앞에 여백 추가
-            try:
-                # 행 32에 빈 행 삽입 (주의사항 섹션 앞)
-                ws.insert_row('', 32)
-                print("✅ 주의사항 섹션 앞 여백 추가 완료")
-                
-            except Exception as e:
-                print(f"⚠️ 여백 추가 중 오류 (무시됨): {e}")
-                
-        except Exception as e:
-            print(f"⚠️ 페이지 레이아웃 최적화 중 오류 (무시됨): {e}")
         
         return {"status": "success"}
         
@@ -589,28 +552,35 @@ async def collect_data(request: Request):
             except Exception as e:
                 print(f"Pipedrive 노트 추가 오류: {str(e)}")
         
-        # 한 행에 모든 데이터 배치
+        # 한 행에 모든 데이터 배치 (새로운 컬럼 매핑)
+        # 첫 번째 제품의 대분류 정보 추출
+        major_category = ""
+        if products and len(products) > 0:
+            major_category = products[0].get("major_category", "")
+        
         row_data = [
             data.get("estimate_date", ""),      # A: 견적일자
             data.get("estimate_number", ""),    # B: 견적번호
             data.get("supplier_person", ""),    # C: 견적담당자
             data.get("receiver_company", ""),   # D: 수신자-회사명
             data.get("receiver_person", ""),    # E: 수신자-담당자
-            data.get("receiver_contact", ""),   # F: 수신자-연락처
-            data.get("product_category", ""),   # G: 견적제품
-            product_names[0],                   # H: 제품1
-            product_names[1],                   # I: 제품2
-            product_names[2],                   # J: 제품3
-            product_names[3],                   # K: 제품4
-            product_names[4],                   # L: 제품5
-            product_names[5],                   # M: 제품6
-            product_names[6],                   # N: 제품7
-            product_names[7],                   # O: 제품8
-            final_total,                        # P: 최종견적(VAT포함)
-            data.get("delivery_date", ""),      # Q: 납기일
-            estimate_link,                      # R: 견적파일(엑셀)
-            pdf_link,                           # S: 견적파일(PDF)
-            pipedrive_deal_id                   # T: Pipedrive 거래 ID
+            data.get("receiver_email", ""),     # F: 수신자-이메일
+            data.get("receiver_phone", ""),     # G: 수신자-전화번호
+            data.get("product_category", ""),   # H: 견적제품
+            major_category,                     # I: 구분(대분류)
+            product_names[0],                   # J: 제품1제품명
+            product_names[1],                   # K: 제품2제품명
+            product_names[2],                   # L: 제품3제품명
+            product_names[3],                   # M: 제품4제품명
+            product_names[4],                   # N: 제품5제품명
+            product_names[5],                   # O: 제품6제품명
+            product_names[6],                   # P: 제품7제품명
+            product_names[7],                   # Q: 제품8제품명
+            final_total,                        # R: 최종견적(VAT포함)
+            data.get("delivery_date", ""),      # S: 납기일
+            estimate_link,                      # T: 견적파일(엑셀)
+            pdf_link,                           # U: 견적파일(PDF)
+            pipedrive_deal_id                   # V: Pipedrive 거래 ID
         ]
         ws.append_row(row_data)
         

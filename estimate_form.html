@@ -104,22 +104,28 @@
     <div style="display:flex; align-items:center; margin-bottom:16px;">
       <label for="supplier-person" style="min-width:70px;">담당자</label>
       <select id="supplier-person" required style="width:180px; margin-right:8px;">
-        <option value="" data-contact="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
-        <option value="애니트론사업부 이훈수 이사" data-contact="hslee@bitekps.com / 010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
-        <option value="애니트론사업부 차재원 차장" data-contact="cjw@bitekps.com / 010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
-        <option value="애니트론사업부 하철용 차장" data-contact="cyha@bitekps.com / 010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
-        <option value="애니트론사업부 노재익 차장" data-contact="jake@bitekps.com / 010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
-        <option value="애니트론사업부 전준영 과장" data-contact="methu@bitekps.com / 010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
-        <option value="애니트론사업부 장진호 대리" data-contact="jhjang@bitekps.com / 010-9999-4401" data-id="F">애니트론사업부 장진호 대리</option>
+        <option value="" data-email="" data-phone="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
+        <option value="애니트론사업부 이훈수 이사" data-email="hslee@bitekps.com" data-phone="010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
+        <option value="애니트론사업부 차재원 차장" data-email="cjw@bitekps.com" data-phone="010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
+        <option value="애니트론사업부 하철용 차장" data-email="cyha@bitekps.com" data-phone="010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
+        <option value="애니트론사업부 노재익 차장" data-email="jake@bitekps.com" data-phone="010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
+        <option value="애니트론사업부 전준영 과장" data-email="methu@bitekps.com" data-phone="010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
+        <option value="애니트론사업부 장진호 대리" data-email="jhjang@bitekps.com" data-phone="010-9999-4401" data-id="F">애니트론사업부 장진호 대리</option>
       </select>
       <!-- 담당자ID 표시란 -->
       <input id="supplier-person-id" type="text" style="width:30px; text-align:center; background:#f0f0f0;" readonly placeholder="ID">
     </div>
 
-    <!-- 연락처 자동 표시란 -->
+    <!-- 이메일 자동 표시란 -->
     <div style="margin-bottom:16px;">
-      <label for="supplier-contact">연락처</label>
-      <input id="supplier-contact" type="text" style="width:100%;" readonly>
+      <label for="supplier-email">이메일</label>
+      <input id="supplier-email" type="email" style="width:100%;" readonly>
+    </div>
+
+    <!-- 전화번호 자동 표시란 -->
+    <div style="margin-bottom:16px;">
+      <label for="supplier-phone">전화번호</label>
+      <input id="supplier-phone" type="tel" style="width:100%;" readonly>
     </div>
   </div>
   <hr>
@@ -133,9 +139,13 @@
       담당자:
       <input type="text" id="receiver-person" placeholder="담당자명을 적어주세요" style="width:70%; display:inline-block;">
     </div>
+    <div style="margin-bottom:4px;">
+      이메일:
+      <input type="text" id="receiver-email" placeholder="이메일을 입력해주세요" style="width:70%; display:inline-block;">
+    </div>
     <div>
-      연락처:
-      <input type="text" id="receiver-contact" placeholder="이메일 or 전화번호" style="width:70%; display:inline-block;">
+      전화번호:
+      <input type="text" id="receiver-phone" placeholder="전화번호를 입력해주세요" style="width:70%; display:inline-block;">
     </div>
   </div>
   <!-- 견적제품 선택 드롭다운 추가 -->
@@ -686,7 +696,8 @@ const supplierContacts = {
 document.getElementById('supplier-person').addEventListener('change', function() {
   const selected = this.options[this.selectedIndex];
   // 연락처 자동 표시
-  document.getElementById('supplier-contact').value = selected.getAttribute('data-contact') || '';
+  document.getElementById('supplier-email').value = selected.getAttribute('data-email') || '';
+  document.getElementById('supplier-phone').value = selected.getAttribute('data-phone') || '';
   // 담당자ID 자동 표시
   document.getElementById('supplier-person-id').value = selected.getAttribute('data-id') || '';
 });
@@ -726,10 +737,13 @@ function collectEstimateData() {
     estimate_date: document.getElementById('date').value,
     estimate_number: document.getElementById('number').value,
     supplier_person: document.getElementById('supplier-person').options[document.getElementById('supplier-person').selectedIndex].text,
-    supplier_contact: document.getElementById('supplier-contact').value,
+    supplier_email: document.getElementById('supplier-email').value,
+    supplier_phone: document.getElementById('supplier-phone').value,
     receiver_company: document.getElementById('receiver-company').value,
     receiver_person: document.getElementById('receiver-person').value,
-    receiver_contact: document.getElementById('receiver-contact').value,
+    receiver_email: document.getElementById('receiver-email').value,
+    receiver_phone: document.getElementById('receiver-phone').value,
+    product_category: document.getElementById('product-category').value,
     delivery_date: document.getElementById('delivery-date').value,
     fileId: fileId, // fileId 추가
     products: Array.from(document.querySelectorAll('.product-set')).map(function(set) {
