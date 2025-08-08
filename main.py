@@ -344,12 +344,15 @@ async def fill_estimate(request: Request):
                 cell_key = f"products[{i}][{field}]"
                 value = product.get(field, "")
                 
-                # 제품상세정보(detail) 필드의 경우 줄바꿈 처리
+                # 제품상세정보(detail) 필드의 경우 줄바꿈 처리 및 위아래 여백 추가
                 if field == "detail" and value:
                     # HTML의 <br> 태그를 줄바꿈으로 변환
                     value = value.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
                     # 연속된 줄바꿈을 하나로 정리
                     value = '\n'.join(line.strip() for line in value.split('\n') if line.strip())
+                    # 위아래 여백 추가 (빈 줄 추가)
+                    if value.strip():
+                        value = f"\n{value}\n"
                 
                 if cell_key in CELL_MAP:
                     updates.append({
