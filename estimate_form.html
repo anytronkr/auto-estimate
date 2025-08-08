@@ -9,7 +9,7 @@
     .container { max-width:400px; margin:40px auto; font-family:'Pretendard',sans-serif; border-radius:24px; border:1px solid #eee; padding:24px; background:#fff; }
     h2 { text-align:center; margin-bottom:24px; }
     label { color:#1cc7b6; font-weight:bold; }
-    input, select { width:100%; padding:8px; margin-top:4px; border-radius:6px; border:1px solid #aaa; box-sizing:border-box; }
+    input, select, textarea { width:100%; padding:8px; margin-top:4px; border-radius:6px; border:1px solid #aaa; box-sizing:border-box; }
     hr { margin:16px 0; }
     .section-title { color:#1cc7b6; font-weight:bold; margin-bottom:8px; }
     .product-set { border:1px solid #eee; padding:12px; margin-top:12px; border-radius:8px; position:relative; background:#fafafa; }
@@ -373,7 +373,7 @@ function createProductSet(idx) {
         <option value="">제품명</option>
       </select>
     </div>
-    <input class="product-detail" type="text" placeholder="제품상세정보">
+    <textarea class="product-detail" placeholder="제품상세정보" rows="4" style="resize: vertical; font-family: inherit; font-size: inherit;"></textarea>
     <div class="product-row">
       <input class="product-qty" type="number" min="1" placeholder="수량">
       <select class="product-price-select" style="display:none;">
