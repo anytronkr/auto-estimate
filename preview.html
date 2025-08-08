@@ -193,8 +193,12 @@ letter-spacing: -1px;
 <div class="value-box" id="supplier-person"></div>
 </div>
 <div class="row-flex">
-<label>연락처</label>
-<div class="value-box" id="supplier-contact"></div>
+<label>이메일</label>
+<div class="value-box" id="supplier-email"></div>
+</div>
+<div class="row-flex">
+<label>전화번호</label>
+<div class="value-box" id="supplier-phone"></div>
 </div>
 <div class="section-title">수신자</div>
 <div class="row-flex">
@@ -206,8 +210,12 @@ letter-spacing: -1px;
 <div class="value-box" id="receiver-person"></div>
 </div>
 <div class="row-flex">
-<label>연락처</label>
-<div class="value-box" id="receiver-contact"></div>
+<label>이메일</label>
+<div class="value-box" id="receiver-email"></div>
+</div>
+<div class="row-flex">
+<label>전화번호</label>
+<div class="value-box" id="receiver-phone"></div>
 </div>
 <div class="section-title">제품정보</div>
 <div class="product-table-wrap">
@@ -262,10 +270,12 @@ if (!estimateData) {
     document.getElementById('estimate-number').textContent = data.estimate_number || '';
     document.getElementById('supplier-company').textContent = "(주)바이텍테크놀로지";
     document.getElementById('supplier-person').textContent = (data.supplier_person || '').replace('하철웅', '하철용');
-    document.getElementById('supplier-contact').textContent = data.supplier_contact || '';
+    document.getElementById('supplier-email').textContent = data.supplier_email || '';
+    document.getElementById('supplier-phone').textContent = data.supplier_phone || '';
     document.getElementById('receiver-company').textContent = data.receiver_company || '';
     document.getElementById('receiver-person').textContent = data.receiver_person || '';
-    document.getElementById('receiver-contact').textContent = data.receiver_contact || '';
+    document.getElementById('receiver-email').textContent = data.receiver_email || '';
+    document.getElementById('receiver-phone').textContent = data.receiver_phone || '';
     document.getElementById('delivery-date').textContent = data.delivery_date || '';
     
     // 제품정보 테이블 생성

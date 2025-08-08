@@ -263,11 +263,14 @@ async def fill_estimate(request: Request):
         for key in ["supplier_person", "supplier_email", "supplier_phone", 
                     "receiver_company", "receiver_person", "receiver_email", "receiver_phone", "delivery_date"]:
             if key in data:
-                print(f"DEBUG: {key} 처리 중 - 값: '{data[key]}', CELL_MAP 위치: '{CELL_MAP.get(key, 'NOT_FOUND')}'")
-                updates.append({
-                    "range": CELL_MAP[key],
-                    "values": [[data[key]]]
-                })
+                if key in CELL_MAP:
+                    print(f"DEBUG: {key} 처리 중 - 값: '{data[key]}', CELL_MAP 위치: '{CELL_MAP.get(key, 'NOT_FOUND')}'")
+                    updates.append({
+                        "range": CELL_MAP[key],
+                        "values": [[data[key]]]
+                    })
+                else:
+                    print(f"❌ CELL_MAP에 '{key}' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
             else:
                 print(f"DEBUG: {key}가 데이터에 없습니다.")
         

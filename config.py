@@ -7,10 +7,12 @@ CELL_MAP = {
     "estimate_date": "F5",           # 견적일자
     "estimate_number": "F6",         # 견적번호
     "supplier_person": "B11",        # 공급자-담당자
-    "supplier_contact": "B12",       # 공급자-연락처
+    "supplier_email": "B12",         # 공급자-이메일
+    "supplier_phone": "B13",         # 공급자-전화번호
     "receiver_company": "D10",       # 수신자-회사명
     "receiver_person": "E11",        # 수신자-담당자
-    "receiver_contact": "E12",       # 수신자-연락처
+    "receiver_email": "E12",         # 수신자-이메일
+    "receiver_phone": "E13",         # 수신자-전화번호
     
     # 제품1 (A15-G15)
     "products[0][type]": "A15",      # 구분
