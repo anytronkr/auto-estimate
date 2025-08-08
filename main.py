@@ -343,6 +343,14 @@ async def fill_estimate(request: Request):
             for field in ["type", "name", "detail", "qty", "price", "total", "note"]:
                 cell_key = f"products[{i}][{field}]"
                 value = product.get(field, "")
+                
+                # 제품상세정보(detail) 필드의 경우 줄바꿈 처리
+                if field == "detail" and value:
+                    # HTML의 <br> 태그를 줄바꿈으로 변환
+                    value = value.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
+                    # 연속된 줄바꿈을 하나로 정리
+                    value = '\n'.join(line.strip() for line in value.split('\n') if line.strip())
+                
                 if cell_key in CELL_MAP:
                     updates.append({
                         "range": CELL_MAP[cell_key],
@@ -356,6 +364,18 @@ async def fill_estimate(request: Request):
             print(f"DEBUG: 업데이트 {i+1}: {update['range']} = {update['values']}")
         
         ws.batch_update(updates)
+        
+        # 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용
+        try:
+            detail_cells = [CELL_MAP[f"products[{i}][detail]"] for i in range(8)]
+            for cell in detail_cells:
+                ws.format(cell, {
+                    "wrapStrategy": "WRAP"
+                })
+            print(f"✅ 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용 완료: {detail_cells}")
+        except Exception as e:
+            print(f"⚠️ 셀 포맷 적용 중 오류 (무시됨): {e}")
+        
         return {"status": "success"}
         
     except Exception as e:
