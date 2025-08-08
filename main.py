@@ -379,6 +379,40 @@ async def fill_estimate(request: Request):
         except Exception as e:
             print(f"⚠️ 셀 포맷 적용 중 오류 (무시됨): {e}")
         
+        # 페이지 나누기 및 레이아웃 최적화
+        try:
+            # 1. 명판/인감 영역 (B36:F37)을 하나의 셀로 병합하여 분할 방지
+            # 2. "본 견적서 기재물건의 주의사항을 숙지하고~" 섹션 앞에 빈 행 추가하여 여백 확보
+            
+            # 명판/인감 영역 병합
+            try:
+                # B36:F37 영역을 병합
+                ws.merge_cells('B36:F37')
+                print("✅ 명판/인감 영역 병합 완료 (B36:F37)")
+                
+                # 병합된 셀에 텍스트 정렬 설정
+                ws.format('B36', {
+                    "horizontalAlignment": "CENTER",
+                    "verticalAlignment": "MIDDLE",
+                    "wrapStrategy": "WRAP"
+                })
+                print("✅ 명판/인감 셀 포맷 설정 완료")
+                
+            except Exception as e:
+                print(f"⚠️ 명판/인감 영역 병합 중 오류 (무시됨): {e}")
+            
+            # "본 견적서 기재물건의 주의사항을 숙지하고~" 섹션 앞에 여백 추가
+            try:
+                # 행 32에 빈 행 삽입 (주의사항 섹션 앞)
+                ws.insert_row('', 32)
+                print("✅ 주의사항 섹션 앞 여백 추가 완료")
+                
+            except Exception as e:
+                print(f"⚠️ 여백 추가 중 오류 (무시됨): {e}")
+                
+        except Exception as e:
+            print(f"⚠️ 페이지 레이아웃 최적화 중 오류 (무시됨): {e}")
+        
         return {"status": "success"}
         
     except Exception as e:

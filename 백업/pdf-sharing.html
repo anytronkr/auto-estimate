@@ -190,107 +190,30 @@
       }
     }
 
-    // 공유 버튼 (PDF 파일을 실제 파일로 공유)
-    async function sharePDF() {
+    // 공유 버튼 (PDF 파일 직접 공유)
+    function sharePDF() {
       if (!pdfId) {
         alert('PDF 파일을 찾을 수 없습니다.');
         return;
       }
 
-      try {
-        // PDF 파일을 Blob으로 다운로드
-        const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${pdfId}`;
-        
-        // 로딩 메시지 표시
-        const shareBtn = document.querySelector('button[onclick="sharePDF()"]');
-        const originalText = shareBtn.innerHTML;
-        shareBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PDF 준비 중...';
-        shareBtn.disabled = true;
-        
-        const response = await fetch(directDownloadUrl);
-        const pdfBlob = await response.blob();
-        
-        // PDF 파일 객체 생성
-        const pdfFile = new File([pdfBlob], '견적서.pdf', { type: 'application/pdf' });
-        
-        // 버튼 상태 복원
-        shareBtn.innerHTML = originalText;
-        shareBtn.disabled = false;
-        
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-          // 모바일에서 파일 공유 API 사용 (실제 파일 첨부)
-          await navigator.share({
-            title: '견적서 PDF',
-            text: '견적서 PDF 파일을 확인해보세요.',
-            files: [pdfFile]
-          });
-        } else if (navigator.share) {
-          // 파일 공유는 지원하지 않지만 일반 공유는 가능한 경우
-          await navigator.share({
-            title: '견적서 PDF',
-            text: '견적서 PDF 파일을 확인해보세요.',
-            url: directDownloadUrl
-          });
-        } else {
-          // 공유 API를 지원하지 않는 경우 - 메일 앱으로 직접 연결
-          shareViaEmail();
-        }
-      } catch (error) {
-        console.log('파일 공유 실패:', error);
-        // 실패 시 기존 방식으로 fallback
-        const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${pdfId}`;
+      // 구글 드라이브 직접 다운로드 링크 생성
+      const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${pdfId}`;
+      
+      if (navigator.share) {
+        // 모바일 공유 API 사용
+        navigator.share({
+          title: '견적서 PDF',
+          text: '견적서 PDF 파일을 확인해보세요.',
+          url: directDownloadUrl
+        }).catch((error) => {
+          console.log('공유 실패:', error);
+          // 공유 실패 시 다운로드 링크 복사
+          copyToClipboard(directDownloadUrl);
+        });
+      } else {
+        // 데스크톱에서는 다운로드 링크 복사
         copyToClipboard(directDownloadUrl);
-        
-        // 버튼 상태 복원
-        const shareBtn = document.querySelector('button[onclick="sharePDF()"]');
-        shareBtn.innerHTML = 'PDF 공유하기';
-        shareBtn.disabled = false;
-      }
-    }
-
-    // 이메일로 PDF 공유 (첨부파일 포함)
-    async function shareViaEmail() {
-      if (!pdfId) {
-        alert('PDF 파일을 찾을 수 없습니다.');
-        return;
-      }
-
-      try {
-        // PDF 파일을 Base64로 변환하여 data URI 생성
-        const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${pdfId}`;
-        const response = await fetch(directDownloadUrl);
-        const pdfBlob = await response.blob();
-        
-        // Blob을 Base64로 변환
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const base64Data = e.target.result;
-          
-          // 이메일 앱으로 연결 (모바일에서 Gmail/메일 앱이 열림)
-          const subject = encodeURIComponent('견적서 PDF');
-          const body = encodeURIComponent('견적서 PDF 파일을 첨부합니다.\n\n첨부파일을 확인해 주세요.');
-          
-          // 모바일에서는 이 링크가 기본 메일 앱을 열어줍니다
-          const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
-          window.location.href = mailtoLink;
-          
-          // 추가로 다운로드도 실행하여 사용자가 수동으로 첨부할 수 있게 함
-          setTimeout(() => {
-            const downloadLink = document.createElement('a');
-            downloadLink.href = directDownloadUrl;
-            downloadLink.download = '견적서.pdf';
-            downloadLink.click();
-          }, 1000);
-        };
-        reader.readAsDataURL(pdfBlob);
-        
-      } catch (error) {
-        console.log('이메일 공유 실패:', error);
-        // 실패 시 단순 mailto 링크
-        const subject = encodeURIComponent('견적서 PDF');
-        const body = encodeURIComponent(`견적서 PDF 파일을 확인해보세요.\n\n다운로드 링크: https://drive.google.com/uc?export=download&id=${pdfId}`);
-        const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
-        window.location.href = mailtoLink;
       }
     }
 
