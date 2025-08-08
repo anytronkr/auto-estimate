@@ -14,78 +14,78 @@ CELL_MAP = {
     "receiver_email": "E12",         # 수신자-이메일
     "receiver_phone": "E13",         # 수신자-전화번호
     
-    # 제품1 (A15-G15)
-    "products[0][type]": "A15",      # 구분
-    "products[0][name]": "B15",      # 제품명
-    "products[0][detail]": "C15",    # 상세정보
-    "products[0][qty]": "D15",       # 수량
-    "products[0][price]": "E15",     # 단가
-    "products[0][total]": "F15",     # 합계
-    "products[0][note]": "G15",      # 비고
+    # 제품1 (A16-G16)
+    "products[0][type]": "A16",      # 구분
+    "products[0][name]": "B16",      # 제품명
+    "products[0][detail]": "C16",    # 상세정보
+    "products[0][qty]": "D16",       # 수량
+    "products[0][price]": "E16",     # 단가
+    "products[0][total]": "F16",     # 합계
+    "products[0][note]": "G16",      # 비고
     
-    # 제품2 (A16-G16)
-    "products[1][type]": "A16",      # 구분
-    "products[1][name]": "B16",      # 제품명
-    "products[1][detail]": "C16",    # 상세정보
-    "products[1][qty]": "D16",       # 수량
-    "products[1][price]": "E16",     # 단가
-    "products[1][total]": "F16",     # 합계
-    "products[1][note]": "G16",      # 비고
+    # 제품2 (A17-G17)
+    "products[1][type]": "A17",      # 구분
+    "products[1][name]": "B17",      # 제품명
+    "products[1][detail]": "C17",    # 상세정보
+    "products[1][qty]": "D17",       # 수량
+    "products[1][price]": "E17",     # 단가
+    "products[1][total]": "F17",     # 합계
+    "products[1][note]": "G17",      # 비고
     
-    # 제품3 (A17-G17)
-    "products[2][type]": "A17",      # 구분
-    "products[2][name]": "B17",      # 제품명
-    "products[2][detail]": "C17",    # 상세정보
-    "products[2][qty]": "D17",       # 수량
-    "products[2][price]": "E17",     # 단가
-    "products[2][total]": "F17",     # 합계
-    "products[2][note]": "G17",      # 비고
+    # 제품3 (A18-G18)
+    "products[2][type]": "A18",      # 구분
+    "products[2][name]": "B18",      # 제품명
+    "products[2][detail]": "C18",    # 상세정보
+    "products[2][qty]": "D18",       # 수량
+    "products[2][price]": "E18",     # 단가
+    "products[2][total]": "F18",     # 합계
+    "products[2][note]": "G18",      # 비고
     
-    # 제품4 (A18-G18)
-    "products[3][type]": "A18",      # 구분
-    "products[3][name]": "B18",      # 제품명
-    "products[3][detail]": "C18",    # 상세정보
-    "products[3][qty]": "D18",       # 수량
-    "products[3][price]": "E18",     # 단가
-    "products[3][total]": "F18",     # 합계
-    "products[3][note]": "G18",      # 비고
+    # 제품4 (A19-G19)
+    "products[3][type]": "A19",      # 구분
+    "products[3][name]": "B19",      # 제품명
+    "products[3][detail]": "C19",    # 상세정보
+    "products[3][qty]": "D19",       # 수량
+    "products[3][price]": "E19",     # 단가
+    "products[3][total]": "F19",     # 합계
+    "products[3][note]": "G19",      # 비고
     
-    # 제품5 (A19-G19)
-    "products[4][type]": "A19",      # 구분
-    "products[4][name]": "B19",      # 제품명
-    "products[4][detail]": "C19",    # 상세정보
-    "products[4][qty]": "D19",       # 수량
-    "products[4][price]": "E19",     # 단가
-    "products[4][total]": "F19",     # 합계
-    "products[4][note]": "G19",      # 비고
+    # 제품5 (A20-G20)
+    "products[4][type]": "A20",      # 구분
+    "products[4][name]": "B20",      # 제품명
+    "products[4][detail]": "C20",    # 상세정보
+    "products[4][qty]": "D20",       # 수량
+    "products[4][price]": "E20",     # 단가
+    "products[4][total]": "F20",     # 합계
+    "products[4][note]": "G20",      # 비고
     
-    # 제품6 (A20-G20)
-    "products[5][type]": "A20",      # 구분
-    "products[5][name]": "B20",      # 제품명
-    "products[5][detail]": "C20",    # 상세정보
-    "products[5][qty]": "D20",       # 수량
-    "products[5][price]": "E20",     # 단가
-    "products[5][total]": "F20",     # 합계
-    "products[5][note]": "G20",      # 비고
+    # 제품6 (A21-G21)
+    "products[5][type]": "A21",      # 구분
+    "products[5][name]": "B21",      # 제품명
+    "products[5][detail]": "C21",    # 상세정보
+    "products[5][qty]": "D21",       # 수량
+    "products[5][price]": "E21",     # 단가
+    "products[5][total]": "F21",     # 합계
+    "products[5][note]": "G21",      # 비고
     
-    # 제품7 (A21-G21)
-    "products[6][type]": "A21",      # 구분
-    "products[6][name]": "B21",      # 제품명
-    "products[6][detail]": "C21",    # 상세정보
-    "products[6][qty]": "D21",       # 수량
-    "products[6][price]": "E21",     # 단가
-    "products[6][total]": "F21",     # 합계
-    "products[6][note]": "G21",      # 비고
+    # 제품7 (A22-G22)
+    "products[6][type]": "A22",      # 구분
+    "products[6][name]": "B22",      # 제품명
+    "products[6][detail]": "C22",    # 상세정보
+    "products[6][qty]": "D22",       # 수량
+    "products[6][price]": "E22",     # 단가
+    "products[6][total]": "F22",     # 합계
+    "products[6][note]": "G22",      # 비고
     
-    # 제품8 (A22-G22) - 마지막 제품은 납기일로 사용
-    "products[7][type]": "A22",      # 구분
-    "products[7][name]": "B22",      # 제품명
-    "products[7][detail]": "C22",    # 상세정보
-    "products[7][qty]": "D22",       # 수량
-    "products[7][price]": "E22",     # 단가
-    "products[7][total]": "F22",     # 합계
-    "products[7][note]": "G22",      # 비고
-    "delivery_date": "B30",          # 납기일 (올바른 위치)
+    # 제품8 (A23-G23)
+    "products[7][type]": "A23",      # 구분
+    "products[7][name]": "B23",      # 제품명
+    "products[7][detail]": "C23",    # 상세정보
+    "products[7][qty]": "D23",       # 수량
+    "products[7][price]": "E23",     # 단가
+    "products[7][total]": "F23",     # 합계
+    "products[7][note]": "G23",      # 비고
+    "delivery_date": "B31",          # 납기일 (B30 → B31로 변경)
     
     # 기존 호환성을 위한 별칭
     "company_name": "F5",
@@ -93,7 +93,7 @@ CELL_MAP = {
     "contact_email": "B11",
     "contact_phone": "B12",
     "project_name": "D10",
-    "total_amount": "F22"
+    "total_amount": "F23"
 }
 
 # API 설정
