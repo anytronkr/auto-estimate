@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>견적내용 입력</title>
+  <style>
+    body { background: #f8f8f8; }
+    .container { max-width:400px; margin:40px auto; font-family:'Pretendard',sans-serif; border-radius:24px; border:1px solid #eee; padding:24px; background:#fff; }
+    h2 { text-align:center; margin-bottom:24px; }
+    label { color:#1cc7b6; font-weight:bold; }
+    input, select { width:100%; padding:8px; margin-top:4px; border-radius:6px; border:1px solid #aaa; box-sizing:border-box; }
+    hr { margin:16px 0; }
+    .section-title { color:#1cc7b6; font-weight:bold; margin-bottom:8px; }
+    .product-set { border:1px solid #eee; padding:12px; margin-top:12px; border-radius:8px; position:relative; background:#fafafa; }
+    .product-set > div:first-child { font-weight:bold; margin-bottom:8px; }
+    .remove-btn { float:right; background:#eee; border:none; border-radius:4px; padding:2px 8px; cursor:pointer; }
+    .product-row { display:flex; gap:8px; margin-bottom:6px; }
+    .product-row input, .product-row select { flex:1; margin-top:0; }
+    .add-btn { margin-top:8px; background:#1cc7b6; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; }
+    .preview-btn { width:100%; margin-top:24px; background:#1cc7b6; color:#fff; border:none; padding:12px 0; border-radius:8px; font-size:1.1em; cursor:pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    
+    /* 로딩 애니메이션 스타일 */
+    .loading {
+      position: relative;
+      background: #1cc7b6 !important;
+      color: transparent !important;
+      pointer-events: none;
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(28, 199, 182, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      margin: -12px 0 0 -12px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      z-index: 10;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 버튼 비활성화 상태 */
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    /* 처음화면으로 버튼 스타일 */
+    .home-button {
+      width: 100%;
+      margin-top: 12px;
+      background: #f8f9fa;
+      color: #6c757d;
+      border: 2px solid #dee2e6;
+      padding: 10px 0;
+      border-radius: 8px;
+      font-size: 0.95em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      text-align: center;
+      display: block;
+    }
+    
+    .home-button:hover {
+      background: #e9ecef;
+      color: #495057;
+      border-color: #adb5bd;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>견적내용 입력</h2>
+  <div style="margin-bottom:16px;">
+    <label>견적일자<span style="color:red">*</span></label>
+    <input type="date" id="date">
+  </div>
+  <div style="margin-bottom:16px;">
+    <label>견적번호<span style="color:red">*</span></label>
+    <input type="text" id="number" placeholder="예시) DLP_250707-1">
+  </div>
+  <hr>
+  <div style="margin-bottom:16px;">
+    <div class="section-title">공급자</div>
+    <div style="margin-bottom:4px;">공급자: <b>(주)바이텍테크놀로지</b></div>
+    <!-- 담당자 선택란 (너비 줄임) -->
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <label for="supplier-person" style="min-width:70px;">담당자</label>
+      <select id="supplier-person" required style="width:180px; margin-right:8px;">
+        <option value="" data-contact="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
+        <option value="애니트론사업부 이훈수 이사" data-contact="hslee@bitekps.com / 010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
+        <option value="애니트론사업부 차재원 차장" data-contact="cjw@bitekps.com / 010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
+        <option value="애니트론사업부 하철용 차장" data-contact="cyha@bitekps.com / 010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
+        <option value="애니트론사업부 노재익 차장" data-contact="jake@bitekps.com / 010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
+        <option value="애니트론사업부 전준영 과장" data-contact="methu@bitekps.com / 010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
+        <option value="애니트론사업부 장진호 대리" data-contact="jhjang@bitekps.com / 010-9999-4401" data-id="F">애니트론사업부 장진호 대리</option>
+      </select>
+      <!-- 담당자ID 표시란 -->
+      <input id="supplier-person-id" type="text" style="width:30px; text-align:center; background:#f0f0f0;" readonly placeholder="ID">
+    </div>
+
+    <!-- 연락처 자동 표시란 -->
+    <div style="margin-bottom:16px;">
+      <label for="supplier-contact">연락처</label>
+      <input id="supplier-contact" type="text" style="width:100%;" readonly>
+    </div>
+  </div>
+  <hr>
+  <div style="margin-bottom:16px;">
+    <div class="section-title">수신자</div>
+    <div style="margin-bottom:4px;">
+      회사명:<span style="color:red">*</span>
+      <input type="text" id="receiver-company" placeholder="회사명을 적어주세요" style="width:70%; display:inline-block;">
+    </div>
+    <div style="margin-bottom:4px;">
+      담당자:
+      <input type="text" id="receiver-person" placeholder="담당자명을 적어주세요" style="width:70%; display:inline-block;">
+    </div>
+    <div>
+      연락처:
+      <input type="text" id="receiver-contact" placeholder="이메일 or 전화번호" style="width:70%; display:inline-block;">
+    </div>
+  </div>
+  <!-- 견적제품 선택 드롭다운 추가 -->
+  <div style="margin-bottom:16px;">
+    <label for="product-category">견적제품 선택<span style="color:red">*</span></label>
+    <select id="product-category" required style="width:100%;">
+      <option value="">견적제품을 선택해주세요</option>
+      <option value="장비">장비</option>
+      <option value="소모품">소모품</option>
+      <option value="기타">기타</option>
+    </select>
+  </div>
+  <hr>
+  <div>
+    <div class="section-title">제품정보(8개까지 추가 가능)<span style="color:red">*</span></div>
+    <div id="products-area"></div>
+    <button type="button" id="add-product" class="add-btn">+제품추가</button>
+    <div style="margin-top:16px;">
+      <label>납기일<span style="color:red">*</span></label>
+      <input type="text" id="delivery-date" placeholder="납기일을 입력해 주세요" value="입금확인일로부터 2주 이내">
+    </div>
+  </div>
+  <button type="button" class="preview-btn" id="preview-btn">견적서 생성하기</button>
+  
+  <!-- 처음화면으로 버튼 -->
+  <a href="/" class="home-button">처음화면으로</a>
+</div>
+<script>
+// 1. 새로운 제품 분류 구조 (CSV 기반)
+const majorCategories = {
+  "애니트론": [
+    "컬러라벨프린터",
+    "컬러 파우치&라벨 프린터\n(낱장 공급 방식)",
+    "옵션 (ANY-002)",
+    "옵션 (PRO10)",
+    "소모품"
+  ],
+  "RFID": [
+    "RFID 프린터",
+    "RFID  핸드 헬드 리더기",
+    "고정형 안테나",
+    "RFID 패키지",
+    "RFID 프로그램",
+    "RFID 소모품"
+  ]
+};
+
+// 2. 소모품 선택 시 옵션들
+const consumableOptions = {
+  "ANY-002": "ANY-002",
+  "1040 4색 ": "1040 4색",
+  "1050 5색": "1050 5색",
+  "EPSON CW-C4040A": "EPSON CW-C4040A",
+  "EPSON CW-C6040A": "EPSON CW-C6040A",
+  "EPSON CW-C6540A": "EPSON CW-C6540A",
+  "ANYPACK": "ANYPACK",
+  "라벨 소모품": "라벨 소모품",
+  "AT-2": "AT-2"
+};
+
+// 3. 제품 데이터 (CSV 기반)
+const productData = {
+  // 애니트론 - 옵션 (ANY-002)
+  "옵션 (ANY-002)": [
+    { name: "ANY-002 장비테이블", detail: "ANY-002 전용 테이블 / 600x1800 , 전용테이블", price: "무상제공" },
+    { name: "리와인더", detail: "8인치 전용 리와인더", price: "1000000" },
+    { name: "출력 S/W", detail: "ANY-002 전용 출력 변환 프로그램 (bitek label s/w)", price: "1000000" }
+  ],
+  // 애니트론 - 옵션 (PRO10)
+  "옵션 (PRO10)": [
+    { name: "리와인더 (5인치)", detail: "출력된 라벨 용지를 롤로 감아주는 기능", price: "500000" },
+    { name: "라벨 출력 S./W", detail: "라벨 출력 편집 프로그램 / 가변 데이터 / 넘버링 기능 등", price: "700000" }
+  ],
+  // 애니트론 - 컬러라벨프린터
+  "컬러라벨프린터": [
+    { name: "ANY-002", detail: "- 프린터 속도 : 34/36 PPM (분당 약 9.3m)\n - 연속 용지 프린터 속도 : 20/16/8 PPM (분당 6 m)\n - 용지무게 : 64~250gsm\n - 첫장출력속도 : 35초 , 예열시간 : 9초\n - 해상도 : 600 x 1200DPI\n - 용지크기 : min 65mm / max 215mm \n - 연속용지 : 8.5 iinch (215mm)\n - 기본메모리 : 256MB\n - HDD : 256MB\n-  지원미디어 : Art paper , PET , PP 지원\n- 토너용량(5% coverage,) : 모노 11,000매(3,300 meter)\n      (A4 기준)         컬러 11,500매(3,450 meter)\n - 이미지드럼 : 28,000매\n - 이송벨트 : 60,000매\n - 정착기 : 60,000매\n - 사용전력 : 220v\n - 센서모듈 : Gap 센싱모드(라벨 사이간격 3mm 필수)\n - 인터페이스 : 고속USB/유선LAN\n - OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)\n  \n 최초 설치 시 토너, 드럼등 소모품은 장착되어 납품 됩니다.", price: "20000000" },
+    { name: "PRO 1040 4색 ", detail: "연속 용지 프린터 속도 : 최대 9M/분당, 기본 5M/분당\n\n- 해상도 : 1200 x 1200 dpi\n- 색상 : CMYK (4색모델)\n- 용지폭 : 25.4mm~130mm\n- 용지길이 : 12.7mm~1320.8mm\n- 인쇄 폭 : 최대 125mm\n- 인쇄 최소여백 : 상하좌우 각 2.12mm\n- 커팅 가능 용지길이 : 최소 101.6mm\n- 롤직경 : 최대 203.2mm(8인치)\n- 미디어두께 : 0.076mm~0.250mm\n- 센서모듈 : Gap 센싱모드(라벨 사이간격 3mm 필수)\n- 인터페이스 : 고속USB/유선LAN\n- OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)", price: "10980000" },
+    { name: "PRO 1050 5색", detail: "연속 용지 프린터 속도 : 최대 9M/분당, 기본 5M/분당\n\n- 해상도 : 1200 x 1200 dpi\n- 색상 : CMYK+W (5색모델)\n- 용지폭 : 25.4mm~130mm\n- 용지길이 : 12.7mm~1320.8mm\n- 인쇄 폭 : 최대 125mm\n- 인쇄 최소여백 : 상하좌우 각 2.12mm\n- 커팅 가능 용지길이 : 최소 101.6mm\n- 롤직경 : 최대 203.2mm(8인치)\n- 미디어두께 : 0.076mm~0.250mm\n- 센서모듈 : Gap 센싱모드(라벨 사이간격 3mm 필수)\n- 인터페이스 : 고속USB/유선LAN\n- OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)", price: "14540000" },
+    { name: "EPSON CW-C4040A", detail: "고품질 고속인쇄(8인치목 출력가능 라벨 프린터)\n\n- 해상도 : 1200 x 1200 dpi- 색상 : CMYK 4색\n- 용지폭 : 21.4mm~104mm\n- 자동노즐검사기능 , 선명한 바코드 인쇄\n- 미디어두께 : 0.076mm~0.250mm\n- 인터페이스 : 고속USB/유선LAN\n- OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)\n(본 제품의 초기에는 C,M,Y 잉크만 동봉되어 있습니다.)\n\n이벤트 증정 : C,M,Y,K 잉크 한세트 무상증정", price: "2500000" },
+    { name: "EPSON CW-C6040A", detail: "고품질 고속인쇄(4인치폭 출력가능 라벨 프린터)\n\n- 해상도 : 1200 x 1200 dpi- 색상 : CMYK 4색\n- 용지폭 : 21.4mm~112mm\n- 인쇄가능폭 : 101.6mm\n- 자동노즐검사기능 , 선명한 바코드 인쇄\n- 미디어두께 : 0.076mm~0.250mm\n- 인터페이스 : 고속USB/유선LAN\n- OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)\n(본 제품의 초기에는 C,M,Y 잉크만 동봉되어 있습니다.)\n- 크기 : 340x565x325mm\n- 무게 :약 22.5kg\n\n이벤트 증정 : C,M,Y,K 잉크 한세트 무상증정", price: "2900000" },
+    { name: "EPSON CW-C6540A", detail: "고품질 고속인쇄(8인치폭 출력가능 라벨 프린터)\n\n- 해상도 : 1200 x 1200 dpi- 색상 : CMYK 4색\n- 용지폭 : 21.4mm~215.9mm\n- 인쇄가능폭 : 210mm\n- 자동노즐검사기능 , 선명한 바코드 인쇄\n- 미디어두께 : 0.076mm~0.250mm\n- 인터페이스 : 고속USB/유선LAN\n- OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)\n(본 제품의 초기에는 C,M,Y 잉크만 동봉되어 있습니다.)\n- 크기 : 444 x 515 x 326mm\n- 무게 :약 25.5kg\n\n이벤트 증정 : C,M,Y,K 잉크 한세트 무상증정", price: "3800000" },
+    { name: "AT-1(낱장방식 프린터)", detail: "컬러&흑백 출력이 가능한 LED LASER PRINTER\n\n- 해상도 : 1200 x 1200 dpi- 색상 : CMYK 4색\n- 용지폭 : 55mm~216mm , 길이 91~1320mm\n- 인쇄속도 : 최대속도 1.5초당 1매\n- 용지두께: 52~320gsm\n- 기본메모리 : 1GB\n- 인터페이스 : 고속USB/유선LAN\n- OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)\n- 크기 : 290x395x430mm (프린터 only)\n (초기 제품에는 C,M,Y,K 토너가 장착되어져 있습니다.)\n (라벨지 100매 서비스 제공 및 출력가이드 제공)", price: "900000" }
+  ],
+  // 애니트론 - 컬러 파우치&라벨 프린터
+  "컬러 파우치&라벨 프린터\n(낱장 공급 방식)": [
+    { name: "ANYPACK \n(C942DN)", detail: "컬러&흑백 출력이 가능한 LED LASER PRINTER\n\n- 해상도 : 1200 x 1200 dpi\n- 색상 : CMYK + W (5색)\n- 용지폭 : 89mm~320mm , 길이 98~1200mm\n- 인쇄속도 : A4 50ppm / A3 28PPM (사무용지 기준)\n- 용지두께: 52~320gsm , MP TRAY : 52~360gsm\n- 기본메모리 : 2GB\n- 인터페이스 : 고속USB/유선LAN\n- OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)\n- 크기 :  625(L) x 699(W) x 640(H)mm , 116kg (소모품 포함)\n (초기 제품에는 토너가 장착되어져 있습니다.)", price: "11000000" },
+    { name: "AT-2", detail: "컬러&흑백 출력이 가능한 LED LASER PRINTER\n\n- 해상도 : 1200 x 2400 dpi\n- 색상 : CMYK 4색\n- 용지폭 : 89mm~320mm , 길이 98~1200mm\n- 인쇄속도 : 최대속도 분당 55매(최고속도 기준)\n- 용지두께: 52~300gsm\n- 기본메모리 : 4GB\n- 인터페이스 : 고속USB/유선LAN\n- OS 호환 : Windows 7, 8, 8.1,10,11(32&64bit)\n- 크기 : 620x720.5x699.1mm (프린터 only)\n (초기 제품에는 C,M,Y,K 토너가 장착되어져 있습니다.)", price: "4500000" }
+  ],
+  // RFID - 핸드 헬드 리더기
+  "RFID  핸드 헬드 리더기": [
+    { name: "AT-907", detail: "PDA 타입 일체형 핸드헬드 리더기\nRFID : UHF\n안드로이드 타입", price: "1400000" },
+    { name: "M3 ORANGE PLUS RFID GUN(43211710-22738770)", detail: "CPU : Cortex-A8 833MHz\t\t\t\nOS : Window Mobile 6.5\t\t\t\n메모리 : ROM 256MB, RAM 1GB\t\t\t\nDisplay : 3.5\"\" Color TFT LCD\t\t\t\n바코드 스캐너 : 1D 기본, 2D 옵션\t\t\t\n배터리 : Li-Ion 3,300mAh\t\t\t\nRFID : Gen-2, ISO 18000-6C\t\t\t", price: "2300000,1900000" }
+  ],
+  // RFID - 프린터
+  "RFID 프린터": [
+    { name: "Blackfish BT-200(43212116-25231260)", detail: "해상도 : 300DPI (1mm : 12dot)\t\t\n메모리 : Flash 256MB, SDRAM 512MB\t\t\n라벨폭 : 25mm ~ 118mm\t\t\t\n인쇄폭 : 25mm ~ 104mm\t\t\t\n인터페이스 : USB2.0 / RS-232-/TCP/IP\t\n출력방식 : 열전사 / 감열방식\t\t\nRFID : Gen-2, ISO 18000-6C\t\t\nLCD : COLOR TFT LCD\t\t\t\n크기 : 512 mm (L) x 291 mm (H) x 274 mm (W)\n중량 : 15 Kg\t\t\t\nRFID 프린터 무상 유지보수 1년 연장\n제조사 : ㈜바이텍테크놀로지", price: "3200000,2500000" },
+    { name: "Blackfish BT-100(43212116-23491762)", detail: "해상도 : 300DPI (1mm : 12dot)\t\t\t\n메모리 : Flash 128MB, SDRAM 32MB\t\t\t\n라벨폭 : 25mm ~ 118mm\t\t\t\n인쇄폭 : 25mm ~ 105mm\t\t\t\n인터페이스 : USB\t\t\t\n출력방식 : 열전사 / 감열방식\t\t\t\nRFID : Gen-2, ISO 18000-6C\t\t\t\nLCD :3.2인치 컬러 터치 스크린\t\t\t\n       Auto Calibration Switch\t\t\t\n크기 : 468mm(L) x 308mm(H) x 270mm(W)\t\t\t\n중량 : 13.6 Kg\t\t\t\nRFID 프린터 무상 유지보수 2년 연장\t\t\t", price: "3200000,2500000" },
+    { name: "BT-002 pro\t", detail: "해상도 : 300DPI (1mm : 12dot)\t\t\n메모리 : Flash 8MB, SDRAM 16MB\t\t\n라벨폭 : 25mm ~ 118mm\t\t\t\n인쇄폭 : 25mm ~ 104mm\t\t\t\n인터페이스 : USB2.0 / RS-232-/TCP/IP\t\n출력방식 : 열전사 / 감열방식\t\t\nRFID : Gen-2, ISO 18000-6C\t\t\nLCD : COLOR TFT LCD\t\t\t\n크기 : 512 mm (L) x 291 mm (H) x 274 mm (W)\n중량 : 15 Kg\t\t\t\n제 제조사 : ㈜바이텍테크놀로지", price: "3200000,2500000" },
+    { name: "BT-003 Pro", detail: "해상도 : 300DPI (1mm : 12dot)\t\t\n메모리 : Flash 8MB, SDRAM 32MB\t\t\n라벨폭 : 25mm ~ 118mm\t\t\t\n인쇄폭 : 25mm ~ 104mm\t\t\t\n인터페이스 : USB2.0 / RS-232-C\t\n출력방식 : 열전사 / 감열방식\t\t\nRFID : ISO/IEC 14443/A _ ISO/IEC 15693\t\nRFID주파수 : HF대역 / 13.56MHz\n크기 : 540 mm (L) x 287 mm (H) x 268 mm (W)\n중량 : 15 Kg\t\t\t\n제조사 : ㈜바이텍테크놀로지", price: "4500000,3500000" }
+  ],
+  // RFID - 고정형 안테나
+  "고정형 안테나": [
+    { name: " IDRO260-919", detail: "모델명 : IDRO260-919\n타 입 : Circular ANT\n중심 주파수 : 920 MHz\n케이블 6M 포함", price: "200000" }
+  ],
+  // RFID - 프로그램
+  "RFID 프로그램": [
+    { name: "ANY-IMS", detail: "RFID 입출고 , 재고관리 솔루션 프로그램", price: "9000000" }
+  ],
+  // RFID - 패키지
+  "RFID 패키지": [
+    { name: "ANY-Finder Plus", detail: "RFID  프린터 / RFID 프린터 전용 프로그램 / \nRFID 일체형 핸드 리더기 / 리더기 전용 프로그램", price: "6600000" },
+    { name: "Any-Finder", detail: "RFID 일체형 핸드 리더기 / 전용 앱 프로그램", price: "2900000" },
+    { name: "Any-Gate", detail: "고정식 리더기/ 안테나/ 터치 모니터/ 미니 PC/ 입출고 관리 프로그램", price: "13500000" }
+  ],
+  // RFID - 소모품
+  "RFID 소모품": [
+    { name: "조달태그(2500매/롤)", detail: "조달태그, 94x24, 2500매/롤", price: "575000,375000" },
+    { name: "차폐재_소프트타입(100개/박스)", detail: "차폐재, 95x25x3, 소프트타입, 100개/박스", price: "100000,50000" },
+    { name: "열전사리본(왁스레진 300미터)", detail: "열전사리본, 왁스레진, 110x300m", price: "43000,30000" },
+    { name: "렛치형태그(개)", detail: "레치 및 케이블타이, 개(200개/묶음)", price: "60000,30000" },
+    { name: "무지태그(2500매/롤)", detail: "무지태그, 94 x 24 , 2500매/롤", price: "325000" },
+    { name: "삼성중공업 제작태그", detail: "100 x 35  NFC  전용 태그", price: "" },
+    { name: "분당서울대병원 제작태그", detail: "RFID 라벨", price: "300" },
+    { name: "LG화학 전용 태그", detail: "100 x 60", price: "" }
+  ]
+};
+
+// 4. 소모품 데이터 (CSV 기반)
+const consumableData = {
+  "ANY-002": [
+    { name: "K TONER", detail: "농도 5% A4 기준 약 11,000매 사용", price: "100000" },
+    { name: "CYAN TONER", detail: "농도 5% A4 기준 약 11,000매 사용", price: "125000" },
+    { name: "MAGENTA TONER", detail: "농도 5% A4 기준 약 11,000매 사용", price: "125000" },
+    { name: " YELLOW TONER", detail: "농도 5% A4 기준 약 11,000매 사용", price: "125000" },
+    { name: "K DRUM", detail: "A4 기준 28,000매 사용", price: "100000" },
+    { name: "CYAN DRUM", detail: "A4 기준 28,000매 사용", price: "100000" },
+    { name: "MAGENTA DRUM", detail: "A4 기준 28,000매 사용", price: "100000" },
+    { name: " YELLOW DRUM", detail: "A4 기준 28,000매 사용", price: "100000" },
+    { name: "Fuser ", detail: "A4 기준 60,000매 사용", price: "270000" },
+    { name: "벨트", detail: "A4 기준 60,000매 사용", price: "270000" }
+  ],
+  "1040 4색 ": [
+    { name: "1040 CYAN TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "225000" },
+    { name: "1040 MAGENTA TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "225000" },
+    { name: "1040 YELLOW TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "225000" },
+    { name: "1040 K TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "225000" },
+    { name: "1040 Fuser(정착기)", detail: "A6 100x150 기준 150,000매 사용", price: "495000" },
+    { name: "1040 Belt(벨트)", detail: "A6 100x150 기준 150,000매 사용", price: "295000" },
+    { name: "1040 폐토너통", detail: "A6 100x150 기준 25,000매 사용", price: "45000" }
+  ],
+  "1050 5색": [
+    { name: "1050 CYAN TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "225000" },
+    { name: "1050 MAGENTA TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "225000" },
+    { name: "1050 YELLOW TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "225000" },
+    { name: "1050 K TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "225000" },
+    { name: "1050 WHITE TONER", detail: "(100x150 기준 약 15,000~20,000매 출력가능 농도5% 기준)", price: "295000" },
+    { name: "1050 Fuser(정착기)", detail: "A6 100x150 기준 150,000매 사용", price: "495000" },
+    { name: "1050 Belt(벨트)", detail: "A6 100x150 기준 150,000매 사용", price: "295000" },
+    { name: "1050 폐토너통", detail: "A6 100x150 기준 25,000매 사용", price: "45000" }
+  ],
+  "EPSON CW-C4040A": [
+    { name: "C ink", detail: "라벨 사이즈 100x100 기준 약 1,500장 출력 가능 (농도5% 기준)", price: "58000" },
+    { name: "M ink", detail: "라벨 사이즈 100x100 기준 약 1,500장 출력 가능 (농도5% 기준)", price: "58000" },
+    { name: "Y ink", detail: "라벨 사이즈 100x100 기준 약 1,500장 출력 가능 (농도5% 기준)", price: "58000" },
+    { name: "K ink", detail: "라벨 사이즈 100x100 기준 약 1,500장 출력 가능 (농도5% 기준)", price: "58000" }
+  ],
+  "EPSON CW-C6040A": [
+    { name: "C ink", detail: "라벨 사이즈 100x100 기준 약 3,000장 출력 가능 (농도5% 기준)", price: "65000" },
+    { name: "M ink", detail: "라벨 사이즈 100x100 기준 약 3,000장 출력 가능 (농도5% 기준)", price: "65000" },
+    { name: "Y ink", detail: "라벨 사이즈 100x100 기준 약 3,000장 출력 가능 (농도5% 기준)", price: "65000" },
+    { name: "K ink", detail: "라벨 사이즈 100x100 기준 약 3,000장 출력 가능 (농도5% 기준)", price: "65000" }
+  ],
+  "EPSON CW-C6540A": [
+    { name: "C ink", detail: "라벨 사이즈 100x100 기준 약 3,000장 출력 가능 (농도5% 기준)", price: "65000" },
+    { name: "M ink", detail: "라벨 사이즈 100x100 기준 약 3,000장 출력 가능 (농도5% 기준)", price: "65000" },
+    { name: "Y ink", detail: "라벨 사이즈 100x100 기준 약 3,000장 출력 가능 (농도5% 기준)", price: "65000" },
+    { name: "K ink", detail: "라벨 사이즈 100x100 기준 약 3,000장 출력 가능 (농도5% 기준)", price: "65000" }
+  ],
+  "ANYPACK": [
+    { name: "K TONER", detail: "A4 38,000장 출력가능 (농도 5% 기준)", price: "150000" },
+    { name: "CYAN TONER", detail: "A4 38,000장 출력가능 (농도 5% 기준)", price: "172000" },
+    { name: "MAGENTA TONER", detail: "A4 38,000장 출력가능 (농도 5% 기준)", price: "172000" },
+    { name: " YELLOW TONER", detail: "A4 38,000장 출력가능 (농도 5% 기준)", price: "172000" },
+    { name: "WHITE TONER", detail: "A4 38,000장 출력가능 (농도 5% 기준)", price: "264000" },
+    { name: "K DRUM", detail: "A4 기준 40,000장 출력가능", price: "194000" },
+    { name: "CYAN DRUM", detail: "A4 기준 40,000장 출력가능", price: "194000" },
+    { name: "MAGENTA DRUM", detail: "A4 기준 40,000장 출력가능", price: "194000" },
+    { name: " YELLOW DRUM", detail: "A4 기준 40,000장 출력가능", price: "194000" },
+    { name: "WHITE DRUM", detail: "A4 기준 40,000장 출력가능", price: "210000" },
+    { name: "FUSER ", detail: "A4 기준 150,000매 출력가능", price: "430000" },
+    { name: "BELT", detail: "A4 기준 150,000매 출력가능", price: "360000" }
+  ],
+  "라벨 소모품": [
+    { name: "아트지", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" },
+    { name: "유포지", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" },
+    { name: "은무 PET", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" },
+    { name: "투명 PET", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" }
+  ],
+  "AT-2": [
+    { name: "K TONER", detail: "A4 26,000장 출력가능 (농도 5% 기준)", price: "150000" },
+    { name: "CYAN TONER", detail: "A4 25,000장 출력가능 (농도 5% 기준)", price: "230000" },
+    { name: "MAGENTA TONER", detail: "A4 25,000장 출력가능 (농도 5% 기준)", price: "230000" },
+    { name: " YELLOW TONER", detail: "A4 25,000장 출력가능 (농도 5% 기준)", price: "230000" },
+    { name: "FUSER ", detail: "", price: "595000" },
+    { name: "BELT", detail: "", price: "" }
+  ]
+};
+
+let productCount = 0;
+const maxProducts = 8;
+
+function createProductSet(idx) {
+  // 대분류 옵션
+  const majorOptions = [
+    '<option value="">대분류</option>',
+    '<option value="애니트론">애니트론</option>',
+    '<option value="RFID">RFID</option>'
+  ].join('');
+  
+  return `
+  <div class="product-set">
+    <div>제품 ${idx+1}
+      ${idx>0?'<button type="button" onclick="removeProduct(this)" class="remove-btn">삭제</button>':''}
+    </div>
+    <div class="product-row">
+      <select class="product-major-category">
+        ${majorOptions}
+      </select>
+      <select class="product-type">
+        <option value="">구분(선택)</option>
+      </select>
+    </div>
+    <div class="product-row">
+      <select class="product-name">
+        <option value="">제품명</option>
+      </select>
+    </div>
+    <input class="product-detail" type="text" placeholder="제품상세정보">
+    <div class="product-row">
+      <input class="product-qty" type="number" min="1" placeholder="수량">
+      <select class="product-price-select" style="display:none;">
+        <option value="">가격 선택</option>
+      </select>
+      <input class="product-price" type="number" min="0" placeholder="공급단가(원)">
+    </div>
+    <input class="product-total" type="text" placeholder="합계(VAT별도가격)" readonly>
+    <input class="product-note" type="text" maxlength="20" placeholder="비고(20자까지 입력가능)">
+  </div>
+  `;
+}
+
+// 대분류 변경 시 구분 옵션 업데이트
+function updateProductTypeOptions(majorSelect, typeSelect) {
+  const major = majorSelect.value;
+  typeSelect.innerHTML = '<option value="">구분(선택)</option>';
+  
+  if(majorCategories[major]) {
+    majorCategories[major].forEach(type => {
+      const opt = document.createElement('option');
+      opt.value = type;
+      opt.textContent = type;
+      typeSelect.appendChild(opt);
+    });
+  }
+}
+
+// 구분 변경 시 제품명 옵션 업데이트
+function updateProductNameOptions(typeSelect, nameSelect, consumableSelect) {
+  const type = typeSelect.value;
+  nameSelect.innerHTML = '<option value="">제품명</option>';
+
+  console.log("=== updateProductNameOptions 디버깅 ===");
+  console.log("선택된 구분:", type);
+
+  // 기존 소모품 선택 드롭다운 찾기
+  const existingConsumableSelect = typeSelect.parentNode.querySelector('.consumable-option');
+
+  // 소모품일 때
+  if(type === "소모품") {
+    console.log("소모품 선택됨 - 소모품 선택 시 드롭다운 생성");
+    // 소모품 선택 드롭다운이 없으면 추가
+    if(!existingConsumableSelect) {
+      const newConsumableSelect = document.createElement('select');
+      newConsumableSelect.className = 'consumable-option';
+      newConsumableSelect.style.marginRight = '8px';
+      newConsumableSelect.innerHTML = '<option value="">장비 선택</option>' +
+        Object.keys(consumableOptions).map(key => `<option value="${key}">${consumableOptions[key]}</option>`).join('');
+      typeSelect.insertAdjacentElement('afterend', newConsumableSelect);
+      newConsumableSelect.addEventListener('change', function() {
+        updateProductNameOptions(typeSelect, nameSelect, newConsumableSelect);
+      });
+      consumableSelect = newConsumableSelect;
+    } else {
+      consumableSelect = existingConsumableSelect;
+      existingConsumableSelect.style.display = 'block';
+    }
+    // 소모품 선택 시 제품명 옵션 변경
+    const selectedConsumable = consumableSelect.value;
+    console.log("선택된 소모품 모델:", selectedConsumable);
+    if(consumableData[selectedConsumable]) {
+      console.log("해당 모델의 소모품 목록:", consumableData[selectedConsumable]);
+      consumableData[selectedConsumable].forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.name;
+        opt.textContent = item.name;
+        nameSelect.appendChild(opt);
+      });
+    } else {
+      console.log("해당 모델의 소모품 데이터가 없음");
+    }
+  } else {
+    // 소모품이 아니면 기존 방식
+    if(existingConsumableSelect) {
+      existingConsumableSelect.style.display = 'none';
+    }
+    if(productData[type]) {
+      const names = [...new Set(productData[type].map(item=>item.name))];
+      names.forEach(name=>{
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        nameSelect.appendChild(opt);
+      });
+    }
+  }
+}
+
+function updateProductDetail(typeSelect, nameSelect, detailInput, priceInput, priceSelect) {
+  const type = typeSelect.value;
+  const name = nameSelect.value;
+  
+  console.log("=== updateProductDetail 디버깅 ===");
+  console.log("선택된 구분(type):", type);
+  console.log("선택된 제품명(name):", name);
+  console.log("productData에서 해당 구분 존재 여부:", !!productData[type]);
+  console.log("해당 구분의 제품 목록:", productData[type]);
+  
+  // 소모품일 때
+  if(type === "소모품") {
+    console.log("소모품 처리 중...");
+    const consumableSelect = typeSelect.parentNode.querySelector('.consumable-option');
+    console.log("소모품 선택 드롭다운:", consumableSelect);
+    if(consumableSelect && consumableData[consumableSelect.value]) {
+      console.log("소모품 데이터에서 검색:", consumableData[consumableSelect.value]);
+      const found = consumableData[consumableSelect.value].find(item => item.name === name);
+      console.log("찾은 소모품:", found);
+      if(found) {
+        detailInput.value = found.detail;
+        updatePriceOptions(found.price, priceInput, priceSelect);
+      } else {
+        detailInput.value = '';
+        priceInput.value = '';
+        priceSelect.style.display = 'none';
+        priceInput.style.display = 'block';
+      }
+    }
+  } else {
+    // 일반 제품
+    console.log("일반 제품 처리 중...");
+    if(productData[type]) {
+      console.log("제품 데이터에서 검색:", productData[type]);
+      const found = productData[type].find(item=>item.name===name);
+      console.log("찾은 제품:", found);
+      if(found) {
+        detailInput.value = found.detail;
+        updatePriceOptions(found.price, priceInput, priceSelect);
+      } else {
+        detailInput.value = '';
+        priceInput.value = '';
+        priceSelect.style.display = 'none';
+        priceInput.style.display = 'block';
+      }
+    } else {
+      console.log("해당 구분의 제품 데이터가 없음");
+      detailInput.value = '';
+      priceInput.value = '';
+      priceSelect.style.display = 'none';
+      priceInput.style.display = 'block';
+    }
+  }
+}
+
+// 가격 옵션 업데이트 함수
+function updatePriceOptions(priceStr, priceInput, priceSelect) {
+  console.log("=== updatePriceOptions 디버깅 ===");
+  console.log("입력된 가격 문자열:", priceStr);
+  
+  if(!priceStr || priceStr === '') {
+    priceInput.value = '';
+    priceSelect.style.display = 'none';
+    priceInput.style.display = 'block';
+    priceInput.removeAttribute('readonly');
+    priceInput.removeAttribute('disabled');
+    return;
+  }
+  
+  // 가격이 쉼표로 구분되어 있는지 확인
+  if(priceStr.includes(',')) {
+    const prices = priceStr.split(',').map(p => p.trim()).filter(p => p !== '텍스트');
+    console.log("분리된 가격들:", prices);
+    if(prices.length > 1) {
+      // 여러 가격이 있으면 드롭다운 표시
+      priceSelect.innerHTML = '<option value="">가격 선택</option>';
+      prices.forEach(price => {
+        const opt = document.createElement('option');
+        opt.value = price;
+        opt.textContent = price;
+        priceSelect.appendChild(opt);
+      });
+      priceSelect.style.display = 'block';
+      priceInput.style.display = 'none';
+      priceInput.value = '';
+      console.log("여러 가격 - 드롭다운 표시");
+    } else {
+      // 하나의 가격만 있으면 직접 입력
+      priceInput.value = prices[0];
+      priceSelect.style.display = 'none';
+      priceInput.style.display = 'block';
+      priceInput.removeAttribute('readonly');
+      priceInput.removeAttribute('disabled');
+      console.log("하나의 가격 - 직접 입력 필드 표시");
+    }
+  } else {
+    // 단일 가격
+    priceInput.value = priceStr;
+    priceSelect.style.display = 'none';
+    priceInput.style.display = 'block';
+    priceInput.removeAttribute('readonly');
+    priceInput.removeAttribute('disabled');
+    console.log("단일 가격 - 직접 입력 필드 표시");
+  }
+}
+
+function updateProductTotal(qtyInput, priceInput, totalInput) {
+  const qty = Number(qtyInput.value);
+  const price = Number(priceInput.value);
+  if(qty && price) {
+    totalInput.value = (qty * price).toLocaleString();
+  } else {
+    totalInput.value = '';
+  }
+}
+
+function removeProduct(btn) {
+  btn.closest('.product-set').remove();
+  productCount--;
+  document.getElementById('add-product').disabled = false;
+  // 제품 번호 다시 매기기
+  document.querySelectorAll('.product-set').forEach((el, idx)=>{
+    el.querySelector('div').innerHTML = `제품 ${idx+1} ${idx>0?'<button type=\"button\" onclick=\"removeProduct(this)\" class=\"remove-btn\">삭제</button>':''}`;
+  });
+}
+
+function addProductSet() {
+  if(productCount >= maxProducts) return;
+  const area = document.getElementById('products-area');
+  area.insertAdjacentHTML('beforeend', createProductSet(productCount));
+  productCount++;
+  if(productCount >= maxProducts) {
+    document.getElementById('add-product').disabled = true;
+  }
+  // 이벤트 바인딩
+  const sets = area.querySelectorAll('.product-set');
+  const lastSet = sets[sets.length-1];
+  const majorSelect = lastSet.querySelector('.product-major-category');
+  const typeSelect = lastSet.querySelector('.product-type');
+  const nameSelect = lastSet.querySelector('.product-name');
+  const detailInput = lastSet.querySelector('.product-detail');
+  const qtyInput = lastSet.querySelector('.product-qty');
+  const priceInput = lastSet.querySelector('.product-price');
+  const priceSelect = lastSet.querySelector('.product-price-select');
+  const totalInput = lastSet.querySelector('.product-total');
+  const noteInput = lastSet.querySelector('.product-note');
+
+  // 대분류 변경 시 구분 옵션 업데이트
+  majorSelect.addEventListener('change', ()=>{
+    updateProductTypeOptions(majorSelect, typeSelect);
+    detailInput.value = '';
+    priceInput.value = '';
+    nameSelect.value = '';
+    typeSelect.value = '';
+  });
+  
+  // 구분 변경 시 제품명 옵션 업데이트
+  typeSelect.addEventListener('change', ()=>{
+    updateProductNameOptions(typeSelect, nameSelect, typeSelect.parentNode.querySelector('.consumable-option'));
+    detailInput.value = '';
+    priceInput.value = '';
+    nameSelect.value = '';
+    priceSelect.style.display = 'none';
+    priceInput.style.display = 'block';
+  });
+  
+  // 제품명 변경 시 상세정보 및 가격 자동 입력
+  nameSelect.addEventListener('change', ()=>{
+    updateProductDetail(typeSelect, nameSelect, detailInput, priceInput, priceSelect);
+    updateProductTotal(qtyInput, priceInput, totalInput);
+  });
+  
+  // 가격 선택 드롭다운 변경 시
+  priceSelect.addEventListener('change', ()=>{
+    console.log("가격 선택 드롭다운 변경됨:", priceSelect.value);
+    priceInput.value = priceSelect.value;
+    // 가격 선택 후 input 필드를 다시 표시하여 수정 가능하게 함
+    priceSelect.style.display = 'none';
+    priceInput.style.display = 'block';
+    // 입력 필드가 편집 가능한지 확인
+    priceInput.removeAttribute('readonly');
+    priceInput.removeAttribute('disabled');
+    priceInput.focus(); // 포커스를 주어 사용자가 바로 편집할 수 있도록 함
+    updateProductTotal(qtyInput, priceInput, totalInput);
+  });
+  
+  // 수량/가격 변경 시 합계 자동 계산
+  qtyInput.addEventListener('input', ()=>updateProductTotal(qtyInput, priceInput, totalInput));
+  priceInput.addEventListener('input', ()=>updateProductTotal(qtyInput, priceInput, totalInput));
+  
+  // 가격 입력 필드 클릭 시 편집 가능하도록 보장
+  priceInput.addEventListener('click', ()=>{
+    priceInput.removeAttribute('readonly');
+    priceInput.removeAttribute('disabled');
+    priceInput.focus();
+  });
+  
+  // 가격 입력 필드 포커스 시 편집 가능하도록 보장
+  priceInput.addEventListener('focus', ()=>{
+    priceInput.removeAttribute('readonly');
+    priceInput.removeAttribute('disabled');
+  });
+  
+  // 비고 입력 제한
+  noteInput.addEventListener('input', ()=>{ if(noteInput.value.length>20) noteInput.value=noteInput.value.slice(0,20); });
+}
+
+document.getElementById('add-product').addEventListener('click', addProductSet);
+addProductSet(); // 최초 1개 세트 표시
+
+// 담당자-연락처 매핑
+const supplierContacts = {
+  "이훈수": "hslee@bitekps.com / 010-3252-0593",
+  "차재원": "cjw@bitekps.com / 010-5035-7791",
+  "장진호": "jhjang@bitekps.com / 010-9999-4401",
+  "하철용": "cyha@bitekps.com / 010-6206-7656",
+  "노재익": "jake@bitekps.com / 010-6419-0945",
+  "전준영": "methu78@bitekps.com / 010-2866-4914"
+};
+
+document.getElementById('supplier-person').addEventListener('change', function() {
+  const selected = this.options[this.selectedIndex];
+  // 연락처 자동 표시
+  document.getElementById('supplier-contact').value = selected.getAttribute('data-contact') || '';
+  // 담당자ID 자동 표시
+  document.getElementById('supplier-person-id').value = selected.getAttribute('data-id') || '';
+});
+
+// 견적번호 자동생성 함수
+async function autoFillEstimateNumber() {
+  const dateVal = document.getElementById('date').value;
+  const supplierSelect = document.getElementById('supplier-person');
+  const supplierId = supplierSelect.options[supplierSelect.selectedIndex]?.getAttribute('data-id') || '';
+  if (!dateVal || !supplierId) return;
+
+  // 날짜 YYMMDD 변환
+  const yymmdd = dateVal.replace(/-/g, '').slice(2);
+
+  // 오늘 PDF생성횟수 가져오기 (임시로 +1, 실제는 서버에서 받아야 정확)
+  let count = 1;
+  try {
+    const res = await fetch('https://auto-estimate.onrender.com/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ check_only: true })
+    });
+    const result = await res.json();
+    if (result.pdf_count_today) count = result.pdf_count_today + 1;
+  } catch (e) {}
+
+  document.getElementById('number').value = `DLP${yymmdd}-${supplierId}-${count}`;
+}
+
+// 견적일자, 담당자 변경 시 자동생성
+document.getElementById('date').addEventListener('change', autoFillEstimateNumber);
+document.getElementById('supplier-person').addEventListener('change', autoFillEstimateNumber);
+
+function collectEstimateData() {
+  const fileId = new URLSearchParams(window.location.search).get("id");
+  return {
+    estimate_date: document.getElementById('date').value,
+    estimate_number: document.getElementById('number').value,
+    supplier_person: document.getElementById('supplier-person').options[document.getElementById('supplier-person').selectedIndex].text,
+    supplier_contact: document.getElementById('supplier-contact').value,
+    receiver_company: document.getElementById('receiver-company').value,
+    receiver_person: document.getElementById('receiver-person').value,
+    receiver_contact: document.getElementById('receiver-contact').value,
+    delivery_date: document.getElementById('delivery-date').value,
+    fileId: fileId, // fileId 추가
+    products: Array.from(document.querySelectorAll('.product-set')).map(function(set) {
+      return {
+        major_category: set.querySelector('.product-major-category').value,
+        type: set.querySelector('.product-type').value,
+        name: set.querySelector('.product-name').value,
+        detail: set.querySelector('.product-detail').value,
+        qty: Number(set.querySelector('.product-qty').value),
+        price: Number(set.querySelector('.product-price').value.replace(/,/g, "") || 0),
+        total: Number(set.querySelector('.product-total').value.replace(/,/g, "")),
+        note: set.querySelector('.product-note').value
+      };
+    })
+  };
+}
+
+function validateEstimateForm() {
+  console.log("=== 견적서 유효성 검사 시작 ===");
+  
+  // 필수 입력값 체크
+  const date = document.getElementById('date').value;
+  const number = document.getElementById('number').value;
+  const supplierPerson = document.getElementById('supplier-person').value;
+  const receiverCompany = document.getElementById('receiver-company').value;
+  const productCategory = document.getElementById('product-category').value;
+  const deliveryDate = document.getElementById('delivery-date').value;
+  
+  console.log("입력값 확인:");
+  console.log("- 견적일자:", date);
+  console.log("- 견적번호:", number);
+  console.log("- 공급자 담당자:", supplierPerson);
+  console.log("- 수신자 회사명:", receiverCompany);
+  console.log("- 견적제품:", productCategory);
+  console.log("- 납기일:", deliveryDate);
+  
+  if (!date) {
+    console.log("❌ 견적일자 누락");
+    alert('견적일자를 입력해 주세요.');
+    return false;
+  }
+  if (!number) {
+    console.log("❌ 견적번호 누락");
+    alert('견적번호를 입력해 주세요.');
+    return false;
+  }
+  if (!supplierPerson) {
+    console.log("❌ 공급자 담당자 누락");
+    alert('공급자 담당자를 선택해 주세요.');
+    return false;
+  }
+  if (!receiverCompany) {
+    console.log("❌ 수신자 회사명 누락");
+    alert('수신자 회사명을 입력해 주세요.');
+    return false;
+  }
+  // 견적제품 선택 필수
+  if (!productCategory) {
+    console.log("❌ 견적제품 누락");
+    alert('견적제품을 선택해 주세요.');
+    return false;
+  }
+  // 제품정보 필수값 체크 (비고 제외)
+  const sets = document.querySelectorAll('.product-set');
+  if (sets.length === 0) {
+    alert('제품정보를 1개 이상 입력해 주세요.');
+    return false;
+  }
+  for (let i = 0; i < sets.length; i++) {
+    const set = sets[i];
+    const majorCategory = set.querySelector('.product-major-category').value;
+    const type = set.querySelector('.product-type').value;
+    const name = set.querySelector('.product-name').value;
+    const detail = set.querySelector('.product-detail').value;
+    const qty = set.querySelector('.product-qty').value;
+    const price = set.querySelector('.product-price').value;
+    const total = set.querySelector('.product-total').value;
+    if (!majorCategory) {
+      alert(`제품 ${i+1}의 대분류를 선택해 주세요.`);
+      return false;
+    }
+    if (!type) {
+      alert(`제품 ${i+1}의 구분을 선택해 주세요.`);
+      return false;
+    }
+    if (!name) {
+      alert(`제품 ${i+1}의 제품명을 선택해 주세요.`);
+      return false;
+    }
+    if (!detail) {
+      alert(`제품 ${i+1}의 상세정보를 입력해 주세요.`);
+      return false;
+    }
+    if (!qty) {
+      alert(`제품 ${i+1}의 수량을 입력해 주세요.`);
+      return false;
+    }
+    if (!price && price !== 0) {
+      alert(`제품 ${i+1}의 공급단가를 입력해 주세요.`);
+      return false;
+    }
+    if (!total) {
+      alert(`제품 ${i+1}의 합계를 입력해 주세요.`);
+      return false;
+    }
+  }
+  // 납기일 필수
+  if (!deliveryDate) {
+    console.log("❌ 납기일 누락");
+    alert('납기일을 입력해 주세요.');
+    return false;
+  }
+  
+  console.log("✅ 모든 필수 입력값 검증 완료");
+  return true;
+}
+
+async function sendEstimateToFastAPI() {
+  console.log("=== 견적서 생성 시작 ===");
+  
+  if (!validateEstimateForm()) {
+    console.log("❌ 유효성 검사 실패");
+    return;
+  }
+  
+  console.log("✅ 유효성 검사 통과");
+  
+  const button = document.getElementById('preview-btn');
+  const originalText = button.textContent;
+  
+  try {
+    // 버튼 비활성화 및 로딩 애니메이션 적용
+    button.disabled = true;
+    button.classList.add('loading');
+    button.textContent = '처리 중...';
+    
+    // 즉시 시각적 피드백을 위한 약간의 지연
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    const data = collectEstimateData();
+    let fileId = new URLSearchParams(window.location.search).get("id");
+    
+    // fileId가 없거나 템플릿 변수인 경우 새로운 견적서 템플릿 생성
+    if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
+      console.log("fileId가 없거나 템플릿 변수입니다. 새로운 템플릿을 생성합니다.");
+    } else {
+      console.log("유효한 fileId가 이미 제공되었습니다:", fileId);
+      data.fileId = fileId;
+    }
+    
+    // fileId가 없는 경우에만 템플릿 생성
+    if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
+      console.log("새로운 견적서 템플릿 생성 시작");
+      console.log("현재 fileId:", fileId);
+      console.log("fileId 검증:", {
+        isEmpty: !fileId,
+        isTemplateVar: fileId === "{{24.id}}",
+        containsTemplate: fileId && (fileId.includes("{{") || fileId.includes("}}"))
+      });
+      
+      try {
+        console.log("견적서 템플릿 복사 API 호출 중...");
+        // 견적서 템플릿 복사 API 호출
+        const templateResponse = await fetch('https://auto-estimate.onrender.com/create-estimate-template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        console.log("API 응답 상태:", templateResponse.status);
+        const templateResult = await templateResponse.json();
+        console.log("API 응답 결과:", templateResult);
+        
+        if (templateResult.status === "success") {
+          console.log("견적서 템플릿 생성 성공:", templateResult);
+          fileId = templateResult.file_id; // fileId 변수 업데이트
+          data.fileId = fileId;
+          
+          // URL에 fileId 추가
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.set('id', fileId);
+          window.history.replaceState({}, '', newUrl);
+          console.log("URL 업데이트 완료:", newUrl.toString());
+        } else {
+          console.error("견적서 템플릿 생성 실패:", templateResult);
+          alert("견적서 템플릿 생성에 실패했습니다: " + templateResult.message);
+          return;
+        }
+      } catch (error) {
+        console.error("견적서 템플릿 생성 중 오류:", error);
+        alert("견적서 템플릿 생성 중 오류가 발생했습니다.");
+        return;
+      }
+    } else {
+      console.log("기존 fileId 사용:", fileId);
+      data.fileId = fileId;
+    }
+
+    // 견적제품 선택 값 저장
+    const productCategory = document.getElementById('product-category').value;
+    localStorage.setItem('productCategory', productCategory);
+
+    // 최소 로딩 시간 설정 (너무 빨리 넘어가는 것 방지)
+    const startTime = Date.now();
+    const minLoadingTime = 1500; // 최소 1.5초 로딩
+    
+    button.textContent = '견적서 생성 중...';
+    
+    console.log("견적서 생성 API 호출 전 데이터:", data);
+    console.log("사용할 fileId:", fileId);
+    
+    const response = await fetch('https://auto-estimate.onrender.com/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    console.log("견적서 생성 API 응답:", result);
+    
+    button.textContent = '완료 중...';
+    
+    if(result.status === "success") {
+      // 최소 로딩 시간 보장
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      
+      setTimeout(() => {
+        // localStorage에 데이터 저장 후 미리보기로 이동
+        const dataToStore = JSON.stringify(data);
+        console.log('저장할 데이터:', dataToStore);
+        localStorage.setItem('estimateData', dataToStore);
+        console.log('localStorage 저장 완료');
+        console.log('preview.html로 이동할 fileId:', fileId);
+        
+        // fileId를 URL에 포함하여 preview.html로 이동
+        if (fileId) {
+          window.location.href = `preview.html?id=${fileId}`;
+        } else {
+          window.location.href = `preview.html`;
+        }
+      }, remainingTime);
+    } else {
+      alert('전송 실패! 다시 시도해 주세요.');
+    }
+  } catch (error) {
+    console.error('견적서 생성 중 오류:', error);
+    alert('전송 중 오류가 발생했습니다.');
+  } finally {
+    // 버튼 상태 복원
+    button.disabled = false;
+    button.classList.remove('loading');
+    button.textContent = originalText;
+  }
+}
+
+document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
+
+// 페이지 로드 시 fileId 상태 확인 (디버그용)
+document.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const fileId = urlParams.get("id");
+  const timestamp = urlParams.get("t"); // 캐시 방지 매개변수 무시
+  
+  console.log("=== estimate_form_new.html 페이지 로드 ===");
+  console.log("URL 파라미터 확인:");
+  console.log("- fileId:", fileId);
+  console.log("- timestamp:", timestamp);
+  console.log("- 전체 URL:", window.location.href);
+  
+  // localStorage에서 기존 데이터 확인
+  try {
+    const existingData = localStorage.getItem('estimateData');
+    if (existingData) {
+      const parsedData = JSON.parse(existingData);
+      console.log("- localStorage estimateData.fileId:", parsedData.fileId);
+    } else {
+      console.log("- localStorage estimateData 없음");
+    }
+  } catch (e) {
+    console.error("- localStorage 파싱 오류:", e);
+  }
+  
+  if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
+    console.log("fileId가 없거나 템플릿 변수입니다. 견적서 생성 시 자동으로 새 템플릿을 생성합니다.");
+  } else {
+    console.log("유효한 fileId가 제공되었습니다:", fileId);
+  }
+  console.log("=== 페이지 로드 완료 ===");
+});
+
+</script>
+</body>
+</html>

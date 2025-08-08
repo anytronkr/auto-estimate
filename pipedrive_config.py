@@ -5,18 +5,27 @@
 PIPEDRIVE_API_TOKEN = "your_pipedrive_api_token_here"
 
 # Pipedrive 도메인 (예: company.pipedrive.com)
-PIPEDRIVE_DOMAIN = "your_domain.pipedrive.com"
+PIPEDRIVE_DOMAIN = "api.pipedrive.com"
 
 # 견적서생성 파이프라인 ID (Pipedrive에서 파이프라인 ID 확인)
-PIPEDRIVE_PIPELINE_ID = "1"
+PIPEDRIVE_PIPELINE_ID = "4"
 
-# 첫 번째 스테이지 ID (파이프라인의 첫 번째 단계 ID)
-PIPEDRIVE_STAGE_ID = "1"
-
-# 담당자별 Pipedrive 사용자 ID 매핑
-# Pipedrive에서 각 사용자의 ID를 확인하여 입력하세요
+# 담당자별 Pipedrive 사용자 ID 매핑 (실제 Pipedrive 사용자 ID)
 PIPEDRIVE_USER_MAPPING = {
-    "이훈수": 1,      # 이훈수 사용자 ID
-    "차재원": 2,      # 차재원 사용자 ID  
-    "장진호": 3,      # 장진호 사용자 ID
+    "이훈수": 23659842,    # hslee@bitekps.com
+    "차재원": 23787233,    # cjw@bitekps.com
+    "장진호": 23823247,    # jhjang@bitekps.com
+    "전준영": 23839164,    # methu78@bitekps.com
+    "하철용": 23839131,    # cyha@bitekps.com
+    "노재익": 23839109     # jake@bitekps.com
+}
+
+# 견적서생성 파이프라인 내 스테이지 ID 매핑
+PIPEDRIVE_STAGE_MAPPING = {
+    "이훈수": 47,    # 이훈수견적서
+    "차재원": 48,    # 차재원견적서
+    "전준영": 49,    # 전준영견적서
+    "장진호": 50,    # 장진호견적서
+    "하철용": 51,    # 하철용견적서
+    "노재익": 52     # 노재익견적서
 } 
