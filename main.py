@@ -353,6 +353,8 @@ async def fill_estimate(request: Request):
                     value = value.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
                     # 연속된 줄바꿈을 하나로 정리
                     value = '\n'.join(line.strip() for line in value.split('\n') if line.strip())
+                    # 제품상세정보 앞뒤로 공백 한 줄씩 추가
+                    value = f'\n{value}\n'
                 
                 if cell_key in CELL_MAP:
                     updates.append({
@@ -378,6 +380,42 @@ async def fill_estimate(request: Request):
             print(f"✅ 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용 완료: {detail_cells}")
         except Exception as e:
             print(f"⚠️ 셀 포맷 적용 중 오류 (무시됨): {e}")
+        
+        # 40행부터 페이지 나누기 설정
+        try:
+            # Google Sheets API를 사용하여 페이지 나누기 설정
+            sheets_service = build('sheets', 'v4', credentials=creds)
+            
+            # 40행에 페이지 나누기 추가
+            request_body = {
+                "requests": [
+                    {
+                        "insertPageBreak": {
+                            "location": {
+                                "sheetId": 0,  # 첫 번째 시트
+                                "rowIndex": 39  # 40행 (0부터 시작하므로 39)
+                            }
+                        }
+                    }
+                ]
+            }
+            
+            sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=file_id,
+                body=request_body
+            ).execute()
+            
+            print("✅ 40행에 페이지 나누기 설정 완료")
+        except Exception as e:
+            print(f"⚠️ 페이지 나누기 설정 중 오류 (무시됨): {e}")
+        
+        # B47 셀 합치기 해제 (명판/인감 영역)
+        try:
+            # B47 셀의 합치기 해제
+            ws.unmerge('B47')
+            print("✅ B47 셀 합치기 해제 완료")
+        except Exception as e:
+            print(f"⚠️ B47 셀 합치기 해제 중 오류 (무시됨): {e}")
         
         return {"status": "success"}
         
