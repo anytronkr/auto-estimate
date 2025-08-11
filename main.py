@@ -381,13 +381,24 @@ async def fill_estimate(request: Request):
         except Exception as e:
             print(f"⚠️ 셀 포맷 적용 중 오류 (무시됨): {e}")
         
-        # 40행부터 페이지 나누기 설정
+        # 40행부터 페이지 나누기 설정 (강화된 버전)
         try:
             # Google Sheets API를 사용하여 페이지 나누기 설정
             sheets_service = build('sheets', 'v4', credentials=creds)
             
-            # 40행에 페이지 나누기 추가
-            request_body = {
+            # 먼저 기존 페이지 나누기 제거
+            clear_request = {
+                "requests": [
+                    {
+                        "deleteBanding": {
+                            "bandedRangeId": 1
+                        }
+                    }
+                ]
+            }
+            
+            # 40행에 페이지 나누기 추가 (수직 페이지 나누기)
+            page_break_request = {
                 "requests": [
                     {
                         "insertPageBreak": {
@@ -400,14 +411,45 @@ async def fill_estimate(request: Request):
                 ]
             }
             
-            sheets_service.spreadsheets().batchUpdate(
+            # 페이지 나누기 설정 실행
+            result = sheets_service.spreadsheets().batchUpdate(
                 spreadsheetId=file_id,
-                body=request_body
+                body=page_break_request
             ).execute()
             
-            print("✅ 40행에 페이지 나누기 설정 완료")
+            print(f"✅ 40행에 페이지 나누기 설정 완료: {result}")
+            
+            # 추가로 셀 높이 조정으로 페이지 나누기 효과 강화
+            row_height_request = {
+                "requests": [
+                    {
+                        "updateDimensionProperties": {
+                            "range": {
+                                "sheetId": 0,
+                                "dimension": "ROWS",
+                                "startIndex": 38,  # 39행부터
+                                "endIndex": 40     # 41행까지
+                            },
+                            "properties": {
+                                "pixelSize": 25  # 행 높이를 25픽셀로 설정
+                            },
+                            "fields": "pixelSize"
+                        }
+                    }
+                ]
+            }
+            
+            sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=file_id,
+                body=row_height_request
+            ).execute()
+            
+            print("✅ 40행 주변 행 높이 조정 완료")
+            
         except Exception as e:
             print(f"⚠️ 페이지 나누기 설정 중 오류 (무시됨): {e}")
+            import traceback
+            traceback.print_exc()
         
         # B47 셀 합치기 해제 (명판/인감 영역)
         try:
@@ -776,19 +818,47 @@ def setup_drive_permissions():
         return {"status": "error", "message": f"권한 설정 실패: {str(e)}"}
 
 def export_sheet_to_pdf(sheet_id, pdf_filename, creds, gid=0):
-    """Google Sheets를 PDF로 export"""
+    """Google Sheets를 PDF로 export (페이지 나누기 강화)"""
     try:
         print(f"DEBUG: export_sheet_to_pdf 함수 시작")
         print(f"DEBUG: sheet_id: {sheet_id}")
         print(f"DEBUG: pdf_filename: {pdf_filename}")
         print(f"DEBUG: gid: {gid}")
         
+        # PDF 생성 전에 페이지 나누기 재확인
+        try:
+            sheets_service = build('sheets', 'v4', credentials=creds)
+            
+            # 40행에 강제 페이지 나누기 설정
+            force_page_break = {
+                "requests": [
+                    {
+                        "insertPageBreak": {
+                            "location": {
+                                "sheetId": 0,
+                                "rowIndex": 39  # 40행
+                            }
+                        }
+                    }
+                ]
+            }
+            
+            sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=sheet_id,
+                body=force_page_break
+            ).execute()
+            
+            print("✅ PDF 생성 전 40행 페이지 나누기 재확인 완료")
+            
+        except Exception as e:
+            print(f"⚠️ PDF 생성 전 페이지 나누기 설정 실패: {e}")
+        
         # Google Drive API를 사용한 PDF 생성
         try:
             print(f"DEBUG: Google Drive API PDF 생성 시도")
             drive_service = build('drive', 'v3', credentials=creds)
             
-            # Google Sheets를 PDF로 export
+            # Google Sheets를 PDF로 export (페이지 설정 포함)
             request = drive_service.files().export_media(
                 fileId=sheet_id,
                 mimeType='application/pdf'
