@@ -702,29 +702,82 @@ document.getElementById('supplier-person').addEventListener('change', function()
   document.getElementById('supplier-person-id').value = selected.getAttribute('data-id') || '';
 });
 
-// 견적번호 자동생성 함수
+// 견적번호 자동생성 함수 (개선버전)
 async function autoFillEstimateNumber() {
   const dateVal = document.getElementById('date').value;
   const supplierSelect = document.getElementById('supplier-person');
   const supplierId = supplierSelect.options[supplierSelect.selectedIndex]?.getAttribute('data-id') || '';
+  const numberInput = document.getElementById('number');
+  
   if (!dateVal || !supplierId) return;
 
   // 날짜 YYMMDD 변환
   const yymmdd = dateVal.replace(/-/g, '').slice(2);
-
-  // 오늘 PDF생성횟수 가져오기 (임시로 +1, 실제는 서버에서 받아야 정확)
+  
+  // 로딩 표시
+  numberInput.value = '생성중...';
+  numberInput.style.color = '#999';
+  
   let count = 1;
+  
   try {
+    console.log('견적번호 생성 시작...');
+    
+    // 5초 타임아웃 적용
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     const res = await fetch('https://auto-estimate.onrender.com/estimate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ check_only: true })
+      body: JSON.stringify({ check_only: true }),
+      signal: controller.signal
     });
-    const result = await res.json();
-    if (result.pdf_count_today) count = result.pdf_count_today + 1;
-  } catch (e) {}
+    
+    clearTimeout(timeoutId);
+    
+    if (res.ok) {
+      const result = await res.json();
+      if (result.pdf_count_today) count = result.pdf_count_today + 1;
+      console.log('서버에서 카운트 가져옴:', count);
+    } else {
+      console.warn('API 응답 실패, 로컬 카운트 사용');
+      count = getLocalCount(yymmdd, supplierId);
+    }
+    
+  } catch (error) {
+    console.error('API 호출 실패:', error.name);
+    
+    if (error.name === 'AbortError') {
+      console.log('타임아웃으로 인한 로컬 카운트 사용');
+    }
+    
+    // 백업: 로컬 스토리지 사용
+    count = getLocalCount(yymmdd, supplierId);
+  }
 
-  document.getElementById('number').value = `DLP${yymmdd}-${supplierId}-${count}`;
+  // 견적번호 생성
+  const estimateNumber = `DLP${yymmdd}-${supplierId}-${count}`;
+  numberInput.value = estimateNumber;
+  numberInput.style.color = '#000';
+  
+  // 로컬 카운트 저장
+  saveLocalCount(yymmdd, supplierId, count);
+  
+  console.log('견적번호 생성 완료:', estimateNumber);
+}
+
+// 로컬 카운트 가져오기
+function getLocalCount(yymmdd, supplierId) {
+  const key = `count_${yymmdd}_${supplierId}`;
+  const stored = localStorage.getItem(key);
+  return stored ? parseInt(stored) + 1 : 1;
+}
+
+// 로컬 카운트 저장
+function saveLocalCount(yymmdd, supplierId, count) {
+  const key = `count_${yymmdd}_${supplierId}`;
+  localStorage.setItem(key, count.toString());
 }
 
 // 견적일자, 담당자 변경 시 자동생성
