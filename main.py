@@ -853,25 +853,54 @@ def export_sheet_to_pdf(sheet_id, pdf_filename, creds, gid=0):
         except Exception as e:
             print(f"⚠️ PDF 생성 전 페이지 나누기 설정 실패: {e}")
         
-        # Google Drive API를 사용한 PDF 생성
+        # URL 방식으로 PDF 생성 (페이지 설정 포함)
         try:
-            print(f"DEBUG: Google Drive API PDF 생성 시도")
-            drive_service = build('drive', 'v3', credentials=creds)
+            print(f"DEBUG: URL 방식 PDF 생성 시도 (페이지 나누기 적용)")
             
-            # Google Sheets를 PDF로 export (페이지 설정 포함)
-            request = drive_service.files().export_media(
-                fileId=sheet_id,
-                mimeType='application/pdf'
-            )
+            # 페이지 설정이 반영되는 URL 방식 사용
+            export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?" + \
+                        f"format=pdf&portrait=true&size=A4&" + \
+                        f"fitw=false&fith=false&" + \
+                        f"top_margin=0.5&bottom_margin=0.5&" + \
+                        f"left_margin=0.5&right_margin=0.5&" + \
+                        f"horizontal_alignment=CENTER&" + \
+                        f"vertical_alignment=TOP&" + \
+                        f"printtitle=false&sheetnames=false&" + \
+                        f"pagenum=UNDEFINED&gridlines=false&" + \
+                        f"scale=4&gid={gid}"
             
-            with open(pdf_filename, 'wb') as f:
-                f.write(request.execute())
+            print(f"DEBUG: PDF 생성 URL: {export_url}")
             
-            print(f"DEBUG: Google Drive API PDF 생성 성공: {pdf_filename}")
-            return True
+            # OAuth 토큰으로 요청
+            import requests
+            headers = {'Authorization': f'Bearer {creds.token}'}
+            
+            response = requests.get(export_url, headers=headers)
+            
+            if response.status_code == 200:
+                with open(pdf_filename, 'wb') as f:
+                    f.write(response.content)
+                print(f"DEBUG: URL 방식 PDF 생성 성공: {pdf_filename}")
+                return True
+            else:
+                print(f"DEBUG: URL 방식 PDF 생성 실패: {response.status_code}")
+                
+                # 백업: Google Drive API 방식
+                print(f"DEBUG: 백업 방법으로 Google Drive API 시도")
+                drive_service = build('drive', 'v3', credentials=creds)
+                request = drive_service.files().export_media(
+                    fileId=sheet_id,
+                    mimeType='application/pdf'
+                )
+                
+                with open(pdf_filename, 'wb') as f:
+                    f.write(request.execute())
+                
+                print(f"DEBUG: 백업 방법 PDF 생성 성공: {pdf_filename}")
+                return True
             
         except Exception as api_e:
-            print(f"DEBUG: Google Drive API PDF 생성 실패: {api_e}")
+            print(f"DEBUG: PDF 생성 실패: {api_e}")
             return False
             
     except Exception as e:
