@@ -171,20 +171,73 @@ def get_google_credentials():
         print(f"private_key_id: {info.get('private_key_id', 'MISSING')}")
         print(f"project_id: {info.get('project_id', 'MISSING')}")
         
-        # 시간 동기화 문제 해결을 위한 시간 정보 출력
+        # 시간 동기화 문제 해결을 위한 NTP 시간 가져오기
         import time
         from datetime import datetime, timezone
+        import socket
+        import struct
         
-        utc_now = datetime.now(timezone.utc)
-        unix_timestamp = int(time.time())
+        def get_ntp_time():
+            """NTP 서버에서 정확한 시간 가져오기"""
+            try:
+                # NTP 서버 목록 (Google, Cloudflare, NIST)
+                ntp_servers = ['time.google.com', 'time.cloudflare.com', 'time.nist.gov']
+                
+                for server in ntp_servers:
+                    try:
+                        # NTP 패킷 생성
+                        ntp_packet = b'\x1b' + 47 * b'\0'
+                        
+                        # UDP 소켓으로 NTP 서버에 요청
+                        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                            s.settimeout(5)  # 5초 타임아웃
+                            s.sendto(ntp_packet, (server, 123))
+                            response = s.recv(1024)
+                            
+                        # NTP 응답에서 시간 추출 (바이트 40-43)
+                        ntp_time = struct.unpack('!I', response[40:44])[0]
+                        # NTP epoch (1900-01-01)을 Unix epoch (1970-01-01)로 변환
+                        unix_time = ntp_time - 2208988800
+                        
+                        print(f"✅ NTP 시간 획득 성공 ({server}): {unix_time}")
+                        return unix_time
+                        
+                    except Exception as e:
+                        print(f"⚠️ NTP 서버 {server} 실패: {e}")
+                        continue
+                        
+                print("❌ 모든 NTP 서버 접근 실패")
+                return None
+                
+            except Exception as e:
+                print(f"❌ NTP 시간 획득 실패: {e}")
+                return None
         
-        print(f"현재 UTC 시간: {utc_now}")
-        print(f"Unix 타임스탬프: {unix_timestamp}")
+        # NTP에서 정확한 시간 가져오기
+        ntp_time = get_ntp_time()
+        local_time = int(time.time())
         
-        # 자격증명 생성 (시간 여유를 두고)
+        print(f"로컬 Unix 타임스탬프: {local_time}")
+        print(f"NTP Unix 타임스탬프: {ntp_time}")
+        
+        if ntp_time:
+            time_diff = abs(ntp_time - local_time)
+            print(f"시간 차이: {time_diff}초")
+            
+            if time_diff > 30:  # 30초 이상 차이나면 경고
+                print(f"⚠️ 시간 동기화 문제 감지: {time_diff}초 차이")
+            
+            # NTP 시간을 기준으로 datetime 생성
+            ntp_datetime = datetime.fromtimestamp(ntp_time, tz=timezone.utc)
+            print(f"정확한 UTC 시간: {ntp_datetime}")
+        else:
+            ntp_datetime = datetime.now(timezone.utc)
+            print(f"로컬 UTC 시간 사용: {ntp_datetime}")
+        
+        # 자격증명 생성 (정확한 시간으로)
         print("자격증명 생성 시도 중...")
         try:
-            # JWT 시간 여유를 위한 추가 설정
+            # JWT 시간을 정확하게 맞추기 위한 커스텀 자격증명 생성
             credentials = service_account.Credentials.from_service_account_info(
                 info,
                 scopes=[
@@ -195,14 +248,18 @@ def get_google_credentials():
                 ]
             )
             
-            # 토큰 생성 시간 여유를 위해 즉시 새로고침
+            # 시간 동기화를 위해 토큰 재생성 강제
             try:
                 import google.auth.transport.requests
                 request = google.auth.transport.requests.Request()
+                
+                # 토큰 만료 시간을 현재 시간보다 이전으로 설정하여 강제 새로고침
+                credentials.expiry = ntp_datetime if ntp_time else datetime.now(timezone.utc)
+                
                 credentials.refresh(request)
-                print("✅ 초기 토큰 새로고침 성공")
+                print("✅ 시간 동기화 토큰 새로고침 성공")
             except Exception as refresh_e:
-                print(f"⚠️ 초기 토큰 새로고침 실패: {refresh_e}")
+                print(f"⚠️ 토큰 새로고침 실패: {refresh_e}")
                 # 실패해도 계속 진행
         except Exception as cred_error:
             print(f"❌ Credentials 생성 중 오류: {cred_error}")
