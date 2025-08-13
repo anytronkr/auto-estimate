@@ -141,27 +141,52 @@ def get_google_credentials():
         # private_key 개행 문자 처리 (JWT 서명 오류의 주요 원인)
         if 'private_key' in info:
             private_key = info['private_key']
+            print(f"원본 private_key 길이: {len(private_key)}")
+            print(f"원본 private_key 시작: {private_key[:50]}...")
+            print(f"\\n 포함 여부: {'\\n' in private_key}")
+            
             if '\\n' in private_key:
                 info['private_key'] = private_key.replace('\\n', '\n')
                 print("✅ private_key 개행 문자 변환 완료")
             
+            # 변환 후 확인
+            converted_key = info['private_key']
+            print(f"변환된 private_key 길이: {len(converted_key)}")
+            print(f"변환된 private_key 시작: {converted_key[:50]}...")
+            print(f"실제 개행 문자 포함 여부: {chr(10) in converted_key}")
+            
             # private_key 유효성 검증
             if not info['private_key'].startswith('-----BEGIN PRIVATE KEY-----'):
                 print("❌ private_key 형식이 올바르지 않습니다")
-                print(f"private_key 시작 부분: {info['private_key'][:50]}...")
+                print(f"private_key 시작 부분: {info['private_key'][:100]}...")
                 return None
+            
+            if not info['private_key'].strip().endswith('-----END PRIVATE KEY-----'):
+                print("❌ private_key 끝 부분이 올바르지 않습니다")
+                print(f"private_key 끝 부분: ...{info['private_key'][-100:]}")
+                return None
+        
+        # 추가 검증
+        print(f"client_email: {info.get('client_email', 'MISSING')}")
+        print(f"private_key_id: {info.get('private_key_id', 'MISSING')}")
+        print(f"project_id: {info.get('project_id', 'MISSING')}")
         
         # 자격증명 생성
         print("자격증명 생성 시도 중...")
-        credentials = service_account.Credentials.from_service_account_info(
-            info,
-            scopes=[
-                'https://www.googleapis.com/auth/spreadsheets',
-                'https://www.googleapis.com/auth/drive',
-                'https://www.googleapis.com/auth/drive.file',
-                'https://www.googleapis.com/auth/drive.readonly'
-            ]
-        )
+        try:
+            credentials = service_account.Credentials.from_service_account_info(
+                info,
+                scopes=[
+                    'https://www.googleapis.com/auth/spreadsheets',
+                    'https://www.googleapis.com/auth/drive',
+                    'https://www.googleapis.com/auth/drive.file',
+                    'https://www.googleapis.com/auth/drive.readonly'
+                ]
+            )
+        except Exception as cred_error:
+            print(f"❌ Credentials 생성 중 오류: {cred_error}")
+            print(f"오류 타입: {type(cred_error)}")
+            return None
         
         print("✅ Google Service Account 자격증명 로드 성공")
         return credentials
