@@ -167,6 +167,15 @@
       <label>납기일<span style="color:red">*</span></label>
       <input type="text" id="delivery-date" placeholder="납기일을 입력해 주세요" value="입금확인일로부터 2주 이내">
     </div>
+    <div style="margin-top:16px;">
+      <label>제품교육</label>
+      <select id="product-training" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+        <option value="">제품교육을 선택해주세요</option>
+        <option value="제품 납품시 사용자 교육을 진행 합니다.">제품 납품시 사용자 교육을 진행 합니다.</option>
+        <option value="엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>
+        <option value="엔지니어 방문 설치교육(250,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(250,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>
+      </select>
+    </div>
   </div>
   <button type="button" class="preview-btn" id="preview-btn">견적서 생성하기</button>
   
@@ -798,6 +807,7 @@ function collectEstimateData() {
     receiver_phone: document.getElementById('receiver-phone').value,
     product_category: document.getElementById('product-category').value,
     delivery_date: document.getElementById('delivery-date').value,
+    product_training: document.getElementById('product-training').value,
     fileId: fileId, // fileId 추가
     products: Array.from(document.querySelectorAll('.product-set')).map(function(set) {
       return {

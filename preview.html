@@ -236,6 +236,10 @@ letter-spacing: -1px;
 <div class="value-box" id="delivery-date"></div>
 </div>
 <div class="row-flex">
+<label>제품교육</label>
+<div class="value-box" id="product-training"></div>
+</div>
+<div class="row-flex">
 <label>합계</label>
 <div class="value-box" id="sum-total"></div>
 </div>
@@ -277,6 +281,7 @@ if (!estimateData) {
     document.getElementById('receiver-email').textContent = data.receiver_email || '';
     document.getElementById('receiver-phone').textContent = data.receiver_phone || '';
     document.getElementById('delivery-date').textContent = data.delivery_date || '';
+    document.getElementById('product-training').textContent = data.product_training || '';
     
     // 제품정보 테이블 생성
     const tbody = document.getElementById('product-table').querySelector('tbody');

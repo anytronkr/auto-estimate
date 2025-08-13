@@ -316,7 +316,7 @@ async def fill_estimate(request: Request):
 
         # 일반 필드 (estimate_date는 사용자 입력, estimate_number는 자동 생성)
         for key in ["supplier_person", "supplier_email", "supplier_phone", 
-                    "receiver_company", "receiver_person", "receiver_email", "receiver_phone", "delivery_date"]:
+                    "receiver_company", "receiver_person", "receiver_email", "receiver_phone", "delivery_date", "product_training"]:
             if key in data:
                 if key in CELL_MAP:
                     print(f"DEBUG: {key} 처리 중 - 값: '{data[key]}', CELL_MAP 위치: '{CELL_MAP.get(key, 'NOT_FOUND')}'")
@@ -716,9 +716,10 @@ async def collect_data(request: Request):
             product_names[7],                   # Q: 제품8제품명
             final_total,                        # R: 최종견적(VAT포함)
             data.get("delivery_date", ""),      # S: 납기일
-            estimate_link,                      # T: 견적파일(엑셀)
-            pdf_link,                           # U: 견적파일(PDF)
-            pipedrive_deal_id                   # V: Pipedrive 거래 ID
+            data.get("product_training", ""),   # T: 제품교육
+            estimate_link,                      # U: 견적파일(엑셀)
+            pdf_link,                           # V: 견적파일(PDF)
+            pipedrive_deal_id                   # W: Pipedrive 거래 ID
         ]
         ws.append_row(row_data)
         
@@ -1032,7 +1033,8 @@ def create_test_pdf(filename, data):
             ['담당자', data.get('supplier_person', '')],
             ['수신자 회사', data.get('receiver_company', '')],
             ['수신자 담당자', data.get('receiver_person', '')],
-            ['납기일', data.get('delivery_date', '')]
+            ['납기일', data.get('delivery_date', '')],
+            ['제품교육', data.get('product_training', '')]
         ]
         
         basic_table = Table(basic_info, colWidths=[3*cm, 12*cm])
