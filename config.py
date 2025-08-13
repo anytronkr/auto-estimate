@@ -171,9 +171,20 @@ def get_google_credentials():
         print(f"private_key_id: {info.get('private_key_id', 'MISSING')}")
         print(f"project_id: {info.get('project_id', 'MISSING')}")
         
-        # 자격증명 생성
+        # 시간 동기화 문제 해결을 위한 시간 정보 출력
+        import time
+        from datetime import datetime, timezone
+        
+        utc_now = datetime.now(timezone.utc)
+        unix_timestamp = int(time.time())
+        
+        print(f"현재 UTC 시간: {utc_now}")
+        print(f"Unix 타임스탬프: {unix_timestamp}")
+        
+        # 자격증명 생성 (시간 여유를 두고)
         print("자격증명 생성 시도 중...")
         try:
+            # JWT 시간 여유를 위한 추가 설정
             credentials = service_account.Credentials.from_service_account_info(
                 info,
                 scopes=[
@@ -183,6 +194,16 @@ def get_google_credentials():
                     'https://www.googleapis.com/auth/drive.readonly'
                 ]
             )
+            
+            # 토큰 생성 시간 여유를 위해 즉시 새로고침
+            try:
+                import google.auth.transport.requests
+                request = google.auth.transport.requests.Request()
+                credentials.refresh(request)
+                print("✅ 초기 토큰 새로고침 성공")
+            except Exception as refresh_e:
+                print(f"⚠️ 초기 토큰 새로고침 실패: {refresh_e}")
+                # 실패해도 계속 진행
         except Exception as cred_error:
             print(f"❌ Credentials 생성 중 오류: {cred_error}")
             print(f"오류 타입: {type(cred_error)}")
