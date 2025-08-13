@@ -1097,6 +1097,38 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log("=== 페이지 로드 완료 ===");
 });
 
+// 제품교육 드롭다운 선택 후 텍스트 입력 필드로 변환
+document.addEventListener('DOMContentLoaded', function() {
+  const productTrainingSelect = document.getElementById('product-training');
+  
+  productTrainingSelect.addEventListener('change', function() {
+    if (this.value && this.value !== '') {
+      // 선택된 값을 가져옴
+      const selectedValue = this.value;
+      
+      // 새로운 텍스트 입력 필드 생성
+      const textInput = document.createElement('input');
+      textInput.type = 'text';
+      textInput.id = 'product-training';
+      textInput.value = selectedValue;
+      textInput.style.cssText = this.style.cssText; // 기존 스타일 복사
+      textInput.style.width = '100%';
+      textInput.style.padding = '8px';
+      textInput.style.border = '1px solid #ddd';
+      textInput.style.borderRadius = '4px';
+      textInput.placeholder = '제품교육 내용을 입력하거나 수정하세요';
+      
+      // 부모 요소에서 드롭다운 제거하고 텍스트 입력 필드 추가
+      const parent = this.parentNode;
+      parent.removeChild(this);
+      parent.appendChild(textInput);
+      
+      // 텍스트 입력 필드에 포커스
+      textInput.focus();
+    }
+  });
+});
+
 </script>
 </body>
 </html>
