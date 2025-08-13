@@ -122,13 +122,35 @@ async def ping():
 def get_credentials():
     """Google Service Account 자격증명 가져오기"""
     try:
-        print("자격증명 생성 중... ✅ Google Service Account 자격증명 로드 성공")
-        print("✅ 환경변수에서 자격증명 로드 성공")
-        print(f"- 타입: {type(get_google_credentials())}")
+        print("자격증명 생성 중...")
+        credentials = get_google_credentials()
         
-        return get_google_credentials()
+        if credentials:
+            print("✅ 환경변수에서 자격증명 로드 성공")
+            print(f"- 타입: {type(credentials)}")
+            
+            # 토큰 만료 확인 및 새로고침
+            try:
+                if not credentials.valid:
+                    print("토큰이 유효하지 않음, 새로고침 시도...")
+                    import google.auth.transport.requests
+                    credentials.refresh(google.auth.transport.requests.Request())
+                    print("✅ 토큰 새로고침 성공")
+                else:
+                    print("✅ 토큰이 유효함")
+            except Exception as refresh_error:
+                print(f"⚠️ 토큰 새로고침 실패: {refresh_error}")
+                # 새로고침 실패해도 계속 진행
+            
+            return credentials
+        else:
+            print("❌ 자격증명이 None입니다")
+            return None
+            
     except Exception as e:
         print(f"❌ 자격증명 생성 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def copy_estimate_template():
@@ -184,7 +206,40 @@ def copy_estimate_template():
             
             # 더 자세한 오류 정보 제공
             error_msg = str(copy_error)
-            if "403" in error_msg:
+            if "invalid_grant" in error_msg or "Invalid JWT" in error_msg:
+                print("JWT 서명 오류 감지 - 자격증명 재생성 및 재시도")
+                try:
+                    # 새로운 자격증명으로 재시도
+                    print("새로운 자격증명으로 재시도...")
+                    creds = get_credentials()
+                    if creds:
+                        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+                        copied_file = service.files().copy(
+                            fileId=TEMPLATE_SHEET_ID,
+                            body=copy_metadata,
+                            supportsAllDrives=True,
+                            fields='id,name,webViewLink'
+                        ).execute()
+                        
+                        new_file_id = copied_file['id']
+                        web_view_link = copied_file.get('webViewLink', '')
+                        
+                        print(f"재시도 성공: {new_filename} (ID: {new_file_id})")
+                        
+                        return {
+                            "status": "success",
+                            "file_id": new_file_id,
+                            "filename": new_filename,
+                            "web_view_link": web_view_link,
+                            "message": "견적서 템플릿이 성공적으로 복사되었습니다."
+                        }
+                except Exception as retry_error:
+                    print(f"재시도도 실패: {retry_error}")
+                    return {
+                        "status": "error",
+                        "message": f"Google 인증 오류입니다. Service Account 키를 확인해주세요. 오류: {str(copy_error)}"
+                    }
+            elif "403" in error_msg:
                 return {
                     "status": "error",
                     "message": "권한이 없습니다. Service Account가 템플릿 파일과 대상 폴더에 대한 편집 권한이 필요합니다."

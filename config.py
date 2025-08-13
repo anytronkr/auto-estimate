@@ -138,6 +138,19 @@ def get_google_credentials():
             print(f"❌ 필수 키 누락: {missing_keys}")
             return None
         
+        # private_key 개행 문자 처리 (JWT 서명 오류의 주요 원인)
+        if 'private_key' in info:
+            private_key = info['private_key']
+            if '\\n' in private_key:
+                info['private_key'] = private_key.replace('\\n', '\n')
+                print("✅ private_key 개행 문자 변환 완료")
+            
+            # private_key 유효성 검증
+            if not info['private_key'].startswith('-----BEGIN PRIVATE KEY-----'):
+                print("❌ private_key 형식이 올바르지 않습니다")
+                print(f"private_key 시작 부분: {info['private_key'][:50]}...")
+                return None
+        
         # 자격증명 생성
         print("자격증명 생성 시도 중...")
         credentials = service_account.Credentials.from_service_account_info(
