@@ -85,8 +85,8 @@ CELL_MAP = {
     "products[7][price]": "E23",     # 단가
     "products[7][total]": "F23",     # 합계
     "products[7][note]": "G23",      # 비고
-    "delivery_date": "B31",          # 납기일 (B30 → B31로 변경)
-    "product_training": "B34",       # 제품교육
+    "delivery_date": "B31",          # 납기일
+    "product_training": "B30",       # 제품교육 (B34 → B30으로 변경)
     
     # 기존 호환성을 위한 별칭
     "company_name": "F5",
