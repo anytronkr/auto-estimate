@@ -351,7 +351,8 @@ const consumableData = {
     { name: "아트지", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" },
     { name: "유포지", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" },
     { name: "은무 PET", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" },
-    { name: "투명 PET", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" }
+    { name: "투명 PET", detail: "가로   x  세로   , 롤당 ? 장 , 장당 단가 ? ", price: "" },
+    { name: "기타", detail: "", price: "" }
   ],
   "AT-2": [
     { name: "K TONER", detail: "A4 26,000장 출력가능 (농도 5% 기준)", price: "150000" },
@@ -650,8 +651,41 @@ function addProductSet() {
   
   // 제품명 변경 시 상세정보 및 가격 자동 입력
   nameSelect.addEventListener('change', ()=>{
-    updateProductDetail(typeSelect, nameSelect, detailInput, priceInput, priceSelect);
-    updateProductTotal(qtyInput, priceInput, totalInput);
+    // '기타' 선택 시 드롭다운을 입력 필드로 변경
+    if(nameSelect.value === '기타') {
+      const textInput = document.createElement('input');
+      textInput.type = 'text';
+      textInput.className = 'product-name';
+      textInput.placeholder = '제품명을 직접 입력하세요';
+      textInput.style.cssText = nameSelect.style.cssText;
+      textInput.style.width = '100%';
+      textInput.style.flex = '1';
+      textInput.style.marginTop = '0';
+      
+      // 드롭다운을 입력 필드로 교체
+      nameSelect.parentNode.replaceChild(textInput, nameSelect);
+      
+      // 상세정보와 가격 필드 초기화 (사용자가 직접 입력)
+      detailInput.value = '';
+      priceInput.value = '';
+      priceSelect.style.display = 'none';
+      priceInput.style.display = 'block';
+      priceInput.removeAttribute('readonly');
+      priceInput.removeAttribute('disabled');
+      
+      // 합계 필드 초기화
+      totalInput.value = '';
+      
+      // 새로운 입력 필드에 이벤트 리스너 추가
+      textInput.addEventListener('input', ()=>{
+        updateProductTotal(qtyInput, priceInput, totalInput);
+      });
+      
+      textInput.focus();
+    } else {
+      updateProductDetail(typeSelect, nameSelect, detailInput, priceInput, priceSelect);
+      updateProductTotal(qtyInput, priceInput, totalInput);
+    }
   });
   
   // 가격 선택 드롭다운 변경 시
@@ -810,10 +844,14 @@ function collectEstimateData() {
     product_training: document.getElementById('product-training').value,
     fileId: fileId, // fileId 추가
     products: Array.from(document.querySelectorAll('.product-set')).map(function(set) {
+      // 제품명 필드가 input인지 select인지 확인
+      const nameElement = set.querySelector('.product-name');
+      const productName = nameElement.tagName === 'INPUT' ? nameElement.value : nameElement.value;
+      
       return {
         major_category: set.querySelector('.product-major-category').value,
         type: set.querySelector('.product-type').value,
-        name: set.querySelector('.product-name').value,
+        name: productName,
         detail: set.querySelector('.product-detail').value,
         qty: Number(set.querySelector('.product-qty').value),
         price: Number(set.querySelector('.product-price').value.replace(/,/g, "") || 0),
@@ -879,7 +917,8 @@ function validateEstimateForm() {
     const set = sets[i];
     const majorCategory = set.querySelector('.product-major-category').value;
     const type = set.querySelector('.product-type').value;
-    const name = set.querySelector('.product-name').value;
+    const nameElement = set.querySelector('.product-name');
+    const name = nameElement.tagName === 'INPUT' ? nameElement.value : nameElement.value;
     const detail = set.querySelector('.product-detail').value;
     const qty = set.querySelector('.product-qty').value;
     const price = set.querySelector('.product-price').value;
