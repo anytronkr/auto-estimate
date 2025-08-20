@@ -436,75 +436,8 @@ async def fill_estimate(request: Request):
         except Exception as e:
             print(f"⚠️ 셀 포맷 적용 중 오류 (무시됨): {e}")
         
-        # 40행부터 페이지 나누기 설정 (강화된 버전)
-        try:
-            # Google Sheets API를 사용하여 페이지 나누기 설정
-            sheets_service = build('sheets', 'v4', credentials=creds)
-            
-            # 먼저 기존 페이지 나누기 제거
-            clear_request = {
-                "requests": [
-                    {
-                        "deleteBanding": {
-                            "bandedRangeId": 1
-                        }
-                    }
-                ]
-            }
-            
-            # 40행에 페이지 나누기 추가 (수직 페이지 나누기)
-            page_break_request = {
-                "requests": [
-                    {
-                        "insertPageBreak": {
-                            "location": {
-                                "sheetId": 0,  # 첫 번째 시트
-                                "rowIndex": 39  # 40행 (0부터 시작하므로 39)
-                            }
-                        }
-                    }
-                ]
-            }
-            
-            # 페이지 나누기 설정 실행
-            result = sheets_service.spreadsheets().batchUpdate(
-                spreadsheetId=file_id,
-                body=page_break_request
-            ).execute()
-            
-            print(f"✅ 40행에 페이지 나누기 설정 완료: {result}")
-            
-            # 추가로 셀 높이 조정으로 페이지 나누기 효과 강화
-            row_height_request = {
-                "requests": [
-                    {
-                        "updateDimensionProperties": {
-                            "range": {
-                                "sheetId": 0,
-                                "dimension": "ROWS",
-                                "startIndex": 38,  # 39행부터
-                                "endIndex": 40     # 41행까지
-                            },
-                            "properties": {
-                                "pixelSize": 25  # 행 높이를 25픽셀로 설정
-                            },
-                            "fields": "pixelSize"
-                        }
-                    }
-                ]
-            }
-            
-            sheets_service.spreadsheets().batchUpdate(
-                spreadsheetId=file_id,
-                body=row_height_request
-            ).execute()
-            
-            print("✅ 40행 주변 행 높이 조정 완료")
-            
-        except Exception as e:
-            print(f"⚠️ 페이지 나누기 설정 중 오류 (무시됨): {e}")
-            import traceback
-            traceback.print_exc()
+        # 페이지 나누기 설정 제거됨 - 자동 너비 맞춤으로 변경
+        print("✅ 페이지 나누기 설정 생략 - 자동 페이지 조정 사용")
         
         # B47 셀 합치기 해제 (명판/인감 영역)
         try:
@@ -881,49 +814,24 @@ def export_sheet_to_pdf(sheet_id, pdf_filename, creds, gid=0):
         print(f"DEBUG: pdf_filename: {pdf_filename}")
         print(f"DEBUG: gid: {gid}")
         
-        # PDF 생성 전에 페이지 나누기 재확인
-        try:
-            sheets_service = build('sheets', 'v4', credentials=creds)
-            
-            # 40행에 강제 페이지 나누기 설정
-            force_page_break = {
-                "requests": [
-                    {
-                        "insertPageBreak": {
-                            "location": {
-                                "sheetId": 0,
-                                "rowIndex": 39  # 40행
-                            }
-                        }
-                    }
-                ]
-            }
-            
-            sheets_service.spreadsheets().batchUpdate(
-                spreadsheetId=sheet_id,
-                body=force_page_break
-            ).execute()
-            
-            print("✅ PDF 생성 전 40행 페이지 나누기 재확인 완료")
-            
-        except Exception as e:
-            print(f"⚠️ PDF 생성 전 페이지 나누기 설정 실패: {e}")
+        # PDF 생성 전 페이지 나누기 설정 제거됨 - 자동 조정 사용
+        print("✅ PDF 생성 시 자동 페이지 조정 사용")
         
         # URL 방식으로 PDF 생성 (페이지 설정 포함)
         try:
-            print(f"DEBUG: URL 방식 PDF 생성 시도 (페이지 나누기 적용)")
+            print(f"DEBUG: URL 방식 PDF 생성 시도 (너비 맞춤으로 변경)")
             
-            # 페이지 설정이 반영되는 URL 방식 사용
+            # 너비 맞춤 설정으로 변경된 URL 방식 사용
             export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?" + \
                         f"format=pdf&portrait=true&size=A4&" + \
-                        f"fitw=false&fith=false&" + \
+                        f"fitw=true&fith=false&" + \
                         f"top_margin=0.5&bottom_margin=0.5&" + \
                         f"left_margin=0.5&right_margin=0.5&" + \
                         f"horizontal_alignment=CENTER&" + \
                         f"vertical_alignment=TOP&" + \
                         f"printtitle=false&sheetnames=false&" + \
                         f"pagenum=UNDEFINED&gridlines=false&" + \
-                        f"scale=4&gid={gid}"
+                        f"gid={gid}"
             
             print(f"DEBUG: PDF 생성 URL: {export_url}")
             
