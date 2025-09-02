@@ -85,8 +85,27 @@ CELL_MAP = {
     "products[7][price]": "E23",     # 단가
     "products[7][total]": "F23",     # 합계
     "products[7][note]": "G23",      # 비고
-    "delivery_date": "B31",          # 납기일
-    "product_training": "B30",       # 제품교육 (B34 → B30으로 변경)
+    
+    # 제품9 (A24-G24)
+    "products[8][type]": "A24",      # 구분
+    "products[8][name]": "B24",      # 제품명
+    "products[8][detail]": "C24",    # 상세정보
+    "products[8][qty]": "D24",       # 수량
+    "products[8][price]": "E24",     # 단가
+    "products[8][total]": "F24",     # 합계
+    "products[8][note]": "G24",      # 비고
+    
+    # 제품10 (A25-G25)
+    "products[9][type]": "A25",      # 구분
+    "products[9][name]": "B25",      # 제품명
+    "products[9][detail]": "C25",    # 상세정보
+    "products[9][qty]": "D25",       # 수량
+    "products[9][price]": "E25",     # 단가
+    "products[9][total]": "F25",     # 합계
+    "products[9][note]": "G25",      # 비고
+    
+    "delivery_date": "B33",          # 납기일 (B31 → B33으로 변경)
+    "product_training": "B32",       # 제품교육 (B30 → B32로 변경)
     
     # 기존 호환성을 위한 별칭
     "company_name": "F5",

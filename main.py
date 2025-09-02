@@ -396,7 +396,7 @@ async def fill_estimate(request: Request):
 
         # 제품 정보
         products = data.get("products", [])
-        for i in range(8):
+        for i in range(10):
             product = products[i] if i < len(products) else {}
             for field in ["type", "name", "detail", "qty", "price", "total", "note"]:
                 cell_key = f"products[{i}][{field}]"
@@ -427,7 +427,7 @@ async def fill_estimate(request: Request):
         
         # 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용
         try:
-            detail_cells = [CELL_MAP[f"products[{i}][detail]"] for i in range(8)]
+            detail_cells = [CELL_MAP[f"products[{i}][detail]"] for i in range(10)]
             for cell in detail_cells:
                 ws.format(cell, {
                     "wrapStrategy": "WRAP"
@@ -526,10 +526,10 @@ async def collect_data(request: Request):
         # 견적서 링크 생성
         estimate_link = f"https://docs.google.com/spreadsheets/d/{data.get('fileId', '')}/edit"
         
-        # 제품 데이터 추출 (최대 8개)
+        # 제품 데이터 추출 (최대 10개)
         products = data.get("products", [])
         product_names = []
-        for i in range(8):  # 최대 8개 제품
+        for i in range(10):  # 최대 10개 제품
             if i < len(products) and products[i].get("name"):
                 product_names.append(products[i].get("name"))
             else:
@@ -647,12 +647,14 @@ async def collect_data(request: Request):
             product_names[5],                   # O: 제품6제품명
             product_names[6],                   # P: 제품7제품명
             product_names[7],                   # Q: 제품8제품명
-            final_total,                        # R: 최종견적(VAT포함)
-            data.get("delivery_date", ""),      # S: 납기일
-            data.get("product_training", ""),   # T: 제품교육
-            estimate_link,                      # U: 견적파일(엑셀)
-            pdf_link,                           # V: 견적파일(PDF)
-            pipedrive_deal_id                   # W: Pipedrive 거래 ID
+            product_names[8],                   # R: 제품9제품명
+            product_names[9],                   # S: 제품10제품명
+            final_total,                        # T: 최종견적(VAT포함) (R → T로 변경)
+            data.get("delivery_date", ""),      # U: 납기일 (S → U로 변경)
+            data.get("product_training", ""),   # V: 제품교육 (T → V로 변경)
+            estimate_link,                      # W: 견적파일(엑셀) (U → W로 변경)
+            pdf_link,                           # X: 견적파일(PDF) (V → X로 변경)
+            pipedrive_deal_id                   # Y: Pipedrive 거래 ID (W → Y로 변경)
         ]
         ws.append_row(row_data)
         
