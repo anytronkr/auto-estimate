@@ -724,17 +724,26 @@ const consumableProducts = {
     "C4040A 잉크카트리지 BLACK",
     "C4040A 잉크카트리지 COLOR",
     "C4040A 메인터넌스박스",
-    "C4040A 컷터블레이드"
+    "C4040A 컷터블레이드",
+    "폐잉크박스"
   ],
   "EPSON CW-C6040A": [
     "C6040A 잉크카트리지 BLACK",
     "C6040A 잉크카트리지 COLOR", 
     "C6040A 메인터넌스박스",
-    "C6040A 컷터블레이드"
+    "C6040A 컷터블래이드",
+    "폐잉크박스"
+  ],
+  "EPSON CW-C6540A": [
+    "C6540A 잉크카트리지 BLACK",
+    "C6540A 잉크카트리지 COLOR",
+    "C6540A 메인터넌스박스",
+    "C6540A 컷터블래이드",
+    "폐잉크박스"
   ]
 };
 
-const consumableModelList = ["1040 4색", "1050 5색", "EPSON CW-C4040A", "EPSON CW-C6040A"];
+const consumableModelList = ["1040 4색", "1050 5색", "EPSON CW-C4040A", "EPSON CW-C6040A", "EPSON CW-C6540A"];
 
 // 확장된 소모품별 제품명, 상세정보, 단가 매핑
 const consumableProductDetails = {
@@ -767,7 +776,16 @@ const consumableProductDetails = {
   "C6040A 잉크카트리지 BLACK": { detail: "EPSON CW-C6040A용 블랙 잉크카트리지", price: 190000, stock: "재고있음" },
   "C6040A 잉크카트리지 COLOR": { detail: "EPSON CW-C6040A용 컬러 잉크카트리지", price: 290000, stock: "재고있음" },
   "C6040A 메인터넌스박스": { detail: "EPSON CW-C6040A용 메인터넌스박스", price: 130000, stock: "재고있음" },
-  "C6040A 컷터블레이드": { detail: "EPSON CW-C6040A용 교체용 컷터블레이드", price: 48000, stock: "재고있음" }
+  "C6040A 컷터블레이드": { detail: "EPSON CW-C6040A용 교체용 컷터블레이드", price: 48000, stock: "재고있음" },
+  
+  // EPSON CW-C6540A 소모품
+  "C6540A 잉크카트리지 BLACK": { detail: "EPSON CW-C6540A용 블랙 잉크카트리지", price: 180000, stock: "재고있음" },
+  "C6540A 잉크카트리지 COLOR": { detail: "EPSON CW-C6540A용 컬러 잉크카트리지", price: 280000, stock: "재고있음" },
+  "C6540A 메인터넌스박스": { detail: "EPSON CW-C6540A용 메인터넌스박스", price: 120000, stock: "재고있음" },
+  "C6540A 컷터블레이드": { detail: "EPSON CW-C6540A용 교체용 컷터블레이드", price: 48000, stock: "재고있음" },
+  
+  // 폐잉크박스 (모든 EPSON 모델용)
+  "폐잉크박스": { detail: "EPSON 프린터 전용 폐잉크박스", price: 41000, stock: "재고있음" }
 };
 
 let productCount = 0;
