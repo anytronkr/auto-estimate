@@ -104,6 +104,7 @@ CELL_MAP = {
     "products[9][total]": "F25",     # 합계
     "products[9][note]": "G25",      # 비고
     
+    "quote_validity": "B30",         # 견적유효기간
     "delivery_date": "B33",          # 납기일 (B31 → B33으로 변경)
     "product_training": "B32",       # 제품교육 (B30 → B32로 변경)
     

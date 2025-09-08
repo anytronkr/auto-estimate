@@ -167,6 +167,10 @@
       <button type="button" id="duplicate-product" class="add-btn" style="background: #16a085;">제품복제</button>
     </div>
     <div style="margin-top:16px;">
+      <label>견적유효기간</label>
+      <input type="text" id="quote-validity" placeholder="견적일로부터 4주" value="견적일로부터 4주">
+    </div>
+    <div style="margin-top:16px;">
       <label>납기일<span style="color:red">*</span></label>
       <input type="text" id="delivery-date" placeholder="납기일을 입력해 주세요" value="입금확인일로부터 2주 이내">
     </div>
@@ -944,6 +948,7 @@ function collectEstimateData() {
     receiver_email: document.getElementById('receiver-email').value,
     receiver_phone: document.getElementById('receiver-phone').value,
     product_category: document.getElementById('product-category').value,
+    quote_validity: document.getElementById('quote-validity').value,
     delivery_date: document.getElementById('delivery-date').value,
     product_training: document.getElementById('product-training').value,
     fileId: fileId, // fileId 추가
