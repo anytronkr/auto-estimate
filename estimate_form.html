@@ -162,7 +162,10 @@
   <div>
     <div class="section-title">제품정보(10개까지 추가 가능)<span style="color:red">*</span></div>
     <div id="products-area"></div>
-    <button type="button" id="add-product" class="add-btn">+제품추가</button>
+    <div style="display: flex; gap: 8px;">
+      <button type="button" id="add-product" class="add-btn">+제품추가</button>
+      <button type="button" id="duplicate-product" class="add-btn" style="background: #16a085;">제품복제</button>
+    </div>
     <div style="margin-top:16px;">
       <label>납기일<span style="color:red">*</span></label>
       <input type="text" id="delivery-date" placeholder="납기일을 입력해 주세요" value="입금확인일로부터 2주 이내">
@@ -726,7 +729,105 @@ function addProductSet() {
   noteInput.addEventListener('input', ()=>{ if(noteInput.value.length>20) noteInput.value=noteInput.value.slice(0,20); });
 }
 
+// 제품 복제 함수
+function duplicateLastProduct() {
+  const productSets = document.querySelectorAll('.product-set');
+  if(productSets.length === 0) {
+    alert('복제할 제품이 없습니다.');
+    return;
+  }
+  if(productCount >= maxProducts) {
+    alert('최대 10개까지만 추가할 수 있습니다.');
+    return;
+  }
+  
+  // 마지막 제품 정보 가져오기
+  const lastSet = productSets[productSets.length - 1];
+  const lastData = {
+    majorCategory: lastSet.querySelector('.product-major-category').value,
+    type: lastSet.querySelector('.product-type').value,
+    name: lastSet.querySelector('.product-name').tagName === 'INPUT' ? 
+          lastSet.querySelector('.product-name').value : 
+          lastSet.querySelector('.product-name').value,
+    detail: lastSet.querySelector('.product-detail').value,
+    qty: lastSet.querySelector('.product-qty').value,
+    price: lastSet.querySelector('.product-price').value,
+    note: lastSet.querySelector('.product-note').value,
+    consumableValue: lastSet.querySelector('.consumable-option') ? 
+                    lastSet.querySelector('.consumable-option').value : null
+  };
+  
+  // 새 제품 세트 추가
+  addProductSet();
+  
+  // 방금 추가된 마지막 제품 세트에 데이터 입력
+  const newSets = document.querySelectorAll('.product-set');
+  const newSet = newSets[newSets.length - 1];
+  
+  // 대분류 선택
+  const newMajorSelect = newSet.querySelector('.product-major-category');
+  newMajorSelect.value = lastData.majorCategory;
+  updateProductTypeOptions(newMajorSelect, newSet.querySelector('.product-type'));
+  
+  // 구분 선택
+  setTimeout(() => {
+    const newTypeSelect = newSet.querySelector('.product-type');
+    newTypeSelect.value = lastData.type;
+    updateProductNameOptions(newTypeSelect, newSet.querySelector('.product-name'), null);
+    
+    // 소모품인 경우 소모품 선택 드롭다운 설정
+    if(lastData.type === "소모품" && lastData.consumableValue) {
+      setTimeout(() => {
+        const consumableSelect = newSet.querySelector('.consumable-option');
+        if(consumableSelect) {
+          consumableSelect.value = lastData.consumableValue;
+          updateProductNameOptions(newTypeSelect, newSet.querySelector('.product-name'), consumableSelect);
+          
+          // 제품명 선택
+          setTimeout(() => {
+            const nameElement = newSet.querySelector('.product-name');
+            if(nameElement.tagName === 'INPUT') {
+              nameElement.value = lastData.name;
+            } else {
+              nameElement.value = lastData.name;
+            }
+            updateProductDetail(newTypeSelect, nameElement, newSet.querySelector('.product-detail'), 
+                             newSet.querySelector('.product-price'), newSet.querySelector('.product-price-select'));
+            
+            // 나머지 정보 입력
+            setTimeout(() => {
+              newSet.querySelector('.product-qty').value = lastData.qty;
+              newSet.querySelector('.product-note').value = lastData.note;
+              updateProductTotal(newSet.querySelector('.product-qty'), newSet.querySelector('.product-price'), newSet.querySelector('.product-total'));
+            }, 100);
+          }, 100);
+        }
+      }, 100);
+    } else {
+      // 일반 제품인 경우
+      setTimeout(() => {
+        const nameElement = newSet.querySelector('.product-name');
+        if(nameElement.tagName === 'INPUT') {
+          nameElement.value = lastData.name;
+        } else {
+          nameElement.value = lastData.name;
+        }
+        updateProductDetail(newTypeSelect, nameElement, newSet.querySelector('.product-detail'), 
+                         newSet.querySelector('.product-price'), newSet.querySelector('.product-price-select'));
+        
+        // 나머지 정보 입력
+        setTimeout(() => {
+          newSet.querySelector('.product-qty').value = lastData.qty;
+          newSet.querySelector('.product-note').value = lastData.note;
+          updateProductTotal(newSet.querySelector('.product-qty'), newSet.querySelector('.product-price'), newSet.querySelector('.product-total'));
+        }, 100);
+      }, 100);
+    }
+  }, 100);
+}
+
 document.getElementById('add-product').addEventListener('click', addProductSet);
+document.getElementById('duplicate-product').addEventListener('click', duplicateLastProduct);
 addProductSet(); // 최초 1개 세트 표시
 
 // 담당자-연락처 매핑
