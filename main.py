@@ -316,7 +316,7 @@ async def fill_estimate(request: Request):
 
         # 일반 필드 (estimate_date는 사용자 입력, estimate_number는 자동 생성)
         for key in ["supplier_person", "supplier_email", "supplier_phone", 
-                    "receiver_company", "receiver_person", "receiver_email", "receiver_phone", "delivery_date", "product_training"]:
+                    "receiver_company", "receiver_person", "receiver_email", "receiver_phone", "quote_validity", "delivery_date", "product_training"]:
             if key in data:
                 if key in CELL_MAP:
                     print(f"DEBUG: {key} 처리 중 - 값: '{data[key]}', CELL_MAP 위치: '{CELL_MAP.get(key, 'NOT_FOUND')}'")
