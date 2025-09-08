@@ -175,8 +175,8 @@
       <input type="text" id="delivery-date" placeholder="납기일을 입력해 주세요" value="입금확인일로부터 2주 이내">
     </div>
     <div style="margin-top:16px;">
-      <label>제품교육</label>
-      <select id="product-training" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+      <label>제품교육<span style="color:red">*</span><span style="font-size:0.9em; font-weight:normal; color:#666;">(공란으로 두실경우 아래 목록중 1개를 선택하고 내용을 지워주세요)</span></label>
+      <select id="product-training" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;" required>
         <option value="">제품교육을 선택해주세요</option>
         <option value="제품 납품시 사용자 교육을 진행 합니다.">제품 납품시 사용자 교육을 진행 합니다.</option>
         <option value="엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>
@@ -1065,6 +1065,14 @@ function validateEstimateForm() {
   if (!deliveryDate) {
     console.log("❌ 납기일 누락");
     alert('납기일을 입력해 주세요.');
+    return false;
+  }
+  
+  // 제품교육 필수
+  const productTraining = document.getElementById('product-training').value;
+  if (!productTraining) {
+    console.log("❌ 제품교육 누락");
+    alert('제품교육을 선택해 주세요.');
     return false;
   }
   
