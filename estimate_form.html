@@ -421,7 +421,7 @@ function createProductSet(idx) {
 function updateProductTypeOptions(majorSelect, typeSelect) {
   const major = majorSelect.value;
   typeSelect.innerHTML = '<option value="">구분(선택)</option>';
-  
+
   if(majorCategories[major]) {
     majorCategories[major].forEach(type => {
       const opt = document.createElement('option');
@@ -429,16 +429,114 @@ function updateProductTypeOptions(majorSelect, typeSelect) {
       opt.textContent = type;
       typeSelect.appendChild(opt);
     });
+
+    // 애니트론 선택 시 '직접입력' 옵션 추가
+    if(major === '애니트론') {
+      const directInputOpt = document.createElement('option');
+      directInputOpt.value = '직접입력';
+      directInputOpt.textContent = '직접입력';
+      typeSelect.appendChild(directInputOpt);
+    }
+  }
+}
+
+// '직접입력' 선택 시 모든 필드를 텍스트 입력으로 변경
+function enableDirectInput(typeSelect) {
+  const productSet = typeSelect.closest('.product-set');
+
+  // 구분 필드를 텍스트 입력으로 변경
+  const typeInput = document.createElement('input');
+  typeInput.type = 'text';
+  typeInput.className = 'product-type-input';
+  typeInput.placeholder = '구분 입력';
+  typeInput.style.cssText = typeSelect.style.cssText;
+  typeInput.value = '';
+  typeInput.dataset.directInput = 'true';
+  typeSelect.parentNode.replaceChild(typeInput, typeSelect);
+
+  // 제품명 필드를 텍스트 입력으로 변경
+  const nameSelect = productSet.querySelector('.product-name');
+  if(nameSelect && nameSelect.tagName === 'SELECT') {
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'product-name';
+    nameInput.placeholder = '제품명 입력';
+    nameInput.style.cssText = nameSelect.style.cssText;
+    nameInput.value = '';
+    nameInput.dataset.directInput = 'true';
+    nameSelect.parentNode.replaceChild(nameInput, nameSelect);
+  }
+
+  // 제품상세정보는 이미 textarea이므로 변경 불필요
+  const detailInput = productSet.querySelector('.product-detail');
+  if(detailInput) {
+    detailInput.placeholder = '제품상세정보 입력';
+    detailInput.value = '';
+  }
+
+  // 단가 필드 활성화 (이미 input이므로 placeholder만 변경)
+  const priceInput = productSet.querySelector('.product-price');
+  if(priceInput) {
+    priceInput.placeholder = '공급단가(원) 입력';
+    priceInput.value = '';
+    priceInput.readOnly = false;
+  }
+
+  // 소모품 선택 드롭다운 숨기기
+  const consumableSelect = productSet.querySelector('.consumable-option');
+  if(consumableSelect) {
+    consumableSelect.style.display = 'none';
+  }
+}
+
+// select 형태로 복원 (직접입력에서 다른 옵션으로 변경 시)
+function restoreSelectFields(typeSelect) {
+  const productSet = typeSelect.closest('.product-set');
+
+  // 구분 필드가 input인 경우 select로 복원
+  const typeInput = productSet.querySelector('.product-type-input');
+  if(typeInput && typeInput.dataset.directInput === 'true') {
+    const newTypeSelect = document.createElement('select');
+    newTypeSelect.className = 'product-type';
+    newTypeSelect.innerHTML = '<option value="">구분(선택)</option>';
+    newTypeSelect.style.cssText = typeInput.style.cssText;
+    typeInput.parentNode.replaceChild(newTypeSelect, typeInput);
+
+    // 이벤트 리스너 재등록 필요
+    const majorSelect = productSet.querySelector('.product-major-category');
+    updateProductTypeOptions(majorSelect, newTypeSelect);
+    newTypeSelect.value = typeSelect.value;
+  }
+
+  // 제품명 필드가 input인 경우 select로 복원
+  const nameInput = productSet.querySelector('.product-name');
+  if(nameInput && nameInput.tagName === 'INPUT' && nameInput.dataset.directInput === 'true') {
+    const newNameSelect = document.createElement('select');
+    newNameSelect.className = 'product-name';
+    newNameSelect.innerHTML = '<option value="">제품명</option>';
+    newNameSelect.style.cssText = nameInput.style.cssText;
+    delete newNameSelect.dataset.directInput;
+    nameInput.parentNode.replaceChild(newNameSelect, nameInput);
   }
 }
 
 // 구분 변경 시 제품명 옵션 업데이트
 function updateProductNameOptions(typeSelect, nameSelect, consumableSelect) {
   const type = typeSelect.value;
-  nameSelect.innerHTML = '<option value="">제품명</option>';
 
   console.log("=== updateProductNameOptions 디버깅 ===");
   console.log("선택된 구분:", type);
+
+  // '직접입력' 선택 시 모든 필드를 텍스트 입력으로 변경
+  if(type === '직접입력') {
+    enableDirectInput(typeSelect);
+    return;
+  }
+
+  // 기존 로직: select 형태로 복원 (직접입력에서 다른 옵션으로 변경 시)
+  restoreSelectFields(typeSelect);
+
+  nameSelect.innerHTML = '<option value="">제품명</option>';
 
   // 기존 소모품 선택 드롭다운 찾기
   const existingConsumableSelect = typeSelect.parentNode.querySelector('.consumable-option');
@@ -747,17 +845,23 @@ function duplicateLastProduct() {
   
   // 마지막 제품 정보 가져오기
   const lastSet = productSets[productSets.length - 1];
+
+  // 구분 필드가 input인지 select인지 확인 (직접입력 모드)
+  const typeElement = lastSet.querySelector('.product-type') || lastSet.querySelector('.product-type-input');
+  const isDirectInput = typeElement && typeElement.classList.contains('product-type-input');
+
   const lastData = {
     majorCategory: lastSet.querySelector('.product-major-category').value,
-    type: lastSet.querySelector('.product-type').value,
-    name: lastSet.querySelector('.product-name').tagName === 'INPUT' ? 
-          lastSet.querySelector('.product-name').value : 
+    type: typeElement ? typeElement.value : '',
+    isDirectInput: isDirectInput,
+    name: lastSet.querySelector('.product-name').tagName === 'INPUT' ?
+          lastSet.querySelector('.product-name').value :
           lastSet.querySelector('.product-name').value,
     detail: lastSet.querySelector('.product-detail').value,
     qty: lastSet.querySelector('.product-qty').value,
     price: lastSet.querySelector('.product-price').value,
     note: lastSet.querySelector('.product-note').value,
-    consumableValue: lastSet.querySelector('.consumable-option') ? 
+    consumableValue: lastSet.querySelector('.consumable-option') ?
                     lastSet.querySelector('.consumable-option').value : null
   };
   
@@ -775,6 +879,34 @@ function duplicateLastProduct() {
   
   // 구분 선택
   setTimeout(() => {
+    // 직접입력 모드인 경우
+    if(lastData.isDirectInput) {
+      const newTypeSelect = newSet.querySelector('.product-type');
+      newTypeSelect.value = '직접입력';
+      enableDirectInput(newTypeSelect);
+
+      // 직접입력된 값 복원
+      setTimeout(() => {
+        const typeInput = newSet.querySelector('.product-type-input');
+        if(typeInput) typeInput.value = lastData.type;
+
+        const nameInput = newSet.querySelector('.product-name');
+        if(nameInput) nameInput.value = lastData.name;
+
+        const detailInput = newSet.querySelector('.product-detail');
+        if(detailInput) detailInput.value = lastData.detail;
+
+        const priceInput = newSet.querySelector('.product-price');
+        if(priceInput) priceInput.value = lastData.price;
+
+        newSet.querySelector('.product-qty').value = lastData.qty;
+        newSet.querySelector('.product-note').value = lastData.note;
+        updateProductTotal(newSet.querySelector('.product-qty'), newSet.querySelector('.product-price'), newSet.querySelector('.product-total'));
+      }, 100);
+      return;
+    }
+
+    // 일반 모드
     const newTypeSelect = newSet.querySelector('.product-type');
     newTypeSelect.value = lastData.type;
     updateProductNameOptions(newTypeSelect, newSet.querySelector('.product-name'), null);
@@ -956,10 +1088,14 @@ function collectEstimateData() {
       // 제품명 필드가 input인지 select인지 확인
       const nameElement = set.querySelector('.product-name');
       const productName = nameElement.tagName === 'INPUT' ? nameElement.value : nameElement.value;
-      
+
+      // 구분 필드가 input인지 select인지 확인 (직접입력 모드)
+      const typeElement = set.querySelector('.product-type') || set.querySelector('.product-type-input');
+      const productType = typeElement ? typeElement.value : '';
+
       return {
         major_category: set.querySelector('.product-major-category').value,
-        type: set.querySelector('.product-type').value,
+        type: productType,
         name: productName,
         detail: set.querySelector('.product-detail').value,
         qty: Number(set.querySelector('.product-qty').value),
@@ -1025,7 +1161,11 @@ function validateEstimateForm() {
   for (let i = 0; i < sets.length; i++) {
     const set = sets[i];
     const majorCategory = set.querySelector('.product-major-category').value;
-    const type = set.querySelector('.product-type').value;
+
+    // 구분 필드가 input인지 select인지 확인 (직접입력 모드)
+    const typeElement = set.querySelector('.product-type') || set.querySelector('.product-type-input');
+    const type = typeElement ? typeElement.value : '';
+
     const nameElement = set.querySelector('.product-name');
     const name = nameElement.tagName === 'INPUT' ? nameElement.value : nameElement.value;
     const detail = set.querySelector('.product-detail').value;
@@ -1037,11 +1177,11 @@ function validateEstimateForm() {
       return false;
     }
     if (!type) {
-      alert(`제품 ${i+1}의 구분을 선택해 주세요.`);
+      alert(`제품 ${i+1}의 구분을 입력해 주세요.`);
       return false;
     }
     if (!name) {
-      alert(`제품 ${i+1}의 제품명을 선택해 주세요.`);
+      alert(`제품 ${i+1}의 제품명을 입력해 주세요.`);
       return false;
     }
     if (!detail) {
