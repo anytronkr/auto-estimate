@@ -18,8 +18,52 @@ import json
 from datetime import datetime, timedelta
 import re
 import time
+from google.auth.transport.requests import Request as GoogleRequest
 
 app = FastAPI()
+
+# === Google client 전역 캐시 (요청마다 새로 만드지 않음) ===
+_GOOGLE_CREDS = None
+_GSPREAD_CLIENT = None
+_DRIVE_SERVICE = None
+
+# requests 연결 재사용 (keep-alive 활용)
+HTTP = requests.Session()
+
+def get_google_clients():
+    """
+    creds / gspread / drive service 를 전역 캐시로 재사용.
+    만료 시에만 refresh.
+    """
+    global _GOOGLE_CREDS, _GSPREAD_CLIENT, _DRIVE_SERVICE
+
+    # 첫 번째 호출 시 또는 creds가 None이면 생성
+    if _GOOGLE_CREDS is None:
+        _GOOGLE_CREDS = get_credentials()
+        if not _GOOGLE_CREDS:
+            raise RuntimeError("Google credentials 로드 실패")
+        print("✅ [캐시] Google credentials 초기 생성 완료")
+
+    # 만료됐거나 토큰이 없으면 refresh
+    try:
+        if getattr(_GOOGLE_CREDS, "expired", False) or not getattr(_GOOGLE_CREDS, "token", None):
+            print("[캐시] creds 만료 감지 → refresh 시도...")
+            _GOOGLE_CREDS.refresh(GoogleRequest())
+            print("✅ [캐시] creds refresh 완료")
+    except Exception as e:
+        print(f"⚠️ [캐시] creds.refresh 실패: {e}")
+
+    # gspread 클라이언트 캐시
+    if _GSPREAD_CLIENT is None:
+        _GSPREAD_CLIENT = gspread.authorize(_GOOGLE_CREDS)
+        print("✅ [캐시] gspread client 초기 생성 완료")
+
+    # drive service 캐시
+    if _DRIVE_SERVICE is None:
+        _DRIVE_SERVICE = build("drive", "v3", credentials=_GOOGLE_CREDS, cache_discovery=False)
+        print("✅ [캐시] drive service 초기 생성 완료")
+
+    return _GOOGLE_CREDS, _GSPREAD_CLIENT, _DRIVE_SERVICE
 
 # 서버 시작 시 시간대 정보 출력
 @app.on_event("startup")
@@ -157,12 +201,9 @@ def copy_estimate_template():
     """견적서 템플릿을 복사하여 새 파일 생성"""
     try:
         print("=== 견적서 템플릿 복사 시작 ===")
-        
-        creds = get_credentials()
-        if not creds:
-            return {"status": "error", "message": "자격증명을 가져올 수 없습니다."}
-        
-        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+
+        creds, gc, drive_service = get_google_clients()
+        service = drive_service
         
         # 파일명 생성
         now = datetime.now()
@@ -209,11 +250,15 @@ def copy_estimate_template():
             if "invalid_grant" in error_msg or "Invalid JWT" in error_msg:
                 print("JWT 서명 오류 감지 - 자격증명 재생성 및 재시도")
                 try:
-                    # 새로운 자격증명으로 재시도
-                    print("새로운 자격증명으로 재시도...")
-                    creds = get_credentials()
+                    # 캐시를 초기화하고 재생성
+                    print("캐시 초기화 후 재시도...")
+                    global _GOOGLE_CREDS, _GSPREAD_CLIENT, _DRIVE_SERVICE
+                    _GOOGLE_CREDS = None
+                    _GSPREAD_CLIENT = None
+                    _DRIVE_SERVICE = None
+                    creds, gc, drive_service = get_google_clients()
+                    service = drive_service
                     if creds:
-                        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
                         copied_file = service.files().copy(
                             fileId=TEMPLATE_SHEET_ID,
                             body=copy_metadata,
@@ -296,12 +341,9 @@ async def fill_estimate(request: Request):
         if not file_id:
             return {"status": "error", "msg": "fileId 없음"}
 
-        creds = get_credentials()
-        if not creds:
-            return {"status": "error", "msg": "Google Service Account 자격증명을 가져올 수 없습니다."}
+        creds, gc, drive_service = get_google_clients()
 
-        sh = gspread.service_account(filename=CREDS_PATH)
-        sh = sh.open_by_key(file_id)
+        sh = gc.open_by_key(file_id)
         ws = sh.sheet1
 
         # 1. 파일명 변경
@@ -514,13 +556,10 @@ async def collect_data(request: Request):
         data = await request.json()
         print(f"받은 데이터: {data}")
         
-        # Google Sheets 연결
-        creds = get_credentials()
-        if not creds:
-            return {"status": "error", "msg": "Google Service Account 자격증명을 가져올 수 없습니다."}
+        # Google Sheets 연결 (캐시 재사용)
+        creds, gc, drive_service = get_google_clients()
 
-        sh = gspread.service_account(filename=CREDS_PATH)
-        sh = sh.open_by_key(DATA_COLLECTION_SHEET_ID)
+        sh = gc.open_by_key(DATA_COLLECTION_SHEET_ID)
         ws = sh.sheet1
         
         # 견적서 링크 생성
@@ -565,14 +604,7 @@ async def collect_data(request: Request):
                 # Google Drive 업로드
                 pdf_id, pdf_link = upload_pdf_to_drive(pdf_filename, get_google_drive_folder_id(), pdf_filename, creds)
                 print(f"DEBUG: Google Drive 업로드 성공 - {pdf_id}, {pdf_link}")
-                
-                # 임시 파일 삭제
-                try:
-                    if os.path.exists(pdf_filename):
-                        os.remove(pdf_filename)
-                        print(f"DEBUG: 임시 파일 정리 완료 - {pdf_filename}")
-                except Exception as e:
-                    print(f"DEBUG: 임시 파일 정리 실패 - {str(e)}")
+                # ⚠️ 임시 파일 삭제는 Pipedrive 업로드 후로 이동 (아래)
             else:
                 print("DEBUG: PDF export 실패 또는 file_id 없음")
                 # Fallback: 테스트 PDF 생성 시도
@@ -581,14 +613,7 @@ async def collect_data(request: Request):
                     # Google Drive 업로드
                     pdf_id, pdf_link = upload_pdf_to_drive(pdf_filename, get_google_drive_folder_id(), pdf_filename, creds)
                     print(f"DEBUG: 테스트 PDF Google Drive 업로드 성공 - {pdf_id}, {pdf_link}")
-                    
-                    # 임시 파일 삭제
-                    try:
-                        if os.path.exists(pdf_filename):
-                            os.remove(pdf_filename)
-                            print(f"DEBUG: 임시 파일 정리 완료 - {pdf_filename}")
-                    except Exception as e:
-                        print(f"DEBUG: 임시 파일 정리 실패 - {str(e)}")
+                    # ⚠️ 임시 파일 삭제는 Pipedrive 업로드 후로 이동 (아래)
                 else:
                     return {
                         "status": "error",
@@ -603,11 +628,19 @@ async def collect_data(request: Request):
         
         # Pipedrive 거래 생성
         pipedrive_deal_id = create_pipedrive_deal(data)
-        
+
         # 거래 생성 성공 시 PDF 파일 업로드
         if pipedrive_deal_id and pdf_filename and os.path.exists(pdf_filename):
             upload_file_to_pipedrive_deal(pipedrive_deal_id, pdf_filename, pdf_filename)
-        
+
+        # ✅ Pipedrive 업로드 완료 후에 임시 파일 삭제
+        try:
+            if pdf_filename and os.path.exists(pdf_filename):
+                os.remove(pdf_filename)
+                print(f"DEBUG: 임시 파일 정리 완료 - {pdf_filename}")
+        except Exception as e:
+            print(f"DEBUG: 임시 파일 정리 실패 - {str(e)}")
+
         # 거래 생성 성공 시 Pipedrive에 노트(메모) 추가
         if pipedrive_deal_id:
             try:
@@ -618,7 +651,7 @@ async def collect_data(request: Request):
                     "content": note_content,
                     "deal_id": pipedrive_deal_id
                 }
-                note_response = requests.post(note_url, json=note_data)
+                note_response = HTTP.post(note_url, json=note_data)
                 print(f"Pipedrive 노트 추가 결과: {note_response.status_code} - {note_response.text}")
             except Exception as e:
                 print(f"Pipedrive 노트 추가 오류: {str(e)}")
@@ -683,12 +716,8 @@ async def test_copy():
     """Google Drive 파일 복사 테스트 엔드포인트"""
     try:
         print("=== Google Drive 파일 복사 테스트 시작 ===")
-        
-        creds = get_credentials()
-        if not creds:
-            return {"error": "자격증명을 가져올 수 없습니다"}
-        
-        service = build("drive", "v3", credentials=creds)
+
+        creds, gc, service = get_google_clients()
         
         # 테스트할 파일 ID (현재 설정된 템플릿 파일)
         test_file_id = TEMPLATE_SHEET_ID
@@ -749,12 +778,8 @@ def setup_drive_permissions():
     """Google Drive 파일 및 폴더에 Service Account 권한 설정"""
     try:
         print("=== Google Drive 권한 설정 시작 ===")
-        
-        creds = get_credentials()
-        if not creds:
-            return {"status": "error", "message": "자격증명을 가져올 수 없습니다."}
-        
-        service = build('drive', 'v3', credentials=creds, cache_discovery=False)
+
+        creds, gc, service = get_google_clients()
         service_account_email = getattr(creds, 'service_account_email', '')
         
         if not service_account_email:
@@ -837,12 +862,11 @@ def export_sheet_to_pdf(sheet_id, pdf_filename, creds, gid=0):
             
             print(f"DEBUG: PDF 생성 URL: {export_url}")
             
-            # OAuth 토큰으로 요청
-            import requests
+            # OAuth 토큰으로 요청 (HTTP Session 재사용)
             headers = {'Authorization': f'Bearer {creds.token}'}
-            
-            response = requests.get(export_url, headers=headers)
-            
+
+            response = HTTP.get(export_url, headers=headers)
+
             if response.status_code == 200:
                 with open(pdf_filename, 'wb') as f:
                     f.write(response.content)
@@ -850,18 +874,18 @@ def export_sheet_to_pdf(sheet_id, pdf_filename, creds, gid=0):
                 return True
             else:
                 print(f"DEBUG: URL 방식 PDF 생성 실패: {response.status_code}")
-                
-                # 백업: Google Drive API 방식
+
+                # 백업: Google Drive API 방식 (캐시된 drive_service 재사용)
                 print(f"DEBUG: 백업 방법으로 Google Drive API 시도")
-                drive_service = build('drive', 'v3', credentials=creds)
-                request = drive_service.files().export_media(
+                _, _, cached_drive_service = get_google_clients()
+                request = cached_drive_service.files().export_media(
                     fileId=sheet_id,
                     mimeType='application/pdf'
                 )
-                
+
                 with open(pdf_filename, 'wb') as f:
                     f.write(request.execute())
-                
+
                 print(f"DEBUG: 백업 방법 PDF 생성 성공: {pdf_filename}")
                 return True
             
@@ -876,7 +900,7 @@ def export_sheet_to_pdf(sheet_id, pdf_filename, creds, gid=0):
 def upload_pdf_to_drive(pdf_path, folder_id, file_name, creds):
     """PDF 파일을 Google Drive에 업로드"""
     try:
-        drive_service = build('drive', 'v3', credentials=creds)
+        _, _, drive_service = get_google_clients()
         file_metadata = {
             'name': file_name,
             'parents': [folder_id]
@@ -1087,8 +1111,8 @@ def create_pipedrive_organization(data):
             "visible_to": 3  # 전체 회사에서 볼 수 있도록 설정
         }
         
-        response = requests.post(url, headers=headers, json=org_data)
-        
+        response = HTTP.post(url, headers=headers, json=org_data)
+
         if response.status_code == 201:
             result = response.json()
             org_id = result['data']['id']
@@ -1121,8 +1145,8 @@ def create_pipedrive_person(data):
         if person_email:
             person_data["email"] = [{"value": person_email, "primary": True, "label": "work"}]
         
-        response = requests.post(url, headers=headers, json=person_data)
-        
+        response = HTTP.post(url, headers=headers, json=person_data)
+
         if response.status_code == 201:
             result = response.json()
             person_id = result['data']['id']
@@ -1190,8 +1214,8 @@ def create_pipedrive_deal(data):
         print(f"URL: {url}")
         print(f"Data: {deal_data}")
         
-        response = requests.post(url, headers=headers, json=deal_data)
-        
+        response = HTTP.post(url, headers=headers, json=deal_data)
+
         print(f"Response Status: {response.status_code}")
         print(f"Response Text: {response.text}")
         
@@ -1233,8 +1257,8 @@ def upload_file_to_pipedrive_deal(deal_id, file_path, file_name):
         print(f"Deal ID: {deal_id}")
         print(f"File: {file_name}")
         
-        response = requests.post(url, files=files, data=data)
-        
+        response = HTTP.post(url, files=files, data=data)
+
         print(f"File Upload Response Status: {response.status_code}")
         print(f"File Upload Response Text: {response.text}")
         
