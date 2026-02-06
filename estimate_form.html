@@ -241,10 +241,61 @@
       flex-direction: column;
     }
 
+    /* 대분류·구분·제품명: 넓은 화면에서만 한 줄 */
+    .product-field-group.product-category-row > div {
+      display: flex;
+      flex-direction: column;
+    }
+
     .product-total-highlight {
       background: #e8f5f5 !important;
       border: 2px solid #2A8486 !important;
+      font-weight: 700;
+      font-size: 15px;
+      color: #1a6b6d;
+      box-shadow: 0 1px 4px rgba(42, 132, 134, 0.2);
+    }
+
+    /* 비고: 맨 마지막 줄 한 줄 최대 폭 */
+    .product-field-group.product-note-row {
+      width: 100%;
+      margin-top: 4px;
+    }
+    .product-field-group.product-note-row .product-note {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* 상세정보: 제품란 전체 폭, 넓은 입력 영역 */
+    .product-field-group.product-detail-row {
+      width: 100%;
+    }
+    .product-field-group.product-detail-row .product-detail {
+      width: 100%;
+      max-width: 100%;
+      min-height: 140px;
+      box-sizing: border-box;
+    }
+
+    /* 총 견적금액 표시 */
+    .summary-box {
+      background: #f8f9fa;
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 4px solid #2A8486;
+      margin-bottom: 24px;
+    }
+    .summary-total {
+      font-size: 18px;
       font-weight: 600;
+      color: #1a6b6d;
+    }
+    .summary-total span:first-child {
+      margin-right: 8px;
+    }
+    #total-estimate-amount {
+      font-weight: 700;
       color: #2A8486;
     }
 
@@ -407,6 +458,13 @@
       .product-field-group.three-columns {
         grid-template-columns: 1fr;
       }
+
+      /* 대분류·구분·제품명: 좁은 화면에서는 세로 배치 */
+      .product-field-group.product-category-row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
     }
 
     /* 2-column 레이아웃 (데스크톱 1024px 이상) */
@@ -424,6 +482,13 @@
       .full-width {
         grid-column: 1 / -1;
       }
+
+      /* 대분류·구분·제품명 한 줄 */
+      .product-field-group.product-category-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1.2fr;
+        gap: 12px;
+      }
     }
   </style>
 </head>
@@ -437,7 +502,7 @@
   <div class="content">
     <!-- 필수 입력 안내 -->
     <div class="required-notice">
-      <strong>*</strong> 표시는 필수사항입니다. <strong>*</strong> 표시가 없는 항목은 입력하지 않으셔도 됩니다.
+      *표시는 필수사항입니다. *표시가 없는 항목은 입력하지 않으셔도 됩니다.
     </div>
 
     <!-- 기본정보 -->
@@ -529,10 +594,19 @@
     <div class="section">
       <h2 class="section-title">제품정보 <span class="info-badge">최대 10개</span></h2>
       <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-        <button type="button" id="add-product" class="add-btn">➕ 제품추가</button>
+        <button type="button" id="add-product" class="add-btn add-product-btn">➕ 제품추가</button>
         <button type="button" id="duplicate-product" class="add-btn">📋 제품복제</button>
       </div>
       <div id="products-area"></div>
+      <div style="display: flex; gap: 10px; margin-top: 12px; margin-bottom: 20px;">
+        <button type="button" id="add-product-bottom" class="add-btn add-product-btn">➕ 제품추가</button>
+      </div>
+      <div class="summary-box">
+        <div class="summary-total">
+          <span>총 견적금액:</span>
+          <span id="total-estimate-amount">0</span> 원
+        </div>
+      </div>
     </div>
 
     <!-- 기타정보 -->
@@ -778,33 +852,30 @@ function createProductSet(idx) {
       </div>
     </div>
 
-    <div class="product-field-group">
-      <div class="product-row">
-        <div style="flex: 1;">
-          <label class="product-field-label">대분류</label>
-          <select class="product-major-category">
-            ${majorOptions}
-          </select>
-        </div>
-        <div style="flex: 1;">
-          <label class="product-field-label">구분</label>
-          <select class="product-type">
-            <option value="">구분(선택)</option>
-          </select>
-        </div>
+    <div class="product-field-group product-category-row">
+      <div>
+        <label class="product-field-label">대분류</label>
+        <select class="product-major-category">
+          ${majorOptions}
+        </select>
+      </div>
+      <div>
+        <label class="product-field-label">구분</label>
+        <select class="product-type">
+          <option value="">구분(선택)</option>
+        </select>
+      </div>
+      <div>
+        <label class="product-field-label">제품명</label>
+        <select class="product-name">
+          <option value="">제품명</option>
+        </select>
       </div>
     </div>
 
-    <div class="product-field-group">
-      <label class="product-field-label">제품명</label>
-      <select class="product-name">
-        <option value="">제품명</option>
-      </select>
-    </div>
-
-    <div class="product-field-group">
+    <div class="product-field-group product-detail-row">
       <label class="product-field-label">상세정보</label>
-      <textarea class="product-detail" placeholder="제품상세정보" rows="4" style="resize: vertical; font-family: inherit; font-size: inherit;"></textarea>
+      <textarea class="product-detail" placeholder="제품상세정보" rows="6" style="resize: vertical; font-family: inherit; font-size: inherit;"></textarea>
     </div>
 
     <div class="product-field-group three-columns">
@@ -825,7 +896,7 @@ function createProductSet(idx) {
       </div>
     </div>
 
-    <div class="product-field-group">
+    <div class="product-field-group product-note-row">
       <label class="product-field-label">비고</label>
       <input class="product-note" type="text" maxlength="20" placeholder="비고(20자까지 입력가능)">
     </div>
@@ -1121,6 +1192,19 @@ function updateProductTotal(qtyInput, priceInput, totalInput) {
   } else {
     totalInput.value = '';
   }
+  updateGrandTotal();
+}
+
+// 총 견적금액 갱신 (모든 제품 합계)
+function updateGrandTotal() {
+  const el = document.getElementById('total-estimate-amount');
+  if(!el) return;
+  let sum = 0;
+  document.querySelectorAll('.product-set .product-total').forEach(function(input) {
+    const v = (input.value || '').replace(/,/g, '');
+    if(v) sum += Number(v);
+  });
+  el.textContent = sum.toLocaleString();
 }
 
 function removeProduct(btn) {
@@ -1130,8 +1214,9 @@ function removeProduct(btn) {
   }
   btn.closest('.product-set').remove();
   productCount--;
-  document.getElementById('add-product').disabled = false;
+  setAddProductButtonsDisabled(false);
   renumberProducts();
+  updateGrandTotal();
 }
 
 // 제품 번호 다시 매기기 함수
@@ -1171,11 +1256,12 @@ function duplicateProduct(btn) {
   productCount++;
 
   if(productCount >= maxProducts) {
-    document.getElementById('add-product').disabled = true;
+    setAddProductButtonsDisabled(true);
   }
 
   renumberProducts();
   rebindProductEvents();
+  updateGrandTotal();
 }
 
 // 모든 제품의 이벤트를 다시 바인딩
@@ -1297,13 +1383,17 @@ function moveProductDown(btn) {
   }
 }
 
+function setAddProductButtonsDisabled(disabled) {
+  document.querySelectorAll('.add-product-btn').forEach(function(btn) { btn.disabled = disabled; });
+}
+
 function addProductSet() {
   if(productCount >= maxProducts) return;
   const area = document.getElementById('products-area');
   area.insertAdjacentHTML('beforeend', createProductSet(productCount));
   productCount++;
   if(productCount >= maxProducts) {
-    document.getElementById('add-product').disabled = true;
+    setAddProductButtonsDisabled(true);
   }
   // 이벤트 바인딩
   const sets = area.querySelectorAll('.product-set');
@@ -1409,6 +1499,8 @@ function addProductSet() {
   
   // 비고 입력 제한
   noteInput.addEventListener('input', ()=>{ if(noteInput.value.length>20) noteInput.value=noteInput.value.slice(0,20); });
+
+  updateGrandTotal();
 }
 
 // 제품 복제 함수
@@ -1543,6 +1635,7 @@ function duplicateLastProduct() {
 }
 
 document.getElementById('add-product').addEventListener('click', addProductSet);
+document.getElementById('add-product-bottom').addEventListener('click', addProductSet);
 document.getElementById('duplicate-product').addEventListener('click', duplicateLastProduct);
 addProductSet(); // 최초 1개 세트 표시
 
@@ -2065,7 +2158,7 @@ function restoreFormData(data) {
     // 기존 제품 영역 초기화 (기본 추가된 1개 제거)
     document.getElementById('products-area').innerHTML = '';
     productCount = 0;
-    document.getElementById('add-product').disabled = false;
+    setAddProductButtonsDisabled(false);
     
     data.products.forEach((prod, index) => {
       addProductSet(); // 빈 세트 추가
@@ -2200,6 +2293,7 @@ function restoreFormData(data) {
       priceInput.style.display = 'block';
       
     });
+    updateGrandTotal();
   }
 }
 
