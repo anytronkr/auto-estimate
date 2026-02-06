@@ -185,6 +185,28 @@
       color: white;
     }
 
+    .move-btn {
+      background: white;
+      color: #2A8486;
+      border: 1px solid #2A8486;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      min-width: 30px;
+    }
+
+    .move-btn:hover {
+      background: #2A8486;
+      color: white;
+    }
+
+    .move-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
     .product-row {
       display: flex;
       gap: 12px;
@@ -306,7 +328,7 @@
 
     textarea {
       resize: vertical;
-      min-height: 80px;
+      min-height: 150px;
     }
 
     .hidden {
@@ -696,9 +718,15 @@ function createProductSet(idx) {
   ].join('');
   
   return `
-  <div class="product-set">
-    <div>제품 ${idx+1}
-      ${idx>0?'<button type="button" onclick="removeProduct(this)" class="remove-btn">삭제</button>':''}
+  <div class="product-set" data-index="${idx}">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-weight: 600; color: #2A8486;">제품 ${idx+1}</span>
+      <div style="display: flex; gap: 4px;">
+        <button type="button" onclick="moveProductUp(this)" class="move-btn" title="위로 이동">▲</button>
+        <button type="button" onclick="moveProductDown(this)" class="move-btn" title="아래로 이동">▼</button>
+        <button type="button" onclick="duplicateProduct(this)" class="remove-btn" style="background: #2A8486; color: white;">복제</button>
+        ${idx>0?'<button type="button" onclick="removeProduct(this)" class="remove-btn">삭제</button>':''}
+      </div>
     </div>
     <div class="product-row">
       <select class="product-major-category">
@@ -1018,13 +1046,177 @@ function updateProductTotal(qtyInput, priceInput, totalInput) {
 }
 
 function removeProduct(btn) {
+  if(productCount <= 1) {
+    alert('최소 1개의 제품은 있어야 합니다.');
+    return;
+  }
   btn.closest('.product-set').remove();
   productCount--;
   document.getElementById('add-product').disabled = false;
-  // 제품 번호 다시 매기기
+  renumberProducts();
+}
+
+// 제품 번호 다시 매기기 함수
+function renumberProducts() {
   document.querySelectorAll('.product-set').forEach((el, idx)=>{
-    el.querySelector('div').innerHTML = `제품 ${idx+1} ${idx>0?'<button type=\"button\" onclick=\"removeProduct(this)\" class=\"remove-btn\">삭제</button>':''}`;
+    el.dataset.index = idx;
+    const headerDiv = el.querySelector('div');
+    const span = headerDiv.querySelector('span');
+    span.textContent = `제품 ${idx+1}`;
   });
+}
+
+// 제품 복제 함수 (해당 제품 바로 뒤에 추가)
+function duplicateProduct(btn) {
+  if(productCount >= maxProducts) {
+    alert('최대 10개까지만 추가할 수 있습니다.');
+    return;
+  }
+
+  const productSet = btn.closest('.product-set');
+  const clonedSet = productSet.cloneNode(true);
+
+  // 입력값 유지하면서 복제
+  const originalInputs = productSet.querySelectorAll('input, select, textarea');
+  const clonedInputs = clonedSet.querySelectorAll('input, select, textarea');
+
+  originalInputs.forEach((input, idx) => {
+    if(input.type === 'checkbox' || input.type === 'radio') {
+      clonedInputs[idx].checked = input.checked;
+    } else {
+      clonedInputs[idx].value = input.value;
+    }
+  });
+
+  // 복제한 제품을 현재 제품 바로 다음에 삽입
+  productSet.insertAdjacentElement('afterend', clonedSet);
+  productCount++;
+
+  if(productCount >= maxProducts) {
+    document.getElementById('add-product').disabled = true;
+  }
+
+  renumberProducts();
+  rebindProductEvents();
+}
+
+// 모든 제품의 이벤트를 다시 바인딩
+function rebindProductEvents() {
+  document.querySelectorAll('.product-set').forEach(productSet => {
+    const majorSelect = productSet.querySelector('.product-major-category');
+    const typeSelect = productSet.querySelector('.product-type');
+    const nameSelect = productSet.querySelector('.product-name');
+    const detailInput = productSet.querySelector('.product-detail');
+    const qtyInput = productSet.querySelector('.product-qty');
+    const priceInput = productSet.querySelector('.product-price');
+    const priceSelect = productSet.querySelector('.product-price-select');
+    const totalInput = productSet.querySelector('.product-total');
+
+    // 기존 이벤트 리스너 제거 후 새로 추가
+    const newMajorSelect = majorSelect.cloneNode(true);
+    const newTypeSelect = typeSelect.cloneNode(true);
+    const newNameSelect = nameSelect.cloneNode(true);
+    const newQtyInput = qtyInput.cloneNode(true);
+    const newPriceInput = priceInput.cloneNode(true);
+    const newPriceSelect = priceSelect.cloneNode(true);
+
+    majorSelect.parentNode.replaceChild(newMajorSelect, majorSelect);
+    typeSelect.parentNode.replaceChild(newTypeSelect, typeSelect);
+    nameSelect.parentNode.replaceChild(newNameSelect, nameSelect);
+    qtyInput.parentNode.replaceChild(newQtyInput, qtyInput);
+    priceInput.parentNode.replaceChild(newPriceInput, priceInput);
+    priceSelect.parentNode.replaceChild(newPriceSelect, priceSelect);
+
+    // 이벤트 바인딩
+    newMajorSelect.addEventListener('change', ()=>{
+      updateProductTypeOptions(newMajorSelect, newTypeSelect);
+      detailInput.value = '';
+      newPriceInput.value = '';
+      newNameSelect.value = '';
+      newTypeSelect.value = '';
+    });
+
+    newTypeSelect.addEventListener('change', ()=>{
+      updateProductNameOptions(newTypeSelect, newNameSelect, newTypeSelect.parentNode.querySelector('.consumable-option'));
+      detailInput.value = '';
+      newPriceInput.value = '';
+      newNameSelect.value = '';
+      newPriceSelect.style.display = 'none';
+      newPriceInput.style.display = 'block';
+    });
+
+    newNameSelect.addEventListener('change', ()=>{
+      if(newNameSelect.value === '기타') {
+        const textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.className = 'product-name';
+        textInput.placeholder = '제품명을 직접 입력하세요';
+        textInput.style.cssText = newNameSelect.style.cssText;
+        textInput.style.width = '100%';
+        textInput.style.flex = '1';
+        textInput.style.marginTop = '0';
+
+        newNameSelect.parentNode.replaceChild(textInput, newNameSelect);
+
+        detailInput.value = '';
+        newPriceInput.value = '';
+        newPriceSelect.style.display = 'none';
+        newPriceInput.style.display = 'block';
+        newPriceInput.removeAttribute('readonly');
+        newPriceInput.removeAttribute('disabled');
+        totalInput.value = '';
+
+        textInput.addEventListener('input', ()=>{
+          updateProductTotal(newQtyInput, newPriceInput, totalInput);
+        });
+
+        textInput.focus();
+      } else {
+        updateProductDetail(newTypeSelect, newNameSelect, detailInput, newPriceInput, newPriceSelect);
+        updateProductTotal(newQtyInput, newPriceInput, totalInput);
+      }
+    });
+
+    newPriceSelect.addEventListener('change', ()=>{
+      newPriceInput.value = newPriceSelect.value;
+      newPriceSelect.style.display = 'none';
+      newPriceInput.style.display = 'block';
+      newPriceInput.removeAttribute('readonly');
+      newPriceInput.removeAttribute('disabled');
+      newPriceInput.focus();
+      updateProductTotal(newQtyInput, newPriceInput, totalInput);
+    });
+
+    newQtyInput.addEventListener('input', ()=>updateProductTotal(newQtyInput, newPriceInput, totalInput));
+    newPriceInput.addEventListener('input', ()=>updateProductTotal(newQtyInput, newPriceInput, totalInput));
+
+    newPriceInput.addEventListener('click', ()=>{
+      newPriceInput.removeAttribute('readonly');
+      newPriceInput.removeAttribute('disabled');
+    });
+  });
+}
+
+// 제품 위로 이동
+function moveProductUp(btn) {
+  const productSet = btn.closest('.product-set');
+  const prevProduct = productSet.previousElementSibling;
+
+  if(prevProduct && prevProduct.classList.contains('product-set')) {
+    productSet.parentNode.insertBefore(productSet, prevProduct);
+    renumberProducts();
+  }
+}
+
+// 제품 아래로 이동
+function moveProductDown(btn) {
+  const productSet = btn.closest('.product-set');
+  const nextProduct = productSet.nextElementSibling;
+
+  if(nextProduct && nextProduct.classList.contains('product-set')) {
+    productSet.parentNode.insertBefore(nextProduct, productSet);
+    renumberProducts();
+  }
 }
 
 function addProductSet() {
