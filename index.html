@@ -219,7 +219,18 @@
 
             try {
                 console.log('=== 견적서 템플릿 생성 시작 ===');
-                
+
+                // 이전 견적서 데이터 삭제 (새 견적서 시작)
+                try {
+                    localStorage.removeItem('estimateData');
+                    localStorage.removeItem('productCategory');
+                    sessionStorage.removeItem('estimateData');
+                    sessionStorage.removeItem('productCategory');
+                    console.log('이전 견적서 데이터 삭제 완료');
+                } catch (e) {
+                    console.warn('Storage 삭제 실패:', e);
+                }
+
                 // 견적서 템플릿 생성 API 호출
                 const response = await fetch('/create-estimate-template', {
                     method: 'POST',
