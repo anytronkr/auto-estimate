@@ -5,21 +5,132 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>견적내용 입력</title>
   <style>
-    body { background: #f8f8f8; }
-    .container { max-width:400px; margin:40px auto; font-family:'Pretendard',sans-serif; border-radius:24px; border:1px solid #eee; padding:24px; background:#fff; }
-    h2 { text-align:center; margin-bottom:24px; }
-    label { color:#1cc7b6; font-weight:bold; }
-    input, select, textarea { width:100%; padding:8px; margin-top:4px; border-radius:6px; border:1px solid #aaa; box-sizing:border-box; }
-    hr { margin:16px 0; }
-    .section-title { color:#1cc7b6; font-weight:bold; margin-bottom:8px; }
-    .product-set { border:1px solid #eee; padding:12px; margin-top:12px; border-radius:8px; position:relative; background:#fafafa; }
-    .product-set > div:first-child { font-weight:bold; margin-bottom:8px; }
-    .remove-btn { float:right; background:#eee; border:none; border-radius:4px; padding:2px 8px; cursor:pointer; }
-    .product-row { display:flex; gap:8px; margin-bottom:6px; }
-    .product-row input, .product-row select { flex:1; margin-top:0; }
-    .add-btn { margin-top:8px; background:#1cc7b6; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; }
-    .preview-btn { width:100%; margin-top:24px; background:#1cc7b6; color:#fff; border:none; padding:12px 0; border-radius:8px; font-size:1.1em; cursor:pointer;
-      display: flex; align-items: center; justify-content: center;
+    body {
+      background: #f8f8f8;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* 반응형 컨테이너 */
+    .container {
+      max-width: 1200px; /* 데스크톱: 넓게 */
+      width: 100%;
+      margin: 40px auto;
+      font-family: 'Pretendard', sans-serif;
+      border-radius: 24px;
+      border: 1px solid #eee;
+      padding: 32px;
+      background: #fff;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 32px;
+      font-size: 1.8em;
+    }
+
+    label {
+      color: #1cc7b6;
+      font-weight: bold;
+      font-size: 1em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      box-sizing: border-box;
+      font-size: 1em;
+    }
+
+    hr { margin: 24px 0; }
+
+    .section-title {
+      color: #1cc7b6;
+      font-weight: bold;
+      margin-bottom: 12px;
+      font-size: 1.2em;
+    }
+
+    .product-set {
+      border: 1px solid #eee;
+      padding: 16px;
+      margin-top: 16px;
+      border-radius: 8px;
+      position: relative;
+      background: #fafafa;
+    }
+
+    .product-set > div:first-child {
+      font-weight: bold;
+      margin-bottom: 12px;
+      font-size: 1.1em;
+    }
+
+    .remove-btn {
+      float: right;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: background 0.2s;
+    }
+
+    .remove-btn:hover {
+      background: #ff5252;
+    }
+
+    .product-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .product-row input, .product-row select {
+      flex: 1;
+      margin-top: 0;
+    }
+
+    .add-btn {
+      margin-top: 12px;
+      background: #1cc7b6;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.2s;
+    }
+
+    .add-btn:hover {
+      background: #16a085;
+    }
+
+    .preview-btn {
+      width: 100%;
+      margin-top: 32px;
+      background: #1cc7b6;
+      color: #fff;
+      border: none;
+      padding: 16px 0;
+      border-radius: 8px;
+      font-size: 1.2em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .preview-btn:hover {
+      background: #16a085;
     }
     
     /* 로딩 애니메이션 스타일 */
@@ -83,6 +194,105 @@
       transform: translateY(-1px);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
+
+    /* 반응형 미디어 쿼리 */
+    /* 태블릿 (768px 이하) */
+    @media (max-width: 768px) {
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 24px;
+        border-radius: 16px;
+      }
+
+      h2 {
+        font-size: 1.5em;
+        margin-bottom: 24px;
+      }
+
+      .section-title {
+        font-size: 1.1em;
+      }
+
+      input, select, textarea {
+        padding: 10px;
+      }
+
+      .preview-btn {
+        font-size: 1.1em;
+        padding: 14px 0;
+      }
+    }
+
+    /* 모바일 (480px 이하) */
+    @media (max-width: 480px) {
+      .container {
+        max-width: 100%;
+        margin: 10px;
+        padding: 16px;
+        border-radius: 12px;
+      }
+
+      h2 {
+        font-size: 1.3em;
+        margin-bottom: 20px;
+      }
+
+      .section-title {
+        font-size: 1em;
+        margin-bottom: 10px;
+      }
+
+      label {
+        font-size: 0.95em;
+      }
+
+      input, select, textarea {
+        padding: 8px;
+        font-size: 0.95em;
+      }
+
+      .product-set {
+        padding: 12px;
+      }
+
+      .product-row {
+        gap: 8px;
+      }
+
+      .add-btn {
+        padding: 8px 16px;
+        font-size: 0.95em;
+      }
+
+      .preview-btn {
+        font-size: 1em;
+        padding: 12px 0;
+        margin-top: 24px;
+      }
+
+      .remove-btn {
+        padding: 2px 8px;
+        font-size: 0.85em;
+      }
+    }
+
+    /* 2-column 레이아웃 (데스크톱 1024px 이상) */
+    @media (min-width: 1024px) {
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .form-grid > div {
+        margin-bottom: 0 !important;
+      }
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
+    }
   </style>
 </head>
 <body>
@@ -100,52 +310,56 @@
   <div style="margin-bottom:16px;">
     <div class="section-title">공급자</div>
     <div style="margin-bottom:4px;">공급자: <b>(주)바이텍테크놀로지</b></div>
-    <!-- 담당자 선택란 (너비 줄임) -->
-    <div style="display:flex; align-items:center; margin-bottom:16px;">
-      <label for="supplier-person" style="min-width:70px;">담당자</label>
-      <select id="supplier-person" required style="width:180px; margin-right:8px;">
-        <option value="" data-email="" data-phone="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
-        <option value="애니트론사업부 이훈수 이사" data-email="hslee@bitekps.com" data-phone="010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
-        <option value="애니트론사업부 차재원 차장" data-email="cjw@bitekps.com" data-phone="010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
-        <option value="애니트론사업부 하철용 차장" data-email="cyha@bitekps.com" data-phone="010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
-        <option value="애니트론사업부 노재익 차장" data-email="jake@bitekps.com" data-phone="010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
-        <option value="애니트론사업부 전준영 과장" data-email="methu@bitekps.com" data-phone="010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
-        <option value="애니트론사업부 장진호 대리" data-email="jhjang@bitekps.com" data-phone="010-9999-4401" data-id="F">애니트론사업부 장진호 대리</option>
-      </select>
-      <!-- 담당자ID 표시란 -->
-      <input id="supplier-person-id" type="text" style="width:30px; text-align:center; background:#f0f0f0;" readonly placeholder="ID">
-    </div>
+    <div class="form-grid">
+      <!-- 담당자 선택란 (너비 줄임) -->
+      <div style="display:flex; align-items:center; margin-bottom:16px;">
+        <label for="supplier-person" style="min-width:70px;">담당자</label>
+        <select id="supplier-person" required style="width:180px; margin-right:8px;">
+          <option value="" data-email="" data-phone="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
+          <option value="애니트론사업부 이훈수 이사" data-email="hslee@bitekps.com" data-phone="010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
+          <option value="애니트론사업부 차재원 차장" data-email="cjw@bitekps.com" data-phone="010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
+          <option value="애니트론사업부 하철용 차장" data-email="cyha@bitekps.com" data-phone="010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
+          <option value="애니트론사업부 노재익 차장" data-email="jake@bitekps.com" data-phone="010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
+          <option value="애니트론사업부 전준영 과장" data-email="methu@bitekps.com" data-phone="010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
+          <option value="애니트론사업부 장진호 대리" data-email="jhjang@bitekps.com" data-phone="010-9999-4401" data-id="F">애니트론사업부 장진호 대리</option>
+        </select>
+        <!-- 담당자ID 표시란 -->
+        <input id="supplier-person-id" type="text" style="width:30px; text-align:center; background:#f0f0f0;" readonly placeholder="ID">
+      </div>
 
-    <!-- 이메일 자동 표시란 -->
-    <div style="margin-bottom:16px;">
-      <label for="supplier-email">이메일</label>
-      <input id="supplier-email" type="email" style="width:100%;" readonly>
-    </div>
+      <!-- 이메일 자동 표시란 -->
+      <div style="margin-bottom:16px;">
+        <label for="supplier-email">이메일</label>
+        <input id="supplier-email" type="email" style="width:100%;" readonly>
+      </div>
 
-    <!-- 전화번호 자동 표시란 -->
-    <div style="margin-bottom:16px;">
-      <label for="supplier-phone">전화번호</label>
-      <input id="supplier-phone" type="tel" style="width:100%;" readonly>
+      <!-- 전화번호 자동 표시란 -->
+      <div style="margin-bottom:16px;">
+        <label for="supplier-phone">전화번호</label>
+        <input id="supplier-phone" type="tel" style="width:100%;" readonly>
+      </div>
     </div>
   </div>
   <hr>
   <div style="margin-bottom:16px;">
     <div class="section-title">수신자</div>
-    <div style="margin-bottom:4px;">
-      회사명:<span style="color:red">*</span>
-      <input type="text" id="receiver-company" placeholder="회사명을 적어주세요" style="width:70%; display:inline-block;">
-    </div>
-    <div style="margin-bottom:4px;">
-      담당자:
-      <input type="text" id="receiver-person" placeholder="담당자명을 적어주세요" style="width:70%; display:inline-block;">
-    </div>
-    <div style="margin-bottom:4px;">
-      이메일:
-      <input type="text" id="receiver-email" placeholder="이메일을 입력해주세요" style="width:70%; display:inline-block;">
-    </div>
-    <div>
-      전화번호:
-      <input type="text" id="receiver-phone" placeholder="전화번호를 입력해주세요" style="width:70%; display:inline-block;">
+    <div class="form-grid">
+      <div style="margin-bottom:4px;">
+        회사명:<span style="color:red">*</span>
+        <input type="text" id="receiver-company" placeholder="회사명을 적어주세요" style="width:70%; display:inline-block;">
+      </div>
+      <div style="margin-bottom:4px;">
+        담당자:
+        <input type="text" id="receiver-person" placeholder="담당자명을 적어주세요" style="width:70%; display:inline-block;">
+      </div>
+      <div style="margin-bottom:4px;">
+        이메일:
+        <input type="text" id="receiver-email" placeholder="이메일을 입력해주세요" style="width:70%; display:inline-block;">
+      </div>
+      <div>
+        전화번호:
+        <input type="text" id="receiver-phone" placeholder="전화번호를 입력해주세요" style="width:70%; display:inline-block;">
+      </div>
     </div>
   </div>
   <!-- 견적제품 선택 드롭다운 추가 -->
@@ -1360,38 +1574,239 @@ async function sendEstimateToFastAPI() {
 
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
 
-// 페이지 로드 시 fileId 상태 확인 (디버그용)
+// 페이지 로드 시 fileId 상태 확인 및 데이터 복원
 document.addEventListener('DOMContentLoaded', function() {
   const urlParams = new URLSearchParams(window.location.search);
   const fileId = urlParams.get("id");
-  const timestamp = urlParams.get("t"); // 캐시 방지 매개변수 무시
   
-  console.log("=== estimate_form_new.html 페이지 로드 ===");
-  console.log("URL 파라미터 확인:");
-  console.log("- fileId:", fileId);
-  console.log("- timestamp:", timestamp);
-  console.log("- 전체 URL:", window.location.href);
+  console.log("=== 페이지 로드 및 데이터 복원 시작 ===");
   
-  // localStorage에서 기존 데이터 확인
-  try {
-    const existingData = localStorage.getItem('estimateData');
-    if (existingData) {
-      const parsedData = JSON.parse(existingData);
-      console.log("- localStorage estimateData.fileId:", parsedData.fileId);
-    } else {
-      console.log("- localStorage estimateData 없음");
+  // 1. localStorage에서 데이터 확인
+  const existingData = localStorage.getItem('estimateData');
+  
+  if (existingData) {
+    try {
+      const data = JSON.parse(existingData);
+      console.log("복원할 데이터 발견:", data);
+      
+      // fileId가 URL에 없고 저장된 데이터에만 있는 경우 (뒤로가기 등)
+      // 현재 URL의 id 파라미터가 우선순위가 높음
+      if (!fileId && data.fileId) {
+        console.log("URL에 ID가 없어 저장된 ID 사용:", data.fileId);
+      }
+      
+      restoreFormData(data);
+      
+    } catch (e) {
+      console.error("데이터 복원 중 오류:", e);
     }
-  } catch (e) {
-    console.error("- localStorage 파싱 오류:", e);
+  } else {
+    console.log("복원할 데이터가 없습니다.");
+    // 데이터가 없으면 기본으로 제품 1개는 addProductSet()이 아래에서 호출됨 (기존 코드)
+  }
+});
+
+// 폼 데이터 복원 함수
+function restoreFormData(data) {
+  // 1. 기본 필드 복원
+  if(data.estimate_date) document.getElementById('date').value = data.estimate_date;
+  if(data.estimate_number) document.getElementById('number').value = data.estimate_number;
+  if(data.receiver_company) document.getElementById('receiver-company').value = data.receiver_company;
+  if(data.receiver_person) document.getElementById('receiver-person').value = data.receiver_person;
+  if(data.receiver_email) document.getElementById('receiver-email').value = data.receiver_email;
+  if(data.receiver_phone) document.getElementById('receiver-phone').value = data.receiver_phone;
+  if(data.quote_validity) document.getElementById('quote-validity').value = data.quote_validity;
+  if(data.delivery_date) document.getElementById('delivery-date').value = data.delivery_date;
+  
+  // 2. 공급자 담당자 선택 및 이벤트 트리거
+  if(data.supplier_person) {
+    const supplierSelect = document.getElementById('supplier-person');
+    // 텍스트로 옵션 찾기
+    for(let i=0; i<supplierSelect.options.length; i++) {
+        if(supplierSelect.options[i].text === data.supplier_person) {
+            supplierSelect.selectedIndex = i;
+            // change 이벤트 수동 트리거 (이메일/전화번호 자동채움)
+            supplierSelect.dispatchEvent(new Event('change'));
+            break;
+        }
+    }
   }
   
-  if (!fileId || fileId === "{{24.id}}" || fileId.includes("{{") || fileId.includes("}}")) {
-    console.log("fileId가 없거나 템플릿 변수입니다. 견적서 생성 시 자동으로 새 템플릿을 생성합니다.");
-  } else {
-    console.log("유효한 fileId가 제공되었습니다:", fileId);
+  // 3. 견적제품 선택
+  if(data.product_category) {
+    document.getElementById('product-category').value = data.product_category;
   }
-  console.log("=== 페이지 로드 완료 ===");
-});
+  
+  // 4. 제품교육 (드롭다운 or 텍스트)
+  if(data.product_training) {
+    const trainingSelect = document.getElementById('product-training');
+    let matchFound = false;
+    for(let i=0; i<trainingSelect.options.length; i++) {
+        if(trainingSelect.options[i].value === data.product_training) {
+            trainingSelect.selectedIndex = i;
+            matchFound = true;
+            break;
+        }
+    }
+    
+    // 드롭다운에 없는 값이면 (사용자 직접 입력) 텍스트 필드로 변환
+    if(!matchFound) {
+        const textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.id = 'product-training';
+        textInput.value = data.product_training;
+        textInput.style.cssText = trainingSelect.style.cssText;
+        textInput.style.width = '100%';
+        textInput.style.padding = '8px';
+        textInput.style.border = '1px solid #ddd';
+        textInput.style.borderRadius = '4px';
+        
+        trainingSelect.parentNode.replaceChild(textInput, trainingSelect);
+    }
+  }
+  
+  // 5. 제품 목록 복원
+  if (data.products && data.products.length > 0) {
+    // 기존 제품 영역 초기화 (기본 추가된 1개 제거)
+    document.getElementById('products-area').innerHTML = '';
+    productCount = 0;
+    document.getElementById('add-product').disabled = false;
+    
+    data.products.forEach((prod, index) => {
+      addProductSet(); // 빈 세트 추가
+      
+      // 방금 추가된 세트 찾기
+      const sets = document.querySelectorAll('.product-set');
+      const set = sets[sets.length - 1];
+      
+      const majorSelect = set.querySelector('.product-major-category');
+      const typeSelect = set.querySelector('.product-type');
+      const nameSelect = set.querySelector('.product-name');
+      const detailInput = set.querySelector('.product-detail');
+      const qtyInput = set.querySelector('.product-qty');
+      const priceInput = set.querySelector('.product-price');
+      const totalInput = set.querySelector('.product-total');
+      const noteInput = set.querySelector('.product-note');
+      
+      // 대분류 설정
+      majorSelect.value = prod.major_category;
+      updateProductTypeOptions(majorSelect, typeSelect);
+      
+      // 구분 설정 (직접입력 체크)
+      // productData에 해당 구분이 있으면 일반, 없으면 직접입력 간주
+      const isDirectType = !majorCategories[prod.major_category] || !majorCategories[prod.major_category].includes(prod.type);
+      
+      if (prod.type === '직접입력') { // 명시적 '직접입력'
+         typeSelect.value = '직접입력';
+         enableDirectInput(typeSelect);
+         const typeInput = set.querySelector('.product-type-input');
+         if(typeInput) typeInput.value = prod.type; 
+      } else {
+         // 드롭다운에 값이 있는지 확인
+         let typeOptionExists = false;
+         for(let i=0; i<typeSelect.options.length; i++){
+             if(typeSelect.options[i].value === prod.type) {
+                 typeOptionExists = true;
+                 break;
+             }
+         }
+         
+         if(typeOptionExists) {
+             typeSelect.value = prod.type;
+             updateProductNameOptions(typeSelect, nameSelect, null);
+         } else {
+             // 옵션에 없으면 직접입력으로 처리
+             const directOpt = document.createElement('option');
+             directOpt.value = '직접입력'; 
+             // 위에서 createProductSet시 이미 추가되지만 확실히 하기 위해
+             typeSelect.value = '직접입력'; 
+             enableDirectInput(typeSelect);
+             const typeInput = set.querySelector('.product-type-input');
+             if(typeInput) typeInput.value = prod.type;
+         }
+      }
+
+      // 제품명 설정
+      // 앞서 updateProductNameOptions가 호출되었음.
+      // 소모품 처리
+      if (prod.type === '소모품') {
+          // 어떤 소모품 장비인지 찾아야 함.
+          // prod.name이 consumableData의 어느 키 배열에 있는지 역추적하거나,
+          // 저장된 데이터에 consumableValue가 없으므로 (collectEstimateData에 누락됨)
+          // 이름으로 추론해야 함.
+          
+          // 하지만 여기선 단순히 이름이 일치하는 옵션을 찾거나 없으면 직접입력 처리
+          // 소모품의 경우 typeSelect 옆에 consumable-option이 생김
+          const consumableSelect = set.querySelector('.consumable-option');
+          if(consumableSelect) {
+             // 소모품 장비 모델을 알 수 없으므로(저장 안함), 
+             // 모든 소모품 데이터를 뒤져서 일치하는 이름이 있는지 확인
+             let foundModel = '';
+             for(const [model, items] of Object.entries(consumableData)) {
+                 if(items.some(item => item.name === prod.name)) {
+                     foundModel = model;
+                     break;
+                 }
+             }
+             if(foundModel) {
+                 consumableSelect.value = foundModel;
+                 // 모델 선택 이벤트 트리거와 유사하게 동작
+                 updateProductNameOptions(typeSelect, nameSelect, consumableSelect);
+             }
+          }
+      }
+      
+      // 제품명 값 설정
+      // 현재 nameSelect가 select인지 input인지 확인
+      const currentNameEl = set.querySelector('.product-name');
+      
+      // 만약 drop down에 해당 이름이 없으면 '기타' -> 직접입력 전환 또는 바로 inputValue설정
+      if(currentNameEl.tagName === 'SELECT') {
+          let nameExists = false;
+          for(let i=0; i<currentNameEl.options.length; i++) {
+              if(currentNameEl.options[i].value === prod.name) {
+                  nameExists = true;
+                  break;
+              }
+          }
+          
+          if(nameExists) {
+              currentNameEl.value = prod.name;
+              // 가격 옵션 등 업데이트 (단, 아래에서 값을 덮어쓸 것이므로 중요도는 낮음)
+              // updateProductDetail(...) 호출하면 detail/price가 리셋될 수 있으므로 주의.
+              // 여기서는 그냥 값만 force setting하고 detail/price는 저장된 값으로 덮어쓰기
+          } else {
+              // 리스트에 없으면 '기타' 처리 (직접입력)
+              // 혹은 원래 '직접입력' 모드였을 수 있음
+              
+              // 강제로 input으로 변환
+              const textInput = document.createElement('input');
+              textInput.type = 'text';
+              textInput.className = 'product-name';
+              textInput.style.cssText = currentNameEl.style.cssText;
+              textInput.value = prod.name;
+              currentNameEl.parentNode.replaceChild(textInput, currentNameEl);
+          }
+      } else {
+          currentNameEl.value = prod.name;
+      }
+      
+      // 상세정보, 수량, 가격, 비고 복원
+      detailInput.value = prod.detail;
+      qtyInput.value = prod.qty;
+      priceInput.value = prod.price; // 숫자형이어도 input엔 잘 들어감
+      totalInput.value = prod.total.toLocaleString(); // 콤마 포맷
+      noteInput.value = prod.note;
+      
+      // 가격 드롭다운 처리 (저장된 가격과 일치하는게 있으면 숨김/보임 처리 등)
+      // 그냥 input에 값을 넣었으므로 select는 숨김 처리
+      const priceSelect = set.querySelector('.product-price-select');
+      if(priceSelect) priceSelect.style.display = 'none';
+      priceInput.style.display = 'block';
+      
+    });
+  }
+}
 
 // 제품교육 드롭다운 선택 후 텍스트 입력 필드로 변환
 document.addEventListener('DOMContentLoaded', function() {
