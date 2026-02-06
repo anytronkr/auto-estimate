@@ -5,91 +5,190 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>견적내용 입력</title>
   <style>
-    body {
-      background: #f8f8f8;
+    * {
       margin: 0;
       padding: 0;
-    }
-
-    /* 반응형 컨테이너 */
-    .container {
-      max-width: 1200px; /* 데스크톱: 넓게 */
-      width: 100%;
-      margin: 40px auto;
-      font-family: 'Pretendard', sans-serif;
-      border-radius: 24px;
-      border: 1px solid #eee;
-      padding: 32px;
-      background: #fff;
       box-sizing: border-box;
     }
 
-    h2 {
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(42, 132, 134, 0.15);
+      overflow: hidden;
+    }
+
+    .header {
+      background: #2A8486;
+      color: white;
+      padding: 30px 40px;
       text-align: center;
-      margin-bottom: 32px;
-      font-size: 1.8em;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 40px;
+    }
+
+    .section {
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2A8486;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #2A8486;
+      display: flex;
+      align-items: center;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 20px;
+      background: #2A8486;
+      margin-right: 10px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
     }
 
     label {
-      color: #1cc7b6;
-      font-weight: bold;
-      font-size: 1em;
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
     }
 
-    input, select, textarea {
-      width: 100%;
-      padding: 12px;
-      margin-top: 6px;
+    label .required {
+      color: #e74c3c;
+      margin-left: 4px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    select,
+    textarea {
+      padding: 12px 16px;
+      border: 1px solid #ddd;
       border-radius: 6px;
-      border: 1px solid #aaa;
-      box-sizing: border-box;
-      font-size: 1em;
+      font-size: 14px;
+      transition: all 0.3s;
+      font-family: inherit;
     }
 
-    hr { margin: 24px 0; }
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    input[type="email"]:focus,
+    input[type="tel"]:focus,
+    input[type="number"]:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #2A8486;
+      box-shadow: 0 0 0 3px rgba(42, 132, 134, 0.1);
+    }
 
-    .section-title {
-      color: #1cc7b6;
-      font-weight: bold;
-      margin-bottom: 12px;
-      font-size: 1.2em;
+    input[readonly] {
+      background: #f8f9fa;
+      cursor: not-allowed;
+    }
+
+    select {
+      cursor: pointer;
+      appearance: none;
+      background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 12px center;
+      padding-right: 40px;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #e9ecef;
+      margin: 24px 0;
     }
 
     .product-set {
-      border: 1px solid #eee;
-      padding: 16px;
-      margin-top: 16px;
+      background: #f8f9fa;
+      padding: 24px;
       border-radius: 8px;
+      margin-bottom: 20px;
+      border: 2px solid #e9ecef;
       position: relative;
-      background: #fafafa;
+    }
+
+    .product-set:hover {
+      border-color: #2A8486;
     }
 
     .product-set > div:first-child {
-      font-weight: bold;
-      margin-bottom: 12px;
-      font-size: 1.1em;
+      font-size: 16px;
+      font-weight: 600;
+      color: #2A8486;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .remove-btn {
-      float: right;
-      background: #ff6b6b;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 12px;
+      background: white;
+      color: #e74c3c;
+      border: 1px solid #e74c3c;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 0.9em;
-      transition: background 0.2s;
+      transition: all 0.3s;
     }
 
     .remove-btn:hover {
-      background: #ff5252;
+      background: #e74c3c;
+      color: white;
     }
 
     .product-row {
       display: flex;
       gap: 12px;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
 
     .product-row input, .product-row select {
@@ -98,49 +197,84 @@
     }
 
     .add-btn {
-      margin-top: 12px;
-      background: #1cc7b6;
-      color: #fff;
+      background: #2A8486;
+      color: white;
+      padding: 8px 16px;
+      font-size: 13px;
       border: none;
-      padding: 10px 20px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 1em;
-      transition: background 0.2s;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .add-btn:hover {
-      background: #16a085;
+      background: #236b6d;
     }
 
-    .preview-btn {
-      width: 100%;
-      margin-top: 32px;
-      background: #1cc7b6;
-      color: #fff;
+    .btn {
+      padding: 14px 28px;
       border: none;
-      padding: 16px 0;
-      border-radius: 8px;
-      font-size: 1.2em;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 500;
       cursor: pointer;
-      display: flex;
+      transition: all 0.3s;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.2s;
+      gap: 8px;
     }
 
-    .preview-btn:hover {
-      background: #16a085;
+    .btn-primary {
+      background: #2A8486;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #236b6d;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(42, 132, 134, 0.3);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #2A8486;
+      border: 1px solid #2A8486;
+    }
+
+    .btn-secondary:hover {
+      background: #f8f9fa;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 2px solid #e9ecef;
+    }
+
+    .info-badge {
+      display: inline-block;
+      background: #e8f5f5;
+      color: #2A8486;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-left: 8px;
     }
     
     /* 로딩 애니메이션 스타일 */
     .loading {
       position: relative;
-      background: #1cc7b6 !important;
+      background: #2A8486 !important;
       color: transparent !important;
       pointer-events: none;
       transform: scale(0.98);
-      box-shadow: 0 2px 8px rgba(28, 199, 182, 0.3);
+      box-shadow: 0 2px 8px rgba(42, 132, 134, 0.3);
       transition: all 0.3s ease;
     }
 
@@ -169,111 +303,43 @@
       opacity: 0.7;
       cursor: not-allowed;
     }
-    
-    /* 처음화면으로 버튼 스타일 */
-    .home-button {
-      width: 100%;
-      margin-top: 12px;
-      background: #f8f9fa;
-      color: #6c757d;
-      border: 2px solid #dee2e6;
-      padding: 10px 0;
-      border-radius: 8px;
-      font-size: 0.95em;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-decoration: none;
-      text-align: center;
-      display: block;
-    }
-    
-    .home-button:hover {
-      background: #e9ecef;
-      color: #495057;
-      border-color: #adb5bd;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
     }
 
-    /* 반응형 미디어 쿼리 */
-    /* 태블릿 (768px 이하) */
+    .hidden {
+      display: none;
+    }
+
     @media (max-width: 768px) {
-      .container {
-        max-width: 600px;
-        margin: 20px auto;
-        padding: 24px;
-        border-radius: 16px;
+      .content {
+        padding: 20px;
       }
 
-      h2 {
-        font-size: 1.5em;
-        margin-bottom: 24px;
+      .form-grid {
+        grid-template-columns: 1fr;
       }
 
-      .section-title {
-        font-size: 1.1em;
+      .product-set > div:first-child {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
       }
 
-      input, select, textarea {
-        padding: 10px;
+      .action-buttons {
+        flex-direction: column;
       }
 
-      .preview-btn {
-        font-size: 1.1em;
-        padding: 14px 0;
-      }
-    }
-
-    /* 모바일 (480px 이하) */
-    @media (max-width: 480px) {
-      .container {
-        max-width: 100%;
-        margin: 10px;
-        padding: 16px;
-        border-radius: 12px;
-      }
-
-      h2 {
-        font-size: 1.3em;
-        margin-bottom: 20px;
-      }
-
-      .section-title {
-        font-size: 1em;
-        margin-bottom: 10px;
-      }
-
-      label {
-        font-size: 0.95em;
-      }
-
-      input, select, textarea {
-        padding: 8px;
-        font-size: 0.95em;
-      }
-
-      .product-set {
-        padding: 12px;
+      .btn {
+        width: 100%;
+        justify-content: center;
       }
 
       .product-row {
+        flex-direction: column;
         gap: 8px;
-      }
-
-      .add-btn {
-        padding: 8px 16px;
-        font-size: 0.95em;
-      }
-
-      .preview-btn {
-        font-size: 1em;
-        padding: 12px 0;
-        margin-top: 24px;
-      }
-
-      .remove-btn {
-        padding: 2px 8px;
-        font-size: 0.85em;
       }
     }
 
@@ -297,111 +363,141 @@
 </head>
 <body>
 <div class="container">
-  <h2>견적내용 입력</h2>
-  <div style="margin-bottom:16px;">
-    <label>견적일자<span style="color:red">*</span></label>
-    <input type="date" id="date">
+  <div class="header">
+    <h1>📋 견적내용 입력</h1>
+    <p>(주)바이텍테크놀로지</p>
   </div>
-  <div style="margin-bottom:16px;">
-    <label>견적번호<span style="color:red">*</span></label>
-    <input type="text" id="number" placeholder="예시) DLP_250707-1">
-  </div>
-  <hr>
-  <div style="margin-bottom:16px;">
-    <div class="section-title">공급자</div>
-    <div style="margin-bottom:4px;">공급자: <b>(주)바이텍테크놀로지</b></div>
-    <div class="form-grid">
-      <!-- 담당자 선택란 (너비 줄임) -->
-      <div style="display:flex; align-items:center; margin-bottom:16px;">
-        <label for="supplier-person" style="min-width:70px;">담당자</label>
-        <select id="supplier-person" required style="width:180px; margin-right:8px;">
-          <option value="" data-email="" data-phone="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
-          <option value="애니트론사업부 이훈수 이사" data-email="hslee@bitekps.com" data-phone="010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
-          <option value="애니트론사업부 차재원 차장" data-email="cjw@bitekps.com" data-phone="010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
-          <option value="애니트론사업부 하철용 차장" data-email="cyha@bitekps.com" data-phone="010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
-          <option value="애니트론사업부 노재익 차장" data-email="jake@bitekps.com" data-phone="010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
-          <option value="애니트론사업부 전준영 과장" data-email="methu@bitekps.com" data-phone="010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
-          <option value="애니트론사업부 장진호 대리" data-email="jhjang@bitekps.com" data-phone="010-9999-4401" data-id="F">애니트론사업부 장진호 대리</option>
+
+  <div class="content">
+    <!-- 기본정보 -->
+    <div class="section">
+      <h2 class="section-title">기본정보</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>견적일자 <span class="required">*</span></label>
+          <input type="date" id="date" required>
+        </div>
+        <div class="form-group">
+          <label>견적번호 <span class="required">*</span></label>
+          <input type="text" id="number" placeholder="예시) DLP_250707-1" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- 공급자 정보 -->
+    <div class="section">
+      <h2 class="section-title">공급자 정보 <span class="info-badge">고정</span></h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>공급자</label>
+          <input type="text" value="(주)바이텍테크놀로지" readonly>
+        </div>
+        <div class="form-group">
+          <label>담당자 <span class="required">*</span></label>
+          <select id="supplier-person" required>
+            <option value="" data-email="" data-phone="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
+            <option value="애니트론사업부 이훈수 이사" data-email="hslee@bitekps.com" data-phone="010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
+            <option value="애니트론사업부 차재원 차장" data-email="cjw@bitekps.com" data-phone="010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
+            <option value="애니트론사업부 하철용 차장" data-email="cyha@bitekps.com" data-phone="010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
+            <option value="애니트론사업부 노재익 차장" data-email="jake@bitekps.com" data-phone="010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
+            <option value="애니트론사업부 전준영 과장" data-email="methu@bitekps.com" data-phone="010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
+            <option value="애니트론사업부 장진호 대리" data-email="jhjang@bitekps.com" data-phone="010-9999-4401" data-id="F">애니트론사업부 장진호 대리</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>담당자 ID</label>
+          <input type="text" id="supplier-person-id" readonly placeholder="자동입력">
+        </div>
+        <div class="form-group">
+          <label>이메일</label>
+          <input type="email" id="supplier-email" readonly placeholder="자동입력">
+        </div>
+        <div class="form-group">
+          <label>전화번호</label>
+          <input type="tel" id="supplier-phone" readonly placeholder="자동입력">
+        </div>
+      </div>
+    </div>
+    <!-- 수신자 정보 -->
+    <div class="section">
+      <h2 class="section-title">수신자 정보</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>회사명 <span class="required">*</span></label>
+          <input type="text" id="receiver-company" required placeholder="회사명을 입력해주세요">
+        </div>
+        <div class="form-group">
+          <label>담당자</label>
+          <input type="text" id="receiver-person" placeholder="담당자명을 입력해주세요">
+        </div>
+        <div class="form-group">
+          <label>이메일</label>
+          <input type="email" id="receiver-email" placeholder="이메일을 입력해주세요">
+        </div>
+        <div class="form-group">
+          <label>전화번호</label>
+          <input type="tel" id="receiver-phone" placeholder="전화번호를 입력해주세요">
+        </div>
+      </div>
+    </div>
+
+    <!-- 견적제품 선택 -->
+    <div class="section">
+      <h2 class="section-title">견적제품 선택</h2>
+      <div class="form-group">
+        <label>제품 유형 <span class="required">*</span></label>
+        <select id="product-category" required>
+          <option value="">선택하세요</option>
+          <option value="장비">장비</option>
+          <option value="소모품">소모품</option>
+          <option value="기타">기타</option>
         </select>
-        <!-- 담당자ID 표시란 -->
-        <input id="supplier-person-id" type="text" style="width:30px; text-align:center; background:#f0f0f0;" readonly placeholder="ID">
       </div>
+    </div>
+    <!-- 제품정보 -->
+    <div class="section">
+      <h2 class="section-title">제품정보 <span class="info-badge">최대 10개</span></h2>
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button type="button" id="add-product" class="add-btn">➕ 제품추가</button>
+        <button type="button" id="duplicate-product" class="add-btn">📋 제품복제</button>
+      </div>
+      <div id="products-area"></div>
+    </div>
 
-      <!-- 이메일 자동 표시란 -->
-      <div style="margin-bottom:16px;">
-        <label for="supplier-email">이메일</label>
-        <input id="supplier-email" type="email" style="width:100%;" readonly>
+    <!-- 기타정보 -->
+    <div class="section">
+      <h2 class="section-title">기타정보</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>견적유효기간</label>
+          <input type="text" id="quote-validity" value="견적일로부터 4주">
+        </div>
+        <div class="form-group">
+          <label>납기일 <span class="required">*</span></label>
+          <input type="text" id="delivery-date" value="입금확인일로부터 2주 이내" required>
+        </div>
+        <div class="form-group full-width">
+          <label>제품교육 <span class="required">*</span></label>
+          <select id="product-training" required>
+            <option value="">선택하세요</option>
+            <option value="제품 납품시 사용자 교육을 진행 합니다.">제품 납품시 사용자 교육을 진행 합니다.</option>
+            <option value="엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>
+            <option value="엔지니어 방문 설치교육(250,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(250,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>
+          </select>
+        </div>
       </div>
+    </div>
 
-      <!-- 전화번호 자동 표시란 -->
-      <div style="margin-bottom:16px;">
-        <label for="supplier-phone">전화번호</label>
-        <input id="supplier-phone" type="tel" style="width:100%;" readonly>
-      </div>
+    <!-- 제출 버튼 -->
+    <div class="action-buttons">
+      <button type="button" id="preview-btn" class="btn btn-primary" style="flex: 1;">
+        📄 견적서 생성하기
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="window.location.href='/'">
+        🏠 처음화면으로
+      </button>
     </div>
   </div>
-  <hr>
-  <div style="margin-bottom:16px;">
-    <div class="section-title">수신자</div>
-    <div class="form-grid">
-      <div style="margin-bottom:4px;">
-        회사명:<span style="color:red">*</span>
-        <input type="text" id="receiver-company" placeholder="회사명을 적어주세요" style="width:70%; display:inline-block;">
-      </div>
-      <div style="margin-bottom:4px;">
-        담당자:
-        <input type="text" id="receiver-person" placeholder="담당자명을 적어주세요" style="width:70%; display:inline-block;">
-      </div>
-      <div style="margin-bottom:4px;">
-        이메일:
-        <input type="text" id="receiver-email" placeholder="이메일을 입력해주세요" style="width:70%; display:inline-block;">
-      </div>
-      <div>
-        전화번호:
-        <input type="text" id="receiver-phone" placeholder="전화번호를 입력해주세요" style="width:70%; display:inline-block;">
-      </div>
-    </div>
-  </div>
-  <!-- 견적제품 선택 드롭다운 추가 -->
-  <div style="margin-bottom:16px;">
-    <label for="product-category">견적제품 선택<span style="color:red">*</span></label>
-    <select id="product-category" required style="width:100%;">
-      <option value="">견적제품을 선택해주세요</option>
-      <option value="장비">장비</option>
-      <option value="소모품">소모품</option>
-      <option value="기타">기타</option>
-    </select>
-  </div>
-  <hr>
-  <div>
-    <div class="section-title">제품정보(10개까지 추가 가능)<span style="color:red">*</span></div>
-    <div id="products-area"></div>
-    <div style="display: flex; gap: 8px;">
-      <button type="button" id="add-product" class="add-btn">+제품추가</button>
-      <button type="button" id="duplicate-product" class="add-btn" style="background: #16a085;">제품복제</button>
-    </div>
-    <div style="margin-top:16px;">
-      <label>견적유효기간</label>
-      <input type="text" id="quote-validity" placeholder="견적일로부터 4주" value="견적일로부터 4주">
-    </div>
-    <div style="margin-top:16px;">
-      <label>납기일<span style="color:red">*</span></label>
-      <input type="text" id="delivery-date" placeholder="납기일을 입력해 주세요" value="입금확인일로부터 2주 이내">
-    </div>
-    <div style="margin-top:16px;">
-      <label>제품교육<span style="color:red">*</span><span style="font-size:0.9em; font-weight:normal; color:#666;">(공란으로 두실경우 아래 목록중 1개를 선택하고 내용을 지워주세요)</span></label>
-      <select id="product-training" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;" required>
-        <option value="">제품교육을 선택해주세요</option>
-        <option value="제품 납품시 사용자 교육을 진행 합니다.">제품 납품시 사용자 교육을 진행 합니다.</option>
-        <option value="엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>
-        <option value="엔지니어 방문 설치교육(250,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(250,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>
-      </select>
-    </div>
-  </div>
-  <button type="button" class="preview-btn" id="preview-btn">견적서 생성하기</button>
-  
-  <!-- 처음화면으로 버튼 -->
-  <a href="/" class="home-button">처음화면으로</a>
 </div>
 <script>
 // 1. 새로운 제품 분류 구조 (CSV 기반)
