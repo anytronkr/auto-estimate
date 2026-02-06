@@ -218,6 +218,46 @@
       margin-top: 0;
     }
 
+    .product-field-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .product-field-group {
+      margin-bottom: 12px;
+    }
+
+    .product-field-group.three-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 12px;
+    }
+
+    .product-field-group.three-columns > div {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .product-total-highlight {
+      background: #e8f5f5 !important;
+      border: 2px solid #2A8486 !important;
+      font-weight: 600;
+      color: #2A8486;
+    }
+
+    .required-notice {
+      background: #fff9e6;
+      border-left: 4px solid #ffc107;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #666;
+      border-radius: 4px;
+    }
+
     .add-btn {
       background: #2A8486;
       color: white;
@@ -363,6 +403,10 @@
         flex-direction: column;
         gap: 8px;
       }
+
+      .product-field-group.three-columns {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* 2-column 레이아웃 (데스크톱 1024px 이상) */
@@ -391,6 +435,11 @@
   </div>
 
   <div class="content">
+    <!-- 필수 입력 안내 -->
+    <div class="required-notice">
+      <strong>*</strong> 표시는 필수사항입니다. <strong>*</strong> 표시가 없는 항목은 입력하지 않으셔도 됩니다.
+    </div>
+
     <!-- 기본정보 -->
     <div class="section">
       <h2 class="section-title">기본정보</h2>
@@ -716,7 +765,7 @@ function createProductSet(idx) {
     '<option value="애니트론">애니트론</option>',
     '<option value="RFID">RFID</option>'
   ].join('');
-  
+
   return `
   <div class="product-set" data-index="${idx}">
     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -728,29 +777,58 @@ function createProductSet(idx) {
         ${idx>0?'<button type="button" onclick="removeProduct(this)" class="remove-btn">삭제</button>':''}
       </div>
     </div>
-    <div class="product-row">
-      <select class="product-major-category">
-        ${majorOptions}
-      </select>
-      <select class="product-type">
-        <option value="">구분(선택)</option>
-      </select>
+
+    <div class="product-field-group">
+      <div class="product-row">
+        <div style="flex: 1;">
+          <label class="product-field-label">대분류</label>
+          <select class="product-major-category">
+            ${majorOptions}
+          </select>
+        </div>
+        <div style="flex: 1;">
+          <label class="product-field-label">구분</label>
+          <select class="product-type">
+            <option value="">구분(선택)</option>
+          </select>
+        </div>
+      </div>
     </div>
-    <div class="product-row">
+
+    <div class="product-field-group">
+      <label class="product-field-label">제품명</label>
       <select class="product-name">
         <option value="">제품명</option>
       </select>
     </div>
-    <textarea class="product-detail" placeholder="제품상세정보" rows="4" style="resize: vertical; font-family: inherit; font-size: inherit;"></textarea>
-    <div class="product-row">
-      <input class="product-qty" type="number" min="1" placeholder="수량">
-      <select class="product-price-select" style="display:none;">
-        <option value="">가격 선택</option>
-      </select>
-      <input class="product-price" type="number" min="0" placeholder="공급단가(원)">
+
+    <div class="product-field-group">
+      <label class="product-field-label">상세정보</label>
+      <textarea class="product-detail" placeholder="제품상세정보" rows="4" style="resize: vertical; font-family: inherit; font-size: inherit;"></textarea>
     </div>
-    <input class="product-total" type="text" placeholder="합계(VAT별도가격)" readonly>
-    <input class="product-note" type="text" maxlength="20" placeholder="비고(20자까지 입력가능)">
+
+    <div class="product-field-group three-columns">
+      <div>
+        <label class="product-field-label">수량</label>
+        <input class="product-qty" type="number" min="1" placeholder="수량">
+      </div>
+      <div>
+        <label class="product-field-label">단가(원)</label>
+        <select class="product-price-select" style="display:none;">
+          <option value="">가격 선택</option>
+        </select>
+        <input class="product-price" type="number" min="0" placeholder="공급단가(원)">
+      </div>
+      <div>
+        <label class="product-field-label">합계(원)</label>
+        <input class="product-total product-total-highlight" type="text" placeholder="합계(VAT별도가격)" readonly>
+      </div>
+    </div>
+
+    <div class="product-field-group">
+      <label class="product-field-label">비고</label>
+      <input class="product-note" type="text" maxlength="20" placeholder="비고(20자까지 입력가능)">
+    </div>
   </div>
   `;
 }
