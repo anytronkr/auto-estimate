@@ -413,6 +413,8 @@ async function generatePDF() {
         } else {
           // PDF 링크가 없어도 성공 메시지 표시 후 홈으로 이동
           alert('견적 데이터가 성공적으로 처리되었습니다!\n' + result.message);
+          localStorage.removeItem('estimateData');
+          localStorage.removeItem('productCategory');
           window.location.href = 'index.html';
         }
       }, remainingTime);

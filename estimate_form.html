@@ -2049,10 +2049,10 @@ async function sendEstimateToFastAPI() {
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
 
 // 페이지 로드 시 fileId 상태 확인 및 데이터 복원
-document.addEventListener('DOMContentLoaded', function() {
+function tryRestoreFormData() {
   const urlParams = new URLSearchParams(window.location.search);
   const fileId = urlParams.get("id");
-  
+
   console.log("=== 페이지 로드 및 데이터 복원 시작 ===");
 
   // 1. localStorage 또는 sessionStorage에서 데이터 확인
@@ -2091,6 +2091,17 @@ document.addEventListener('DOMContentLoaded', function() {
   } else {
     console.log("복원할 데이터가 없습니다.");
     // 데이터가 없으면 기본으로 제품 1개는 addProductSet()이 아래에서 호출됨 (기존 코드)
+  }
+}
+
+// 최초 로드 시 복원
+document.addEventListener('DOMContentLoaded', tryRestoreFormData);
+
+// 뒤로가기(bfcache) 시에도 복원 — DOMContentLoaded는 bfcache 복원 시 실행되지 않음
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) {
+    console.log("=== bfcache에서 복원됨 — 데이터 재복원 ===");
+    tryRestoreFormData();
   }
 });
 
