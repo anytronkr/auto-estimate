@@ -222,13 +222,33 @@
     </div>
 
     <script>
+        // === 페이지 로드 시 백그라운드로 템플릿 미리 생성 ===
+        let prefetchPromise = null;
+
+        function prefetchTemplate() {
+            console.log('[Pre-fetch] 백그라운드 템플릿 생성 시작');
+            prefetchPromise = fetch('/create-estimate-template', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(result => {
+                console.log('[Pre-fetch] 완료:', result);
+                return result;
+            })
+            .catch(err => {
+                console.error('[Pre-fetch] 실패:', err);
+                return null; // 실패해도 버튼 클릭 시 재시도
+            });
+        }
+
+        // 페이지 로드 즉시 미리 생성 시작
+        prefetchTemplate();
+
         // 단계별 로딩 메시지
         const loadingSteps = [
-            { msg: '서버에 노크 중...', sub: '잠시만 기다려주세요', delay: 0 },
-            { msg: 'Google 드라이브 연결 중...', sub: '구글에게 인사하는 중', delay: 2000 },
-            { msg: '견적서 양식 복사 중...', sub: '깔끔한 양식을 준비하고 있어요', delay: 5000 },
-            { msg: '거의 다 됐어요!', sub: '마무리 작업 중...', delay: 10000 },
-            { msg: '조금만 더 기다려주세요...', sub: '서버가 열심히 일하는 중', delay: 18000 },
+            { msg: '견적서 준비 중...', sub: '거의 다 됐어요', delay: 0 },
+            { msg: '마무리 중...', sub: '조금만 기다려주세요', delay: 3000 },
         ];
 
         let stepTimers = [];
@@ -265,40 +285,37 @@
             loading.style.display = 'block';
             startLoadingMessages();
 
+            // 이전 견적 데이터 초기화
+            localStorage.removeItem('estimateData');
+            localStorage.removeItem('productCategory');
+
             try {
-                console.log('=== 견적서 템플릿 생성 시작 ===');
+                // 미리 생성한 결과가 있으면 사용, 없으면 새로 호출
+                let result = prefetchPromise ? await prefetchPromise : null;
 
-                // 이전 견적 데이터 초기화
-                localStorage.removeItem('estimateData');
-                localStorage.removeItem('productCategory');
-                console.log('localStorage 초기화 완료');
+                // pre-fetch 실패했거나 없으면 새로 호출
+                if (!result || result.status !== 'success') {
+                    console.log('Pre-fetch 결과 없음 → 새로 API 호출');
+                    const response = await fetch('/create-estimate-template', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    result = await response.json();
+                }
 
-                // 견적서 템플릿 생성 API 호출
-                const response = await fetch('/create-estimate-template', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                console.log('API 응답 상태:', response.status);
-                const result = await response.json();
                 console.log('API 응답 결과:', result);
 
                 if (result.status === 'success') {
                     stopLoadingMessages();
                     document.getElementById('loading-message').textContent = '완료! 견적서 폼으로 이동합니다';
                     document.getElementById('loading-sub').textContent = '';
-                    console.log('견적서 템플릿 생성 성공:', result.file_id);
 
-                    // fileId와 함께 estimate_form.html로 이동
                     setTimeout(() => {
                         window.location.href = `/estimate_form.html?id=${result.file_id}`;
-                    }, 500);
+                    }, 300);
                 } else {
                     stopLoadingMessages();
-                    console.error('견적서 템플릿 생성 실패:', result.message);
                     alert('견적서 템플릿 생성에 실패했습니다: ' + result.message);
-
-                    // 실패 시 버튼 상태 복원
                     button.disabled = false;
                     button.textContent = '견적서 생성 시작';
                     loading.style.display = 'none';
@@ -308,8 +325,6 @@
                 stopLoadingMessages();
                 console.error('견적서 템플릿 생성 중 오류:', error);
                 alert('견적서 템플릿 생성 중 오류가 발생했습니다.');
-
-                // 오류 시 버튼 상태 복원
                 button.disabled = false;
                 button.textContent = '견적서 생성 시작';
                 loading.style.display = 'none';
