@@ -385,6 +385,9 @@
       history.back();
     }
     function goHome() {
+      // 홈으로 돌아갈 때 이전 견적 데이터 초기화
+      localStorage.removeItem('estimateData');
+      localStorage.removeItem('productCategory');
       window.location.href = 'https://auto-estimate.onrender.com';
     }
     function goDrive() {
