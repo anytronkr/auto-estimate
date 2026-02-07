@@ -219,6 +219,11 @@
 
             try {
                 console.log('=== 견적서 템플릿 생성 시작 ===');
+
+                // 이전 견적 데이터 초기화
+                localStorage.removeItem('estimateData');
+                localStorage.removeItem('productCategory');
+                console.log('localStorage 초기화 완료');
                 
                 // 견적서 템플릿 생성 API 호출
                 const response = await fetch('/create-estimate-template', {

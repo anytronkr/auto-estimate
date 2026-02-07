@@ -1575,34 +1575,45 @@ async function sendEstimateToFastAPI() {
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
 
 // 페이지 로드 시 fileId 상태 확인 및 데이터 복원
-document.addEventListener('DOMContentLoaded', function() {
+function tryRestoreFormData() {
   const urlParams = new URLSearchParams(window.location.search);
   const fileId = urlParams.get("id");
-  
+
   console.log("=== 페이지 로드 및 데이터 복원 시작 ===");
-  
+
   // 1. localStorage에서 데이터 확인
   const existingData = localStorage.getItem('estimateData');
-  
+
   if (existingData) {
     try {
       const data = JSON.parse(existingData);
       console.log("복원할 데이터 발견:", data);
-      
+
       // fileId가 URL에 없고 저장된 데이터에만 있는 경우 (뒤로가기 등)
       // 현재 URL의 id 파라미터가 우선순위가 높음
       if (!fileId && data.fileId) {
         console.log("URL에 ID가 없어 저장된 ID 사용:", data.fileId);
       }
-      
+
       restoreFormData(data);
-      
+
     } catch (e) {
       console.error("데이터 복원 중 오류:", e);
     }
   } else {
     console.log("복원할 데이터가 없습니다.");
     // 데이터가 없으면 기본으로 제품 1개는 addProductSet()이 아래에서 호출됨 (기존 코드)
+  }
+}
+
+// 최초 로드 시 복원
+document.addEventListener('DOMContentLoaded', tryRestoreFormData);
+
+// 뒤로가기(bfcache) 시에도 복원 — DOMContentLoaded는 bfcache 복원 시 실행되지 않음
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) {
+    console.log("=== bfcache에서 복원됨 — 데이터 재복원 ===");
+    tryRestoreFormData();
   }
 });
 
