@@ -840,7 +840,16 @@ def export_sheet_to_pdf(sheet_id, pdf_filename, creds, gid=0):
         print(f"DEBUG: sheet_id: {sheet_id}")
         print(f"DEBUG: pdf_filename: {pdf_filename}")
         print(f"DEBUG: gid: {gid}")
-        
+
+        # PDF 생성 전 토큰 갱신 보장
+        try:
+            if getattr(creds, "expired", False) or not getattr(creds, "token", None):
+                print("[PDF] 토큰 만료 감지 → refresh")
+                creds.refresh(GoogleRequest())
+                print("✅ [PDF] 토큰 갱신 완료")
+        except Exception as e:
+            print(f"⚠️ [PDF] 토큰 갱신 실패: {e}")
+
         # PDF 생성 전 페이지 나누기 설정 제거됨 - 자동 조정 사용
         print("✅ PDF 생성 시 자동 페이지 조정 사용")
         
