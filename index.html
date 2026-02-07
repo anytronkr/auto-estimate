@@ -103,17 +103,30 @@
 
         .spinner {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #4CAF50;
+            border-top: 3px solid #16a085;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 35px;
+            height: 35px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
+            margin: 0 auto 12px;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .loading-message {
+            font-size: 1.05em;
+            color: #555;
+            transition: opacity 0.3s ease;
+            min-height: 1.5em;
+        }
+
+        .loading-sub {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 6px;
         }
 
         .features {
@@ -192,7 +205,8 @@
         
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>견적서 생성 준비 중...</p>
+            <p id="loading-message" class="loading-message">준비 중...</p>
+            <p id="loading-sub" class="loading-sub"></p>
         </div>
 
         <div class="quick-links">
@@ -208,14 +222,48 @@
     </div>
 
     <script>
+        // 단계별 로딩 메시지
+        const loadingSteps = [
+            { msg: '서버에 노크 중...', sub: '잠시만 기다려주세요', delay: 0 },
+            { msg: 'Google 드라이브 연결 중...', sub: '구글에게 인사하는 중', delay: 2000 },
+            { msg: '견적서 양식 복사 중...', sub: '깔끔한 양식을 준비하고 있어요', delay: 5000 },
+            { msg: '거의 다 됐어요!', sub: '마무리 작업 중...', delay: 10000 },
+            { msg: '조금만 더 기다려주세요...', sub: '서버가 열심히 일하는 중', delay: 18000 },
+        ];
+
+        let stepTimers = [];
+
+        function startLoadingMessages() {
+            const msgEl = document.getElementById('loading-message');
+            const subEl = document.getElementById('loading-sub');
+
+            loadingSteps.forEach(step => {
+                const timer = setTimeout(() => {
+                    msgEl.style.opacity = '0';
+                    setTimeout(() => {
+                        msgEl.textContent = step.msg;
+                        subEl.textContent = step.sub;
+                        msgEl.style.opacity = '1';
+                    }, 200);
+                }, step.delay);
+                stepTimers.push(timer);
+            });
+        }
+
+        function stopLoadingMessages() {
+            stepTimers.forEach(t => clearTimeout(t));
+            stepTimers = [];
+        }
+
         document.getElementById('startButton').addEventListener('click', async function() {
             const button = this;
             const loading = document.getElementById('loading');
 
             // 버튼 비활성화 및 로딩 표시
             button.disabled = true;
-            button.textContent = '견적서 템플릿 생성 중...';
+            button.textContent = '생성 중...';
             loading.style.display = 'block';
+            startLoadingMessages();
 
             try {
                 console.log('=== 견적서 템플릿 생성 시작 ===');
@@ -224,36 +272,43 @@
                 localStorage.removeItem('estimateData');
                 localStorage.removeItem('productCategory');
                 console.log('localStorage 초기화 완료');
-                
+
                 // 견적서 템플릿 생성 API 호출
                 const response = await fetch('/create-estimate-template', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
-                
+
                 console.log('API 응답 상태:', response.status);
                 const result = await response.json();
                 console.log('API 응답 결과:', result);
-                
+
                 if (result.status === 'success') {
+                    stopLoadingMessages();
+                    document.getElementById('loading-message').textContent = '완료! 견적서 폼으로 이동합니다';
+                    document.getElementById('loading-sub').textContent = '';
                     console.log('견적서 템플릿 생성 성공:', result.file_id);
-                    
+
                     // fileId와 함께 estimate_form.html로 이동
-                    window.location.href = `/estimate_form.html?id=${result.file_id}`;
+                    setTimeout(() => {
+                        window.location.href = `/estimate_form.html?id=${result.file_id}`;
+                    }, 500);
                 } else {
+                    stopLoadingMessages();
                     console.error('견적서 템플릿 생성 실패:', result.message);
                     alert('견적서 템플릿 생성에 실패했습니다: ' + result.message);
-                    
+
                     // 실패 시 버튼 상태 복원
                     button.disabled = false;
                     button.textContent = '견적서 생성 시작';
                     loading.style.display = 'none';
                 }
-                
+
             } catch (error) {
+                stopLoadingMessages();
                 console.error('견적서 템플릿 생성 중 오류:', error);
                 alert('견적서 템플릿 생성 중 오류가 발생했습니다.');
-                
+
                 // 오류 시 버튼 상태 복원
                 button.disabled = false;
                 button.textContent = '견적서 생성 시작';
