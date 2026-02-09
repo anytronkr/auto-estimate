@@ -917,8 +917,8 @@ function updateProductTypeOptions(majorSelect, typeSelect) {
       typeSelect.appendChild(opt);
     });
 
-    // 애니트론 선택 시 '직접입력' 옵션 추가
-    if(major === '애니트론') {
+    // 애니트론, RFID 선택 시 '직접입력' 옵션 추가
+    if(major === '애니트론' || major === 'RFID') {
       const directInputOpt = document.createElement('option');
       directInputOpt.value = '직접입력';
       directInputOpt.textContent = '직접입력';
