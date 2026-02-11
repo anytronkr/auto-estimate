@@ -1328,6 +1328,12 @@ function rebindProductEvents() {
     const priceSelect = productSet.querySelector('.product-price-select');
     const totalInput = productSet.querySelector('.product-total');
 
+    // 현재 선택된 값들 저장 (select 교체 전에)
+    const majorVal = majorSelect ? majorSelect.value : '';
+    const typeVal = typeSelect && typeSelect.tagName === 'SELECT' ? typeSelect.value : '';
+    const nameVal = nameSelect && nameSelect.tagName === 'SELECT' ? nameSelect.value : '';
+    const consumableOpt = productSet.querySelector('.consumable-option');
+
     // 기존 이벤트 리스너 제거 후 새로 추가
     const newMajorSelect = majorSelect.cloneNode(true);
     const newTypeSelect = typeSelect.cloneNode(true);
@@ -1342,6 +1348,23 @@ function rebindProductEvents() {
     qtyInput.parentNode.replaceChild(newQtyInput, qtyInput);
     priceInput.parentNode.replaceChild(newPriceInput, priceInput);
     priceSelect.parentNode.replaceChild(newPriceSelect, priceSelect);
+
+    // 대분류/구분/제품명 옵션 복원 및 값 복원 (select가 SELECT 타입일 때만)
+    if (newMajorSelect && newTypeSelect && newNameSelect && 
+        newTypeSelect.tagName === 'SELECT' && newNameSelect.tagName === 'SELECT') {
+      // 대분류 값 복원
+      newMajorSelect.value = majorVal;
+      // 대분류에 맞게 구분 옵션 업데이트
+      if (majorVal) {
+        updateProductTypeOptions(newMajorSelect, newTypeSelect);
+        newTypeSelect.value = typeVal;
+        // 구분에 맞게 제품명 옵션 업데이트
+        if (typeVal) {
+          updateProductNameOptions(newTypeSelect, newNameSelect, consumableOpt || null);
+          newNameSelect.value = nameVal;
+        }
+      }
+    }
 
     // 이벤트 바인딩
     newMajorSelect.addEventListener('change', ()=>{
