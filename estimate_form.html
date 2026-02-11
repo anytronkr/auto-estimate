@@ -1226,6 +1226,25 @@ function renumberProducts() {
     const headerDiv = el.querySelector('div');
     const span = headerDiv.querySelector('span');
     span.textContent = `제품 ${idx+1}`;
+    // 복제된 제품에도 삭제 버튼이 있도록 버튼 영역 동기화 (첫 번째만 삭제 버튼 없음)
+    // headerDiv의 두 번째 자식이 버튼 그룹 div
+    const btnGroup = headerDiv.children.length > 1 ? headerDiv.children[1] : headerDiv.querySelector('div:last-child');
+    if (!btnGroup) return;
+    const deleteBtn = btnGroup.querySelector('button[onclick*="removeProduct"]');
+    if (idx > 0) {
+      // 두 번째 제품부터는 반드시 삭제 버튼이 있어야 함
+      if (!deleteBtn) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('onclick', 'removeProduct(this)');
+        btn.className = 'remove-btn';
+        btn.textContent = '삭제';
+        btnGroup.appendChild(btn);
+      }
+    } else {
+      // 첫 번째 제품은 삭제 버튼 제거
+      if (deleteBtn) deleteBtn.remove();
+    }
   });
 }
 
@@ -1255,10 +1274,43 @@ function duplicateProduct(btn) {
   productSet.insertAdjacentElement('afterend', clonedSet);
   productCount++;
 
+  // 복제된 세트의 대분류/구분/제품명 옵션 복원 및 값 유지 (rebind 전에 옵션 목록 맞춤)
+  const cMajor = clonedSet.querySelector('.product-major-category');
+  const cTypeSelect = clonedSet.querySelector('.product-type');
+  const cNameSelect = clonedSet.querySelector('.product-name');
+  if (cMajor && cTypeSelect && cNameSelect && cTypeSelect.tagName === 'SELECT' && cNameSelect.tagName === 'SELECT') {
+    const majorVal = cMajor.value;
+    const typeVal = cTypeSelect.value;
+    const nameVal = cNameSelect.value;
+    const consumableOpt = clonedSet.querySelector('.consumable-option');
+    updateProductTypeOptions(cMajor, cTypeSelect);
+    cTypeSelect.value = typeVal;
+    updateProductNameOptions(cTypeSelect, cNameSelect, consumableOpt || null);
+    cNameSelect.value = nameVal;
+  }
+
   if(productCount >= maxProducts) {
     setAddProductButtonsDisabled(true);
   }
 
+  // 복제된 제품이 두 번째 이상이면 삭제 버튼 추가 (복제 직후 명시적으로 추가)
+  const clonedHeaderDiv = clonedSet.querySelector('div');
+  if (clonedHeaderDiv && productCount > 1) {
+    const clonedBtnGroup = clonedHeaderDiv.children.length > 1 ? clonedHeaderDiv.children[1] : clonedHeaderDiv.querySelector('div:last-child');
+    if (clonedBtnGroup) {
+      const clonedDeleteBtn = clonedBtnGroup.querySelector('button[onclick*="removeProduct"]');
+      if (!clonedDeleteBtn) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('onclick', 'removeProduct(this)');
+        btn.className = 'remove-btn';
+        btn.textContent = '삭제';
+        clonedBtnGroup.appendChild(btn);
+      }
+    }
+  }
+
+  // 제품 번호 재매기기 및 삭제 버튼 추가 (제품 2개 이상일 때 두 번째부터 삭제 버튼 표시)
   renumberProducts();
   rebindProductEvents();
   updateGrandTotal();
