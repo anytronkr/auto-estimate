@@ -192,7 +192,13 @@
         
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>견적서 생성 준비 중...</p>
+            <p id="loading-message">구글 드라이브 연결 중...</p>
+            <div id="loading-steps" style="margin-top:12px; font-size:0.85em; color:#999; text-align:left; display:inline-block;">
+                <div id="step-1" style="margin:4px 0;">⬜ 구글 드라이브 연결</div>
+                <div id="step-2" style="margin:4px 0;">⬜ 견적서 템플릿 복사</div>
+                <div id="step-3" style="margin:4px 0;">⬜ 파일 권한 설정</div>
+                <div id="step-4" style="margin:4px 0;">⬜ 마무리 중</div>
+            </div>
         </div>
 
         <div class="quick-links">
@@ -208,6 +214,41 @@
     </div>
 
     <script>
+        // 로딩 단계 표시 함수
+        function setStep(stepNum, msg) {
+            const steps = ['step-1','step-2','step-3','step-4'];
+            const msgs = ['구글 드라이브 연결 중...','견적서 템플릿 복사 중...','파일 권한 설정 중...','마무리 중...'];
+            steps.forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (i < stepNum - 1) {
+                    el.textContent = '✅ ' + el.textContent.replace('⬜ ','').replace('🔄 ','');
+                    el.style.color = '#4CAF50';
+                } else if (i === stepNum - 1) {
+                    el.textContent = '🔄 ' + el.textContent.replace('⬜ ','').replace('✅ ','').replace('🔄 ','');
+                    el.style.color = '#2A8486';
+                    el.style.fontWeight = '600';
+                }
+            });
+            document.getElementById('loading-message').textContent = msg || msgs[stepNum-1];
+        }
+
+        let stepTimer = null;
+        function startStepAnimation() {
+            setStep(1);
+            stepTimer = setTimeout(()=> setStep(2), 1500);
+            stepTimer = setTimeout(()=> setStep(3), 4000);
+            stepTimer = setTimeout(()=> setStep(4), 7000);
+        }
+        function finishSteps() {
+            ['step-1','step-2','step-3','step-4'].forEach(id => {
+                const el = document.getElementById(id);
+                el.textContent = '✅ ' + el.textContent.replace('⬜ ','').replace('🔄 ','').replace('✅ ','');
+                el.style.color = '#4CAF50';
+                el.style.fontWeight = 'normal';
+            });
+            document.getElementById('loading-message').textContent = '완료! 입력 화면으로 이동 중...';
+        }
+
         document.getElementById('startButton').addEventListener('click', async function() {
             const button = this;
             const loading = document.getElementById('loading');
@@ -216,6 +257,7 @@
             button.disabled = true;
             button.textContent = '견적서 템플릿 생성 중...';
             loading.style.display = 'block';
+            startStepAnimation();
 
             try {
                 console.log('=== 견적서 템플릿 생성 시작 ===');
@@ -243,23 +285,26 @@
                 
                 if (result.status === 'success') {
                     console.log('견적서 템플릿 생성 성공:', result.file_id);
-                    
-                    // fileId와 함께 estimate_form.html로 이동
-                    window.location.href = `/estimate_form.html?id=${result.file_id}`;
+                    finishSteps();
+
+                    // 잠깐 완료 메시지 보여준 후 이동
+                    setTimeout(() => {
+                        window.location.href = `/estimate_form.html?id=${result.file_id}`;
+                    }, 800);
                 } else {
                     console.error('견적서 템플릿 생성 실패:', result.message);
                     alert('견적서 템플릿 생성에 실패했습니다: ' + result.message);
-                    
+
                     // 실패 시 버튼 상태 복원
                     button.disabled = false;
                     button.textContent = '견적서 생성 시작';
                     loading.style.display = 'none';
                 }
-                
+
             } catch (error) {
                 console.error('견적서 템플릿 생성 중 오류:', error);
                 alert('견적서 템플릿 생성 중 오류가 발생했습니다.');
-                
+
                 // 오류 시 버튼 상태 복원
                 button.disabled = false;
                 button.textContent = '견적서 생성 시작';
