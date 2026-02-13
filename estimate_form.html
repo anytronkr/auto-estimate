@@ -297,6 +297,17 @@
     #total-estimate-amount {
       font-weight: 700;
       color: #2A8486;
+      width: 160px;
+      text-align: right;
+      padding: 6px 10px;
+      border: 1px solid #c5d0d0;
+      border-radius: 6px;
+      font-size: 18px;
+    }
+    #total-estimate-amount:focus {
+      outline: none;
+      border-color: #2A8486;
+      box-shadow: 0 0 0 2px rgba(42, 132, 134, 0.2);
     }
 
     .required-notice {
@@ -604,7 +615,7 @@
       <div class="summary-box">
         <div class="summary-total">
           <span>총 견적금액:</span>
-          <span id="total-estimate-amount">0</span> 원
+          <input type="text" id="total-estimate-amount" value="0" placeholder="0" inputmode="numeric" title="최종금액을 직접 수정할 수 있습니다"> 원
         </div>
       </div>
     </div>
@@ -1195,7 +1206,7 @@ function updateProductTotal(qtyInput, priceInput, totalInput) {
   updateGrandTotal();
 }
 
-// 총 견적금액 갱신 (모든 제품 합계)
+// 총 견적금액 갱신 (모든 제품 합계) — 사용자가 직접 수정한 값은 유지하려면 포커스 시 갱신 생략 가능
 function updateGrandTotal() {
   const el = document.getElementById('total-estimate-amount');
   if(!el) return;
@@ -1204,8 +1215,21 @@ function updateGrandTotal() {
     const v = (input.value || '').replace(/,/g, '');
     if(v) sum += Number(v);
   });
-  el.textContent = sum.toLocaleString();
+  el.value = sum.toLocaleString();
 }
+
+// 최종금액 입력란: 숫자만 허용, blur 시 콤마 포맷
+(function() {
+  const totalEl = document.getElementById('total-estimate-amount');
+  if (!totalEl) return;
+  totalEl.addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '');
+  });
+  totalEl.addEventListener('blur', function() {
+    const num = (this.value || '').replace(/,/g, '');
+    if (num) this.value = Number(num).toLocaleString();
+  });
+})();
 
 function removeProduct(btn) {
   if(productCount <= 1) {
@@ -1817,9 +1841,12 @@ document.getElementById('supplier-person').addEventListener('change', autoFillEs
 
 function collectEstimateData() {
   const fileId = new URLSearchParams(window.location.search).get("id");
+  const totalEl = document.getElementById('total-estimate-amount');
+  const totalAmount = totalEl ? Number((totalEl.value || '').replace(/,/g, '')) || 0 : 0;
   return {
     estimate_date: document.getElementById('date').value,
     estimate_number: document.getElementById('number').value,
+    total_estimate_amount: totalAmount,
     supplier_person: document.getElementById('supplier-person').options[document.getElementById('supplier-person').selectedIndex].text,
     supplier_email: document.getElementById('supplier-email').value,
     supplier_phone: document.getElementById('supplier-phone').value,
