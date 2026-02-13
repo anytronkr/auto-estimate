@@ -254,6 +254,7 @@
       font-size: 15px;
       color: #1a6b6d;
       box-shadow: 0 1px 4px rgba(42, 132, 134, 0.2);
+      cursor: text;
     }
 
     /* 비고: 맨 마지막 줄 한 줄 최대 폭 */
@@ -297,6 +298,41 @@
     #total-estimate-amount {
       font-weight: 700;
       color: #2A8486;
+      width: 160px;
+      text-align: right;
+      padding: 6px 10px;
+      border: 1px solid #c5d0d0;
+      border-radius: 6px;
+      font-size: 18px;
+    }
+    #total-estimate-amount:focus {
+      outline: none;
+      border-color: #2A8486;
+      box-shadow: 0 0 0 2px rgba(42, 132, 134, 0.2);
+    }
+    .btn-edit-total, .btn-confirm-total {
+      margin-left: 8px;
+      padding: 6px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #2A8486;
+      background: #fff;
+      color: #2A8486;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-edit-total:hover, .btn-confirm-total:hover {
+      background: #2A8486;
+      color: #fff;
+    }
+    .total-edit-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 4px;
+    }
+    .total-edit-wrap input {
+      width: 140px;
     }
 
     .required-notice {
@@ -604,7 +640,12 @@
       <div class="summary-box">
         <div class="summary-total">
           <span>총 견적금액:</span>
-          <span id="total-estimate-amount">0</span> 원
+          <span id="total-estimate-display">0</span> 원
+          <button type="button" id="total-estimate-edit-btn" class="btn-edit-total" title="총 견적금액 수정">수정</button>
+          <span id="total-estimate-edit-wrap" class="total-edit-wrap" style="display:none;">
+            <input type="text" id="total-estimate-amount" value="0" placeholder="0" inputmode="numeric">
+            <button type="button" id="total-estimate-confirm" class="btn-confirm-total">확인</button>
+          </span>
         </div>
       </div>
     </div>
@@ -892,7 +933,7 @@ function createProductSet(idx) {
       </div>
       <div>
         <label class="product-field-label">합계(원)</label>
-        <input class="product-total product-total-highlight" type="text" placeholder="합계(VAT별도가격)" readonly>
+        <input class="product-total product-total-highlight" type="text" placeholder="합계(VAT별도가격)" title="클릭하여 수정">
       </div>
     </div>
 
@@ -1197,15 +1238,73 @@ function updateProductTotal(qtyInput, priceInput, totalInput) {
 
 // 총 견적금액 갱신 (모든 제품 합계)
 function updateGrandTotal() {
-  const el = document.getElementById('total-estimate-amount');
-  if(!el) return;
+  const inputEl = document.getElementById('total-estimate-amount');
+  const displayEl = document.getElementById('total-estimate-display');
+  if (!inputEl) return;
   let sum = 0;
   document.querySelectorAll('.product-set .product-total').forEach(function(input) {
     const v = (input.value || '').replace(/,/g, '');
-    if(v) sum += Number(v);
+    if (v) sum += Number(v);
   });
-  el.textContent = sum.toLocaleString();
+  var formatted = sum.toLocaleString();
+  inputEl.value = formatted;
+  if (displayEl) displayEl.textContent = formatted;
 }
+
+// 총 견적금액: 수정 버튼 클릭 시 입력란 표시, 확인 시 반영
+(function() {
+  var editBtn = document.getElementById('total-estimate-edit-btn');
+  var displayEl = document.getElementById('total-estimate-display');
+  var editWrap = document.getElementById('total-estimate-edit-wrap');
+  var totalInput = document.getElementById('total-estimate-amount');
+  var confirmBtn = document.getElementById('total-estimate-confirm');
+
+  function showEdit() {
+    if (!editBtn || !displayEl || !editWrap || !totalInput) return;
+    totalInput.value = displayEl.textContent;
+    displayEl.style.display = 'none';
+    editBtn.style.display = 'none';
+    editWrap.style.display = 'inline-flex';
+    totalInput.focus();
+  }
+  function hideEdit() {
+    if (!displayEl || !editWrap || !totalInput) return;
+    var num = (totalInput.value || '').replace(/,/g, '');
+    if (num) totalInput.value = Number(num).toLocaleString();
+    displayEl.textContent = totalInput.value;
+    displayEl.style.display = '';
+    if (editBtn) editBtn.style.display = '';
+    editWrap.style.display = 'none';
+  }
+
+  if (editBtn) editBtn.addEventListener('click', showEdit);
+  if (confirmBtn) confirmBtn.addEventListener('click', hideEdit);
+  if (totalInput) {
+    totalInput.addEventListener('input', function() { this.value = this.value.replace(/[^0-9]/g, ''); });
+    totalInput.addEventListener('blur', function() {
+      var num = (this.value || '').replace(/,/g, '');
+      if (num) this.value = Number(num).toLocaleString();
+    });
+    totalInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); hideEdit(); }
+    });
+  }
+})();
+
+// 제품별 합계(원): 클릭하면 수정 가능 — 숫자만 허용, blur 시 콤마 포맷
+document.addEventListener('input', function(e) {
+  if (e.target.classList.contains('product-total')) {
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+    updateGrandTotal();
+  }
+});
+document.addEventListener('blur', function(e) {
+  if (e.target.classList.contains('product-total')) {
+    var num = (e.target.value || '').replace(/,/g, '');
+    if (num) e.target.value = Number(num).toLocaleString();
+    updateGrandTotal();
+  }
+}, true);
 
 function removeProduct(btn) {
   if(productCount <= 1) {
@@ -1817,9 +1916,12 @@ document.getElementById('supplier-person').addEventListener('change', autoFillEs
 
 function collectEstimateData() {
   const fileId = new URLSearchParams(window.location.search).get("id");
+  const totalEl = document.getElementById('total-estimate-amount');
+  const totalAmount = totalEl ? Number((totalEl.value || '').replace(/,/g, '')) || 0 : 0;
   return {
     estimate_date: document.getElementById('date').value,
     estimate_number: document.getElementById('number').value,
+    total_estimate_amount: totalAmount,
     supplier_person: document.getElementById('supplier-person').options[document.getElementById('supplier-person').selectedIndex].text,
     supplier_email: document.getElementById('supplier-email').value,
     supplier_phone: document.getElementById('supplier-phone').value,
