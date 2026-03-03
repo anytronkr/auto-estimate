@@ -107,6 +107,7 @@ CELL_MAP = {
     "quote_validity": "B30",         # 견적유효기간
     "delivery_date": "B33",          # 납기일 (B31 → B33으로 변경)
     "product_training": "B32",       # 제품교육 (B30 → B32로 변경)
+    "extra_note": "B26",             # 비고 (리와인더 등 별매 안내)
     
     # 기존 호환성을 위한 별칭
     "company_name": "F5",

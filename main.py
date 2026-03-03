@@ -626,12 +626,15 @@ async def collect_data(request: Request):
                 "message": f"PDF 생성 중 오류 발생: {str(e)}"
             }
         
-        # Pipedrive 거래 생성
-        pipedrive_deal_id = create_pipedrive_deal(data)
-
-        # 거래 생성 성공 시 PDF 파일 업로드
-        if pipedrive_deal_id and pdf_filename and os.path.exists(pdf_filename):
-            upload_file_to_pipedrive_deal(pipedrive_deal_id, pdf_filename, pdf_filename)
+        # Pipedrive 거래 처리: 선택된 기존 거래가 있을 때만 업데이트
+        selected_deal_id = data.get("pipedrive_deal_id")
+        if selected_deal_id:
+            pipedrive_deal_id = update_pipedrive_deal_estimate(
+                selected_deal_id, data.get("estimate_number", ""), pdf_filename, estimate_link, pdf_link
+            )
+        else:
+            pipedrive_deal_id = None
+            print("Pipedrive 거래 미선택 - Pipedrive 전송 생략")
 
         # ✅ Pipedrive 업로드 완료 후에 임시 파일 삭제
         try:
@@ -640,21 +643,6 @@ async def collect_data(request: Request):
                 print(f"DEBUG: 임시 파일 정리 완료 - {pdf_filename}")
         except Exception as e:
             print(f"DEBUG: 임시 파일 정리 실패 - {str(e)}")
-
-        # 거래 생성 성공 시 Pipedrive에 노트(메모) 추가
-        if pipedrive_deal_id:
-            try:
-                pipedrive_settings = get_pipedrive_config()
-                note_content = f"견적서명: {pdf_filename}\n엑셀견적서: {estimate_link}\nPDF견적서: {pdf_link}"
-                note_url = f"https://{pipedrive_settings['domain']}/api/v1/notes?api_token={pipedrive_settings['api_token']}"
-                note_data = {
-                    "content": note_content,
-                    "deal_id": pipedrive_deal_id
-                }
-                note_response = HTTP.post(note_url, json=note_data)
-                print(f"Pipedrive 노트 추가 결과: {note_response.status_code} - {note_response.text}")
-            except Exception as e:
-                print(f"Pipedrive 노트 추가 오류: {str(e)}")
         
         # 한 행에 모든 데이터 배치 (새로운 컬럼 매핑)
         # 첫 번째 제품의 대분류 정보 추출
@@ -1104,6 +1092,79 @@ def get_pipedrive_stage_id(supplier_person):
             return stage_id
     return 47  # 기본값: 이훈수견적서
 
+@app.get("/search-deals")
+async def search_deals(q: str = ""):
+    """업체명으로 Pipedrive 거래 검색"""
+    if not q or len(q) < 2:
+        return {"deals": []}
+    try:
+        pipedrive_settings = get_pipedrive_config()
+        url = f"https://{pipedrive_settings['domain']}/api/v1/deals/search"
+        params = {
+            "term": q,
+            "fields": "org_name",
+            "limit": 20,
+            "api_token": pipedrive_settings["api_token"]
+        }
+        res = HTTP.get(url, params=params)
+        res_data = res.json()
+        deals = []
+        if res_data.get("success") and res_data.get("data", {}).get("items"):
+            for item in res_data["data"]["items"]:
+                deal = item.get("item", {})
+                deals.append({
+                    "id": deal.get("id"),
+                    "title": deal.get("title", ""),
+                    "org_name": (deal.get("organization") or {}).get("name", ""),
+                    "stage": deal.get("stage", {}).get("name", "") if deal.get("stage") else "",
+                    "status": deal.get("status", ""),
+                })
+        return {"deals": deals}
+    except Exception as e:
+        print(f"Pipedrive 거래 검색 오류: {e}")
+        return {"deals": []}
+
+
+def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estimate_link, pdf_link):
+    """기존 Pipedrive 거래에 견적번호 추가 및 PDF 첨부"""
+    try:
+        pipedrive_settings = get_pipedrive_config()
+        base_url = f"https://{pipedrive_settings['domain']}/api/v1"
+        token = pipedrive_settings["api_token"]
+
+        # 기존 견적번호 가져오기 (누적 저장)
+        deal_res = HTTP.get(f"{base_url}/deals/{deal_id}?api_token={token}")
+        existing = ""
+        if deal_res.status_code == 200:
+            existing = deal_res.json().get("data", {}).get("55c48a15f50d667c26682f95d38a9a06d420369f", "") or ""
+
+        # 견적번호 누적 (기존값 있으면 쉼표로 구분)
+        new_value = f"{existing}, {estimate_number}".strip(", ") if existing else estimate_number
+
+        # 커스텀 필드 업데이트
+        update_res = HTTP.put(
+            f"{base_url}/deals/{deal_id}?api_token={token}",
+            json={"55c48a15f50d667c26682f95d38a9a06d420369f": new_value}
+        )
+        print(f"Pipedrive 거래 업데이트 결과: {update_res.status_code} - {update_res.text}")
+
+        # PDF 첨부
+        if pdf_filename and os.path.exists(pdf_filename):
+            upload_file_to_pipedrive_deal(deal_id, pdf_filename, pdf_filename)
+
+        # 노트 추가
+        note_content = f"견적번호: {estimate_number}\n엑셀견적서: {estimate_link}\nPDF견적서: {pdf_link}"
+        HTTP.post(
+            f"{base_url}/notes?api_token={token}",
+            json={"content": note_content, "deal_id": deal_id}
+        )
+        print(f"Pipedrive 기존 거래 업데이트 완료 - deal_id: {deal_id}, 견적번호: {new_value}")
+        return deal_id
+    except Exception as e:
+        print(f"Pipedrive 거래 업데이트 오류: {e}")
+        return None
+
+
 def create_pipedrive_organization(data):
     """Pipedrive에 조직을 생성합니다."""
     try:
@@ -1206,7 +1267,8 @@ def create_pipedrive_deal(data):
             "pipeline_id": 4,  # 고정
             "stage_id": stage_id,
             "user_id": user_id,
-            "visible_to": 3  # 전체 회사에서 볼 수 있도록 설정
+            "visible_to": 3,  # 전체 회사에서 볼 수 있도록 설정
+            "55c48a15f50d667c26682f95d38a9a06d420369f": data.get("estimate_number", "")  # 견적번호 커스텀 필드
         }
         
         # 조직과 담당자 ID가 있으면 추가
