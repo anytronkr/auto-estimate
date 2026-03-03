@@ -1093,7 +1093,7 @@ def get_pipedrive_stage_id(supplier_person):
     return 47  # 기본값: 이훈수견적서
 
 @app.get("/search-deals")
-async def search_deals(q: str = ""):
+async def search_deals(q: str = "", debug: int = 0):
     """거래 제목으로 Pipedrive 거래 검색"""
     if not q or len(q) < 2:
         return {"deals": []}
@@ -1110,16 +1110,36 @@ async def search_deals(q: str = ""):
         })
         res_data = res.json()
 
+        # 디버그 모드: 필터링 없이 Pipedrive 원본 결과 반환
+        if debug:
+            raw_items = []
+            if res_data.get("success") and res_data.get("data", {}).get("items"):
+                for item in res_data["data"]["items"]:
+                    deal = item.get("item", {})
+                    raw_items.append({
+                        "title": deal.get("title", ""),
+                        "org_name": (deal.get("organization") or {}).get("name", ""),
+                        "status": deal.get("status", ""),
+                        "add_time": (deal.get("add_time") or "")[:10],
+                    })
+            return {"total": len(raw_items), "raw_items": raw_items}
+
         deals = []
+        seen_ids = set()
         q_lower = q.lower()
         if res_data.get("success") and res_data.get("data", {}).get("items"):
             for item in res_data["data"]["items"]:
                 deal = item.get("item", {})
+                deal_id = deal.get("id")
+                if deal_id in seen_ids:
+                    continue
+                seen_ids.add(deal_id)
+
                 title = deal.get("title", "") or ""
                 org_name = (deal.get("organization") or {}).get("name", "") or ""
 
-                # Pipedrive 한국어 유사음 오매칭 방지: 검색어가 제목 또는 업체명에 실제로 포함된 것만
-                if q_lower not in title.lower() and q_lower not in org_name.lower():
+                # 거래명에 검색어가 실제로 포함된 것만 (조직명 기준 매칭 제외)
+                if q_lower not in title.lower():
                     continue
 
                 value = deal.get("value") or 0
