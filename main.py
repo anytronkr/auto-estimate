@@ -1111,19 +1111,25 @@ async def search_deals(q: str = ""):
         res_data = res.json()
 
         deals = []
+        q_lower = q.lower()
         if res_data.get("success") and res_data.get("data", {}).get("items"):
             for item in res_data["data"]["items"]:
                 deal = item.get("item", {})
-                # 금액 포맷 (천 단위 콤마)
+                title = deal.get("title", "") or ""
+                org_name = (deal.get("organization") or {}).get("name", "") or ""
+
+                # Pipedrive 한국어 유사음 오매칭 방지: 검색어가 제목 또는 업체명에 실제로 포함된 것만
+                if q_lower not in title.lower() and q_lower not in org_name.lower():
+                    continue
+
                 value = deal.get("value") or 0
                 value_fmt = f"{int(value):,}" if value else "-"
                 currency = deal.get("currency", "KRW")
-                # 생성일 (YYYY-MM-DD)
                 add_time = (deal.get("add_time") or "")[:10]
                 deals.append({
                     "id": deal.get("id"),
-                    "title": deal.get("title", ""),
-                    "org_name": (deal.get("organization") or {}).get("name", ""),
+                    "title": title,
+                    "org_name": org_name,
                     "value": value_fmt,
                     "currency": currency,
                     "add_time": add_time,
