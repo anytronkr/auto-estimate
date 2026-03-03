@@ -2325,11 +2325,17 @@ window.addEventListener('pageshow', function(event) {
       }
       dropdown.innerHTML = json.deals.map(deal => {
         const statusBadge = deal.status === 'won' ? ' 🏆' : deal.status === 'lost' ? ' ❌' : '';
+        const valueStr = deal.value && deal.value !== '-' ? `${deal.value} ${deal.currency}` : '금액미입력';
+        const dateStr = deal.add_time || '';
         return `<div class="deal-item" onclick="selectDeal(${deal.id}, '${(deal.title||'').replace(/'/g,"\\'")}', '${(deal.org_name||'').replace(/'/g,"\\'")}')\"
           style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;"
           onmouseover="this.style.background='#e8f5f5'" onmouseout="this.style.background=''">
           <div style="font-weight:600;color:#2A8486;">${deal.title}${statusBadge}</div>
-          <div style="color:#666;margin-top:2px;">${deal.org_name || ''} ${deal.stage ? '· ' + deal.stage : ''}</div>
+          <div style="color:#666;margin-top:3px;display:flex;gap:12px;">
+            <span>🏢 ${deal.org_name || '-'}</span>
+            <span>💰 ${valueStr}</span>
+            <span>📅 ${dateStr}</span>
+          </div>
         </div>`;
       }).join('');
     } catch(e) {

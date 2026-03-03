@@ -1094,7 +1094,7 @@ def get_pipedrive_stage_id(supplier_person):
 
 @app.get("/search-deals")
 async def search_deals(q: str = ""):
-    """업체명으로 Pipedrive 거래 검색 (조직 검색 → 거래 조회)"""
+    """거래 제목으로 Pipedrive 거래 검색"""
     if not q or len(q) < 2:
         return {"deals": []}
     try:
@@ -1102,60 +1102,33 @@ async def search_deals(q: str = ""):
         base_url = f"https://{pipedrive_settings['domain']}/api/v1"
         token = pipedrive_settings["api_token"]
 
-        # 1단계: 조직명으로 조직 검색
-        org_res = HTTP.get(f"{base_url}/organizations/search", params={
+        res = HTTP.get(f"{base_url}/deals/search", params={
             "term": q,
-            "fields": "name",
-            "limit": 10,
+            "fields": "title",
+            "limit": 30,
             "api_token": token
         })
-        org_data = org_res.json()
+        res_data = res.json()
 
         deals = []
-        org_ids = []
-        if org_data.get("success") and org_data.get("data", {}).get("items"):
-            for item in org_data["data"]["items"]:
-                org = item.get("item", {})
-                org_ids.append((org.get("id"), org.get("name", "")))
-
-        # 2단계: 각 조직의 거래 가져오기
-        for org_id, org_name in org_ids:
-            deal_res = HTTP.get(f"{base_url}/deals", params={
-                "org_id": org_id,
-                "status": "open",
-                "limit": 10,
-                "api_token": token
-            })
-            deal_data = deal_res.json()
-            if deal_data.get("success") and deal_data.get("data"):
-                for deal in deal_data["data"]:
-                    deals.append({
-                        "id": deal.get("id"),
-                        "title": deal.get("title", ""),
-                        "org_name": org_name,
-                        "stage": (deal.get("stage_id") and deal.get("stage_id")) or "",
-                        "status": deal.get("status", ""),
-                    })
-
-        # 조직 없으면 거래명으로 직접 검색 fallback
-        if not deals:
-            deal_search_res = HTTP.get(f"{base_url}/deals/search", params={
-                "term": q,
-                "fields": "title",
-                "limit": 20,
-                "api_token": token
-            })
-            ds_data = deal_search_res.json()
-            if ds_data.get("success") and ds_data.get("data", {}).get("items"):
-                for item in ds_data["data"]["items"]:
-                    deal = item.get("item", {})
-                    deals.append({
-                        "id": deal.get("id"),
-                        "title": deal.get("title", ""),
-                        "org_name": (deal.get("organization") or {}).get("name", ""),
-                        "stage": "",
-                        "status": deal.get("status", ""),
-                    })
+        if res_data.get("success") and res_data.get("data", {}).get("items"):
+            for item in res_data["data"]["items"]:
+                deal = item.get("item", {})
+                # 금액 포맷 (천 단위 콤마)
+                value = deal.get("value") or 0
+                value_fmt = f"{int(value):,}" if value else "-"
+                currency = deal.get("currency", "KRW")
+                # 생성일 (YYYY-MM-DD)
+                add_time = (deal.get("add_time") or "")[:10]
+                deals.append({
+                    "id": deal.get("id"),
+                    "title": deal.get("title", ""),
+                    "org_name": (deal.get("organization") or {}).get("name", ""),
+                    "value": value_fmt,
+                    "currency": currency,
+                    "add_time": add_time,
+                    "status": deal.get("status", ""),
+                })
 
         return {"deals": deals}
     except Exception as e:
