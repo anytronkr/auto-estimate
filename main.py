@@ -1094,31 +1094,69 @@ def get_pipedrive_stage_id(supplier_person):
 
 @app.get("/search-deals")
 async def search_deals(q: str = ""):
-    """업체명으로 Pipedrive 거래 검색"""
+    """업체명으로 Pipedrive 거래 검색 (조직 검색 → 거래 조회)"""
     if not q or len(q) < 2:
         return {"deals": []}
     try:
         pipedrive_settings = get_pipedrive_config()
-        url = f"https://{pipedrive_settings['domain']}/api/v1/deals/search"
-        params = {
+        base_url = f"https://{pipedrive_settings['domain']}/api/v1"
+        token = pipedrive_settings["api_token"]
+
+        # 1단계: 조직명으로 조직 검색
+        org_res = HTTP.get(f"{base_url}/organizations/search", params={
             "term": q,
-            "fields": "org_name",
-            "limit": 20,
-            "api_token": pipedrive_settings["api_token"]
-        }
-        res = HTTP.get(url, params=params)
-        res_data = res.json()
+            "fields": "name",
+            "limit": 10,
+            "api_token": token
+        })
+        org_data = org_res.json()
+
         deals = []
-        if res_data.get("success") and res_data.get("data", {}).get("items"):
-            for item in res_data["data"]["items"]:
-                deal = item.get("item", {})
-                deals.append({
-                    "id": deal.get("id"),
-                    "title": deal.get("title", ""),
-                    "org_name": (deal.get("organization") or {}).get("name", ""),
-                    "stage": deal.get("stage", {}).get("name", "") if deal.get("stage") else "",
-                    "status": deal.get("status", ""),
-                })
+        org_ids = []
+        if org_data.get("success") and org_data.get("data", {}).get("items"):
+            for item in org_data["data"]["items"]:
+                org = item.get("item", {})
+                org_ids.append((org.get("id"), org.get("name", "")))
+
+        # 2단계: 각 조직의 거래 가져오기
+        for org_id, org_name in org_ids:
+            deal_res = HTTP.get(f"{base_url}/deals", params={
+                "org_id": org_id,
+                "status": "open",
+                "limit": 10,
+                "api_token": token
+            })
+            deal_data = deal_res.json()
+            if deal_data.get("success") and deal_data.get("data"):
+                for deal in deal_data["data"]:
+                    deals.append({
+                        "id": deal.get("id"),
+                        "title": deal.get("title", ""),
+                        "org_name": org_name,
+                        "stage": (deal.get("stage_id") and deal.get("stage_id")) or "",
+                        "status": deal.get("status", ""),
+                    })
+
+        # 조직 없으면 거래명으로 직접 검색 fallback
+        if not deals:
+            deal_search_res = HTTP.get(f"{base_url}/deals/search", params={
+                "term": q,
+                "fields": "title",
+                "limit": 20,
+                "api_token": token
+            })
+            ds_data = deal_search_res.json()
+            if ds_data.get("success") and ds_data.get("data", {}).get("items"):
+                for item in ds_data["data"]["items"]:
+                    deal = item.get("item", {})
+                    deals.append({
+                        "id": deal.get("id"),
+                        "title": deal.get("title", ""),
+                        "org_name": (deal.get("organization") or {}).get("name", ""),
+                        "stage": "",
+                        "status": deal.get("status", ""),
+                    })
+
         return {"deals": deals}
     except Exception as e:
         print(f"Pipedrive 거래 검색 오류: {e}")
