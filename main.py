@@ -1116,12 +1116,7 @@ async def search_deals(q: str = "", debug: int = 0):
             if res_data.get("success") and res_data.get("data", {}).get("items"):
                 for item in res_data["data"]["items"]:
                     deal = item.get("item", {})
-                    raw_items.append({
-                        "title": deal.get("title", ""),
-                        "org_name": (deal.get("organization") or {}).get("name", ""),
-                        "status": deal.get("status", ""),
-                        "add_time": (deal.get("add_time") or "")[:10],
-                    })
+                    raw_items.append(dict(deal))  # 전체 필드 그대로 반환
             return {"total": len(raw_items), "raw_items": raw_items}
 
         deals = []
