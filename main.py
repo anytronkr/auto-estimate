@@ -1146,10 +1146,11 @@ async def search_deals(q: str = "", debug: int = 0):
                 try:
                     detail_res = HTTP.get(f"{base_url}/deals/{deal_id}", params={"api_token": token})
                     detail_data = detail_res.json()
+                    print(f"[DEBUG] deal/{deal_id} status={detail_res.status_code} success={detail_data.get('success')} add_time={detail_data.get('data', {}).get('add_time') if detail_data.get('data') else detail_data.get('error')}", flush=True)
                     if detail_data.get("success") and detail_data.get("data"):
                         add_time = (detail_data["data"].get("add_time") or "")[:10]
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[DEBUG] deal/{deal_id} fetch error: {e}", flush=True)
                 deals.append({
                     "id": deal_id,
                     "title": title,
