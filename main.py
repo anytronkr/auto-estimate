@@ -1122,6 +1122,8 @@ async def search_deals(q: str = "", debug: int = 0):
         deals = []
         seen_ids = set()
         q_lower = q.lower()
+        org_id_to_indices = {}  # org_id -> deals 리스트 인덱스 목록
+
         if res_data.get("success") and res_data.get("data", {}).get("items"):
             for item in res_data["data"]["items"]:
                 deal = item.get("item", {})
@@ -1131,7 +1133,9 @@ async def search_deals(q: str = "", debug: int = 0):
                 seen_ids.add(deal_id)
 
                 title = deal.get("title", "") or ""
-                org_name = (deal.get("organization") or {}).get("name", "") or ""
+                org_info = deal.get("organization") or {}
+                org_name = org_info.get("name", "") or ""
+                org_id = org_info.get("id")
 
                 # 거래명에 검색어가 실제로 포함된 것만 (조직명 기준 매칭 제외)
                 if q_lower not in title.lower():
@@ -1140,26 +1144,40 @@ async def search_deals(q: str = "", debug: int = 0):
                 value = deal.get("value") or 0
                 value_fmt = f"{int(value):,}" if value else "-"
                 currency = deal.get("currency", "KRW")
-                deal_id = deal.get("id")
-                # /deals/search는 add_time을 반환하지 않으므로 개별 조회
-                add_time = ""
-                try:
-                    detail_res = HTTP.get(f"{base_url}/deals/{deal_id}", params={"api_token": token})
-                    detail_data = detail_res.json()
-                    print(f"[DEBUG] deal/{deal_id} status={detail_res.status_code} success={detail_data.get('success')} add_time={detail_data.get('data', {}).get('add_time') if detail_data.get('data') else detail_data.get('error')}", flush=True)
-                    if detail_data.get("success") and detail_data.get("data"):
-                        add_time = (detail_data["data"].get("add_time") or "")[:10]
-                except Exception as e:
-                    print(f"[DEBUG] deal/{deal_id} fetch error: {e}", flush=True)
+
+                idx = len(deals)
                 deals.append({
                     "id": deal_id,
                     "title": title,
                     "org_name": org_name,
                     "value": value_fmt,
                     "currency": currency,
-                    "add_time": add_time,
+                    "add_time": "",
                     "status": deal.get("status", ""),
                 })
+
+                if org_id:
+                    org_id_to_indices.setdefault(org_id, []).append(idx)
+
+        # 조직별 거래 조회로 add_time 취득 (검색 API는 add_time 미포함)
+        # 조직 수만큼만 API 호출 (검색 결과 건수와 무관)
+        if org_id_to_indices:
+            deal_add_times = {}
+            for org_id in org_id_to_indices:
+                try:
+                    org_res = HTTP.get(
+                        f"{base_url}/organizations/{org_id}/deals",
+                        params={"api_token": token, "limit": 100, "status": "all_not_deleted"}
+                    )
+                    org_data = org_res.json()
+                    if org_data.get("success") and org_data.get("data"):
+                        for d in org_data["data"]:
+                            deal_add_times[d["id"]] = (d.get("add_time") or "")[:10]
+                except Exception as e:
+                    print(f"[WARN] org/{org_id} deals fetch error: {e}", flush=True)
+
+            for deal_dict in deals:
+                deal_dict["add_time"] = deal_add_times.get(deal_dict["id"], "")
 
         return {"deals": deals}
     except Exception as e:
