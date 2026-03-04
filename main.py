@@ -1140,9 +1140,18 @@ async def search_deals(q: str = "", debug: int = 0):
                 value = deal.get("value") or 0
                 value_fmt = f"{int(value):,}" if value else "-"
                 currency = deal.get("currency", "KRW")
-                add_time = (deal.get("add_time") or "")[:10]
+                deal_id = deal.get("id")
+                # /deals/search는 add_time을 반환하지 않으므로 개별 조회
+                add_time = ""
+                try:
+                    detail_res = HTTP.get(f"{base_url}/deals/{deal_id}", params={"api_token": token})
+                    detail_data = detail_res.json()
+                    if detail_data.get("success") and detail_data.get("data"):
+                        add_time = (detail_data["data"].get("add_time") or "")[:10]
+                except Exception:
+                    pass
                 deals.append({
-                    "id": deal.get("id"),
+                    "id": deal_id,
                     "title": title,
                     "org_name": org_name,
                     "value": value_fmt,
