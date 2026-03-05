@@ -626,15 +626,17 @@ async def collect_data(request: Request):
                 "message": f"PDF 생성 중 오류 발생: {str(e)}"
             }
         
-        # Pipedrive 거래 처리: 선택된 기존 거래가 있을 때만 업데이트
+        # Pipedrive 거래 처리
+        # - 기존 거래 선택 시: 해당 거래에 견적번호 기록
+        # - 미선택(수기 입력) 시: 담당자 파이프라인에 신규 거래 생성
         selected_deal_id = data.get("pipedrive_deal_id")
         if selected_deal_id:
             pipedrive_deal_id = update_pipedrive_deal_estimate(
                 selected_deal_id, data.get("estimate_number", ""), pdf_filename, estimate_link, pdf_link
             )
         else:
-            pipedrive_deal_id = None
-            print("Pipedrive 거래 미선택 - Pipedrive 전송 생략")
+            print("Pipedrive 거래 미선택 - 담당자 파이프라인에 신규 거래 생성")
+            pipedrive_deal_id = create_pipedrive_deal(data)
 
         # ✅ Pipedrive 업로드 완료 후에 임시 파일 삭제
         try:
