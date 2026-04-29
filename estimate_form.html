@@ -2009,6 +2009,14 @@ function validateEstimateForm() {
     alert('수신자 회사명을 입력해 주세요.');
     return false;
   }
+  // Pipedrive 거래 선택 필수
+  const pipedriveDealId = document.getElementById('pipedrive-deal-id').value;
+  if (!pipedriveDealId) {
+    console.log("❌ Pipedrive 거래 미선택");
+    alert('📋 파이프드라이브에 거래가 없습니다.\n\n유효PP로 체크하신 후 (파이프드라이브 리드로 전송됨) 리드수신함의 리드를 \'거래로 전환\' 하시거나,\n본인 파이프라인에 거래를 직접 생성하신 뒤\n회사명으로 검색하여 해당 거래를 선택해 주세요.');
+    document.getElementById('receiver-company').focus();
+    return false;
+  }
   // 견적제품 선택 필수
   if (!productCategory) {
     console.log("❌ 견적제품 누락");
