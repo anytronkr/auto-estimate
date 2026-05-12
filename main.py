@@ -1190,16 +1190,19 @@ async def search_deals(q: str = "", debug: int = 0):
 
 def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estimate_link, pdf_link):
     """기존 Pipedrive 거래에 견적번호 추가 및 PDF 첨부"""
+    TIMEOUT = 15  # 초
     try:
         pipedrive_settings = get_pipedrive_config()
         base_url = f"https://{pipedrive_settings['domain']}/api/v1"
         token = pipedrive_settings["api_token"]
 
         # 기존 견적번호 가져오기 (누적 저장)
-        deal_res = HTTP.get(f"{base_url}/deals/{deal_id}?api_token={token}")
+        deal_res = HTTP.get(f"{base_url}/deals/{deal_id}?api_token={token}", timeout=TIMEOUT)
         existing = ""
         if deal_res.status_code == 200:
             existing = deal_res.json().get("data", {}).get("55c48a15f50d667c26682f95d38a9a06d420369f", "") or ""
+        else:
+            print(f"[WARN] 거래 조회 실패 - deal_id: {deal_id}, status: {deal_res.status_code}, body: {deal_res.text[:200]}")
 
         # 견적번호 누적 (기존값 있으면 쉼표로 구분)
         new_value = f"{existing}, {estimate_number}".strip(", ") if existing else estimate_number
@@ -1207,9 +1210,13 @@ def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estim
         # 커스텀 필드 업데이트
         update_res = HTTP.put(
             f"{base_url}/deals/{deal_id}?api_token={token}",
-            json={"55c48a15f50d667c26682f95d38a9a06d420369f": new_value}
+            json={"55c48a15f50d667c26682f95d38a9a06d420369f": new_value},
+            timeout=TIMEOUT
         )
-        print(f"Pipedrive 거래 업데이트 결과: {update_res.status_code} - {update_res.text}")
+        print(f"Pipedrive 거래 업데이트 결과: {update_res.status_code} - {update_res.text[:200]}")
+        if update_res.status_code not in (200, 201):
+            print(f"[ERROR] 커스텀 필드 업데이트 실패 - deal_id: {deal_id}, status: {update_res.status_code}")
+            return None
 
         # PDF 첨부
         if pdf_filename and os.path.exists(pdf_filename):
@@ -1219,12 +1226,13 @@ def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estim
         note_content = f"견적번호: {estimate_number}\n엑셀견적서: {estimate_link}\nPDF견적서: {pdf_link}"
         HTTP.post(
             f"{base_url}/notes?api_token={token}",
-            json={"content": note_content, "deal_id": deal_id}
+            json={"content": note_content, "deal_id": deal_id},
+            timeout=TIMEOUT
         )
         print(f"Pipedrive 기존 거래 업데이트 완료 - deal_id: {deal_id}, 견적번호: {new_value}")
         return deal_id
     except Exception as e:
-        print(f"Pipedrive 거래 업데이트 오류: {e}")
+        print(f"[ERROR] Pipedrive 거래 업데이트 예외 - deal_id: {deal_id}, 오류: {type(e).__name__}: {e}")
         return None
 
 
