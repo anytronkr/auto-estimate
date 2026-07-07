@@ -1,7 +1,6 @@
 import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import gspread
 from config import (
@@ -146,8 +145,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 정적 파일 서빙
-app.mount("/static", StaticFiles(directory="."), name="static")
+# [보안 수정] /static 마운트 제거 — 프로젝트 폴더 전체(creds.json 포함)가
+# 인터넷에 공개되던 심각한 취약점. /static은 어디서도 사용되지 않음 (전체 검색 확인).
+# 페이지 서빙은 아래 FileResponse 라우트들이 담당.
 
 # Google Drive API 설정
 TEMPLATE_SHEET_ID = os.environ.get("TEMPLATE_SHEET_ID", "1Rf7dGonf0HgAfZ-XS3cW1Hp3V-NiOTWbt8m_qRtyzBY")
