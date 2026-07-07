@@ -590,6 +590,22 @@
         </div>
       </div>
     </div>
+    <!-- 이전 견적 불러오기 -->
+    <div class="section">
+      <h2 class="section-title">이전 견적 불러오기 <span class="info-badge">선택사항</span></h2>
+      <div class="form-group" style="position:relative;">
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="history-search" placeholder="거래처명으로 검색 (담당자 선택 후 이용 가능)" autocomplete="off" style="flex:1;">
+          <button type="button" id="history-recent-btn" class="add-btn" style="white-space:nowrap;">📂 내 최근 견적</button>
+        </div>
+        <div id="history-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #2A8486;border-radius:0 0 8px 8px;z-index:998;max-height:280px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div>
+        <div id="history-loaded-badge" style="display:none;margin-top:6px;padding:8px 12px;background:#fff9e6;border:1px solid #ffc107;border-radius:6px;font-size:13px;color:#8a6d00;">
+          📂 <strong id="history-loaded-info"></strong> 견적을 불러왔습니다. 수정 후 발행하면 <strong>새 견적번호</strong>로 발행됩니다.
+          <span onclick="this.parentElement.style.display='none'" style="float:right;cursor:pointer;color:#999;">✕</span>
+        </div>
+      </div>
+    </div>
+
     <!-- 수신자 정보 -->
     <div class="section">
       <h2 class="section-title">수신자 정보</h2>
@@ -697,6 +713,10 @@
   </div>
 </div>
 <script>
+// API 서버 주소: 폼이 서버 자체에서 서빙되므로 same-origin 사용
+// (로컬 테스트 시 로컬 서버로, 운영에서는 운영 서버로 자동 연결 — 하드코딩 금지)
+const API_ORIGIN = window.location.origin;
+
 // 1. 새로운 제품 분류 구조 (CSV 기반)
 const majorCategories = {
   "애니트론": [
@@ -1868,7 +1888,7 @@ async function autoFillEstimateNumber() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const res = await fetch('https://auto-estimate.onrender.com/estimate', {
+    const res = await fetch(`${API_ORIGIN}/estimate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ check_only: true }),
@@ -2137,7 +2157,7 @@ async function sendEstimateToFastAPI() {
       try {
         console.log("견적서 템플릿 복사 API 호출 중...");
         // 견적서 템플릿 복사 API 호출
-        const templateResponse = await fetch('https://auto-estimate.onrender.com/create-estimate-template', {
+        const templateResponse = await fetch(`${API_ORIGIN}/create-estimate-template`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -2191,7 +2211,7 @@ async function sendEstimateToFastAPI() {
     console.log("견적서 생성 API 호출 전 데이터:", data);
     console.log("사용할 fileId:", fileId);
 
-    const response = await fetch('https://auto-estimate.onrender.com/estimate', {
+    const response = await fetch(`${API_ORIGIN}/estimate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -2305,7 +2325,7 @@ window.addEventListener('pageshow', function(event) {
 
 // ===== Pipedrive 거래 검색 =====
 (function() {
-  const API_BASE = 'https://auto-estimate.onrender.com';
+  const API_BASE = API_ORIGIN;
   let searchTimer = null;
 
   document.getElementById('receiver-company').addEventListener('input', function() {
@@ -2328,7 +2348,10 @@ window.addEventListener('pageshow', function(event) {
       const res = await fetch(`${API_BASE}/search-deals?q=${encodeURIComponent(q)}`);
       const json = await res.json();
       if (!json.deals || json.deals.length === 0) {
-        dropdown.innerHTML = '<div style="padding:10px;color:#999;font-size:13px;">검색 결과 없음</div>';
+        const safeQ = q.replace(/'/g, "\\'");
+        dropdown.innerHTML = '<div style="padding:10px;font-size:13px;color:#999;">검색 결과 없음' +
+          '<div style="margin-top:4px;font-size:12px;color:#bbb;">방금 만든 거래는 Pipedrive 검색 반영까지 수십 초 걸릴 수 있어요.</div>' +
+          '<a href="#" onclick="searchDeals(\'' + safeQ + '\');return false;" style="display:inline-block;margin-top:6px;color:#2A8486;font-weight:600;">🔄 다시 검색</a></div>';
         return;
       }
       dropdown.innerHTML = json.deals.map(deal => {
@@ -2369,6 +2392,128 @@ window.addEventListener('pageshow', function(event) {
 })();
 // ===== Pipedrive 거래 검색 끝 =====
 
+// ===== 이전 견적 불러오기 =====
+(function() {
+  let historyTimer = null;
+  const searchInput = document.getElementById('history-search');
+  const dropdown = document.getElementById('history-dropdown');
+
+  function currentPersonText() {
+    const sel = document.getElementById('supplier-person');
+    return (sel && sel.value) ? sel.options[sel.selectedIndex].text : '';
+  }
+
+  async function fetchHistory(q) {
+    const person = currentPersonText();
+    if (!person) {
+      dropdown.innerHTML = '<div style="padding:10px;color:#e74c3c;font-size:13px;">먼저 위의 공급자 담당자를 선택해 주세요.</div>';
+      dropdown.style.display = 'block';
+      return;
+    }
+    dropdown.innerHTML = '<div style="padding:10px;color:#999;font-size:13px;">불러오는 중...</div>';
+    dropdown.style.display = 'block';
+    try {
+      const url = `${API_ORIGIN}/estimate-history?person=${encodeURIComponent(person)}&q=${encodeURIComponent(q || '')}&limit=20`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (!json.items || json.items.length === 0) {
+        dropdown.innerHTML = '<div style="padding:10px;color:#999;font-size:13px;">견적 이력이 없습니다.</div>';
+        return;
+      }
+      dropdown.innerHTML = json.items.map(function(it) {
+        const totalNum = Number(String(it.total || '').replace(/[^\d]/g, '')) || 0;
+        const totalStr = totalNum ? totalNum.toLocaleString() + '원' : '-';
+        const compEsc = (it.company || '').replace(/'/g, "\\'");
+        const numEsc = (it.number || '').replace(/'/g, "\\'");
+        return `<div onclick="loadPastEstimate('${it.file_id || ''}','${numEsc}','${compEsc}','${it.deal_id || ''}')"` +
+          ` style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;"` +
+          ` onmouseover="this.style.background='#e8f5f5'" onmouseout="this.style.background=''">` +
+          `<div style="font-weight:600;color:#2A8486;">${it.company} <span style="color:#999;font-weight:400;font-size:12px;">${it.number}</span></div>` +
+          `<div style="color:#666;margin-top:3px;display:flex;gap:12px;"><span>📅 ${it.date}</span><span>💰 ${totalStr}</span></div>` +
+          `</div>`;
+      }).join('');
+    } catch (e) {
+      console.error('견적 이력 조회 오류:', e);
+      dropdown.innerHTML = '<div style="padding:10px;color:#e74c3c;font-size:13px;">이력 조회 중 오류가 발생했습니다.</div>';
+    }
+  }
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(historyTimer);
+    const q = this.value.trim();
+    if (q.length < 1) { dropdown.style.display = 'none'; return; }
+    historyTimer = setTimeout(function() { fetchHistory(q); }, 400);
+  });
+  searchInput.addEventListener('blur', function() {
+    setTimeout(function() { dropdown.style.display = 'none'; }, 250);
+  });
+  document.getElementById('history-recent-btn').addEventListener('click', function() { fetchHistory(''); });
+
+  // 대분류 추론: 견적서 시트에는 대분류가 저장되지 않으므로 구분/제품명으로 유추
+  function inferMajor(p) {
+    if (p.major_category) return;
+    for (const major in majorCategories) {
+      if (majorCategories[major].includes(p.type)) { p.major_category = major; return; }
+    }
+    for (const model in consumableData) {
+      if (consumableData[model].some(function(it) { return it.name === p.name; })) {
+        p.major_category = '애니트론'; return;
+      }
+    }
+    const hint = String(p.type || '') + String(p.name || '');
+    p.major_category = /RFID|태그|리더|안테나/i.test(hint) ? 'RFID' : '애니트론';
+  }
+
+  window.loadPastEstimate = async function(fileId, number, company, dealId) {
+    dropdown.style.display = 'none';
+    if (!fileId) { alert('이 견적은 파일 정보가 없어 불러올 수 없습니다.'); return; }
+    searchInput.value = '';
+    try {
+      const res = await fetch(`${API_ORIGIN}/load-estimate?file_id=${encodeURIComponent(fileId)}`);
+      const json = await res.json();
+      if (json.status !== 'success') {
+        alert('견적서를 불러오지 못했습니다: ' + (json.message || '알 수 없는 오류'));
+        return;
+      }
+      const data = json.data;
+      (data.products || []).forEach(inferMajor);
+
+      restoreFormData(data);
+
+      // 재발행 준비: 오늘 날짜 + 새 견적번호 자동 생성 (기존 번호 재사용 방지)
+      const today = new Date();
+      const todayStr = today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
+      document.getElementById('date').value = todayStr;
+      document.getElementById('number').value = '';
+      autoFillEstimateNumber();
+
+      // 견적제품 유형 자동 추정 (비어있을 때만)
+      const pc = document.getElementById('product-category');
+      if (pc && !pc.value) {
+        const anyConsumable = (data.products || []).some(function(p) { return String(p.type || '').includes('소모품'); });
+        pc.value = anyConsumable ? '소모품' : '장비';
+      }
+
+      // 이전 견적의 Pipedrive 거래 재사용 (발행목록 Y열에 저장된 거래 ID)
+      if (dealId) {
+        document.getElementById('pipedrive-deal-id').value = dealId;
+        document.getElementById('deal-selected-title').textContent = company + ' (이전 견적 거래 재사용)';
+        document.getElementById('deal-selected-badge').style.display = 'block';
+      }
+
+      document.getElementById('history-loaded-info').textContent = company + ' / ' + number;
+      document.getElementById('history-loaded-badge').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      console.error('견적 불러오기 오류:', e);
+      alert('견적서를 불러오는 중 오류가 발생했습니다.');
+    }
+  };
+})();
+// ===== 이전 견적 불러오기 끝 =====
+
 // 폼 데이터 복원 함수
 function restoreFormData(data) {
   // 1. 기본 필드 복원
@@ -2380,6 +2525,10 @@ function restoreFormData(data) {
   if(data.receiver_phone) document.getElementById('receiver-phone').value = data.receiver_phone;
   if(data.quote_validity) document.getElementById('quote-validity').value = data.quote_validity;
   if(data.delivery_date) document.getElementById('delivery-date').value = data.delivery_date;
+  if(data.extra_note) {
+    const extraEl = document.getElementById('extra-note');
+    if (extraEl) extraEl.value = data.extra_note;
+  }
   
   // 2. 공급자 담당자 선택 및 이벤트 트리거
   if(data.supplier_person) {
