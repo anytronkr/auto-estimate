@@ -678,16 +678,16 @@ async def collect_data(request: Request):
             data.get("product_training", ""),   # V: 제품교육 (T → V로 변경)
             estimate_link,                      # W: 견적파일(엑셀) (U → W로 변경)
             pdf_link,                           # X: 견적파일(PDF) (V → X로 변경)
-            pipedrive_deal_id                   # Y: Pipedrive 거래 ID (W → Y로 변경)
+            selected_deal_id                    # Y: Pipedrive 거래 ID — 사용자 선택값을 그대로 기록 (PD API 업데이트 실패와 무관)
         ]
         ws.append_row(row_data)
         
         success_message = f"견적 데이터 및 PDF가 성공적으로 추가되었습니다."
         if pipedrive_deal_id:
-            success_message += f"\nPipedrive 거래가 성공적으로 생성되었습니다. (거래 ID: {pipedrive_deal_id})"
+            success_message += f"\nPipedrive 거래가 성공적으로 업데이트되었습니다. (거래 ID: {pipedrive_deal_id})"
             success_message += f"\nPDF 파일이 Pipedrive 거래에 첨부되었습니다."
         else:
-            success_message += "\nPipedrive 거래 생성에 실패했습니다."
+            success_message += f"\n⚠️ Pipedrive 견적번호 기록에 실패했습니다 (거래 ID {selected_deal_id}는 시트에 저장됨)."
         
         return {
             "status": "success",
