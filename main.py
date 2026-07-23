@@ -693,16 +693,16 @@ async def collect_data(request: Request):
             data.get("product_training", ""),   # V: 제품교육 (T → V로 변경)
             estimate_link,                      # W: 견적파일(엑셀) (U → W로 변경)
             pdf_link,                           # X: 견적파일(PDF) (V → X로 변경)
-            pipedrive_deal_id                   # Y: Pipedrive 거래 ID (W → Y로 변경)
+            selected_deal_id                    # Y: Pipedrive 거래 ID — 사용자 선택값을 그대로 기록 (PD API 업데이트 실패와 무관)
         ]
         ws.append_row(row_data)
         
         success_message = f"견적 데이터 및 PDF가 성공적으로 추가되었습니다."
         if pipedrive_deal_id:
-            success_message += f"\nPipedrive 거래가 성공적으로 생성되었습니다. (거래 ID: {pipedrive_deal_id})"
+            success_message += f"\nPipedrive 거래가 성공적으로 업데이트되었습니다. (거래 ID: {pipedrive_deal_id})"
             success_message += f"\nPDF 파일이 Pipedrive 거래에 첨부되었습니다."
         else:
-            success_message += "\nPipedrive 거래 생성에 실패했습니다."
+            success_message += f"\n⚠️ Pipedrive 견적번호 기록에 실패했습니다 (거래 ID {selected_deal_id}는 시트에 저장됨)."
         
         return {
             "status": "success",
@@ -1079,6 +1079,29 @@ def get_pipedrive_config():
         "domain": os.environ.get("PIPEDRIVE_DOMAIN", "api.pipedrive.com")
     }
 
+# Pipedrive 견적번호 커스텀필드 키
+PIPEDRIVE_QUOTE_NUM_FIELD_KEY = "55c48a15f50d667c26682f95d38a9a06d420369f"
+
+def _pd_extract_search_items(res_json):
+    """v1(data.items[].item)과 v2(data가 배열/리스트일 가능성) 검색 응답을 모두 흡수해서
+    딜/조직 딕셔너리 리스트로 반환. v2 정확한 응답 구조는 라이브 테스트로 확인 필요."""
+    if not res_json.get("success"):
+        return []
+    data = res_json.get("data")
+    if isinstance(data, dict) and data.get("items"):
+        return [it.get("item", {}) for it in data["items"] if it.get("item")]
+    if isinstance(data, list):
+        return data
+    return []
+
+def _pd_custom_field_value(data_obj, key):
+    """v2 custom_fields.{key}.value 중첩 구조에서 값 읽기 (평면 구조도 방어)"""
+    cf = (data_obj or {}).get("custom_fields") or {}
+    v = cf.get(key)
+    if isinstance(v, dict):
+        return v.get("value") or ""
+    return v or ""
+
 def _norm_text(s):
     """검색 비교용 정규화: 공백/특수문자 제거 + 소문자 (한글/영문/숫자만 유지)
     예: '(주)경신 이엔피' → '주경신이엔피' — '경신이' 검색어도 매칭됨"""
@@ -1100,7 +1123,7 @@ def search_deals(q: str = "", debug: int = 0):
     TIMEOUT = 10
     try:
         pipedrive_settings = get_pipedrive_config()
-        base_url = f"https://{pipedrive_settings['domain']}/api/v1"
+        base_url = f"https://{pipedrive_settings['domain']}/api/v2"
         token = pipedrive_settings["api_token"]
         qn = _norm_text(q)
 
@@ -1117,12 +1140,9 @@ def search_deals(q: str = "", debug: int = 0):
                 res = HTTP.get(f"{base_url}/deals/search", params={
                     "term": term, "fields": "title", "limit": 30, "api_token": token
                 }, timeout=TIMEOUT)
-                res_data = res.json()
-                if res_data.get("success") and res_data.get("data", {}).get("items"):
-                    for item in res_data["data"]["items"]:
-                        deal = item.get("item", {})
-                        if deal.get("id"):
-                            raw_deals.setdefault(deal["id"], dict(deal))
+                for deal in _pd_extract_search_items(res.json()):
+                    if deal.get("id"):
+                        raw_deals.setdefault(deal["id"], dict(deal))
             except Exception as e:
                 print(f"[WARN] deals/search '{term}' 오류: {e}", flush=True)
 
@@ -1133,22 +1153,21 @@ def search_deals(q: str = "", debug: int = 0):
                 org_res = HTTP.get(f"{base_url}/organizations/search", params={
                     "term": term, "fields": "name", "limit": 10, "api_token": token
                 }, timeout=TIMEOUT)
-                org_data = org_res.json()
-                if org_data.get("success") and org_data.get("data", {}).get("items"):
-                    for item in org_data["data"]["items"]:
-                        org = item.get("item", {})
-                        oname = org.get("name", "") or ""
-                        if org.get("id") and qn in _norm_text(oname):
-                            org_names[org["id"]] = oname
+                for org in _pd_extract_search_items(org_res.json()):
+                    oname = org.get("name", "") or ""
+                    if org.get("id") and qn in _norm_text(oname):
+                        org_names[org["id"]] = oname
             except Exception as e:
                 print(f"[WARN] organizations/search '{term}' 오류: {e}", flush=True)
 
+        # v1 /organizations/{id}/deals는 v2에서 폐지 → /deals?org_id= 로 대체
+        # v2 status 필터는 open/won/lost/deleted만 허용 (v1의 all_not_deleted 값 사용 불가) → 생략
         org_deal_add_times = {}  # deal_id -> add_time (조직 거래 조회 시 함께 확보)
         for org_id in list(org_names.keys())[:5]:  # 과도한 API 호출 방지
             try:
                 od_res = HTTP.get(
-                    f"{base_url}/organizations/{org_id}/deals",
-                    params={"api_token": token, "limit": 100, "status": "all_not_deleted"},
+                    f"{base_url}/deals",
+                    params={"api_token": token, "limit": 100, "org_id": org_id},
                     timeout=TIMEOUT
                 )
                 od_data = od_res.json()
@@ -1205,8 +1224,8 @@ def search_deals(q: str = "", debug: int = 0):
             for org_id in list(org_id_to_indices.keys())[:5]:
                 try:
                     org_res = HTTP.get(
-                        f"{base_url}/organizations/{org_id}/deals",
-                        params={"api_token": token, "limit": 100, "status": "all_not_deleted"},
+                        f"{base_url}/deals",
+                        params={"api_token": token, "limit": 100, "org_id": org_id},
                         timeout=TIMEOUT
                     )
                     org_data = org_res.json()
@@ -1350,28 +1369,34 @@ def load_estimate(file_id: str = ""):
 
 
 def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estimate_link, pdf_link):
-    """기존 Pipedrive 거래에 견적번호 추가 및 PDF 첨부"""
+    """기존 Pipedrive 거래에 견적번호 추가 및 PDF 첨부
+
+    Deals는 API v2 사용. Notes/Files는 v2 엔드포인트가 아직 없어(2026-07 기준,
+    Pipedrive 공식 답변 "Notes는 당분간 v1 계속 사용 권장") v1을 그대로 유지.
+    """
     TIMEOUT = 15  # 초
     try:
         pipedrive_settings = get_pipedrive_config()
-        base_url = f"https://{pipedrive_settings['domain']}/api/v1"
+        base_url_v2 = f"https://{pipedrive_settings['domain']}/api/v2"
+        base_url_v1 = f"https://{pipedrive_settings['domain']}/api/v1"
         token = pipedrive_settings["api_token"]
 
         # 기존 견적번호 가져오기 (누적 저장)
-        deal_res = HTTP.get(f"{base_url}/deals/{deal_id}?api_token={token}", timeout=TIMEOUT)
+        deal_res = HTTP.get(f"{base_url_v2}/deals/{deal_id}?api_token={token}", timeout=TIMEOUT)
         existing = ""
         if deal_res.status_code == 200:
-            existing = deal_res.json().get("data", {}).get("55c48a15f50d667c26682f95d38a9a06d420369f", "") or ""
+            existing = _pd_custom_field_value(deal_res.json().get("data"), PIPEDRIVE_QUOTE_NUM_FIELD_KEY)
         else:
             print(f"[WARN] 거래 조회 실패 - deal_id: {deal_id}, status: {deal_res.status_code}, body: {deal_res.text[:200]}")
 
         # 견적번호 누적 (기존값 있으면 쉼표로 구분)
         new_value = f"{existing}, {estimate_number}".strip(", ") if existing else estimate_number
 
-        # 커스텀 필드 업데이트
-        update_res = HTTP.put(
-            f"{base_url}/deals/{deal_id}?api_token={token}",
-            json={"55c48a15f50d667c26682f95d38a9a06d420369f": new_value},
+        # 커스텀 필드 업데이트 (v2: PUT→PATCH, custom_fields 중첩 구조)
+        # 주의: 텍스트형 커스텀필드의 정확한 쓰기 body 구조는 실제 토큰으로 라이브 테스트 필요
+        update_res = HTTP.patch(
+            f"{base_url_v2}/deals/{deal_id}?api_token={token}",
+            json={"custom_fields": {PIPEDRIVE_QUOTE_NUM_FIELD_KEY: {"value": new_value}}},
             timeout=TIMEOUT
         )
         print(f"Pipedrive 거래 업데이트 결과: {update_res.status_code} - {update_res.text[:200]}")
@@ -1379,14 +1404,14 @@ def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estim
             print(f"[ERROR] 커스텀 필드 업데이트 실패 - deal_id: {deal_id}, status: {update_res.status_code}")
             return None
 
-        # PDF 첨부
+        # PDF 첨부 (Files API v1 유지)
         if pdf_filename and os.path.exists(pdf_filename):
             upload_file_to_pipedrive_deal(deal_id, pdf_filename, pdf_filename)
 
-        # 노트 추가
+        # 노트 추가 (Notes API v1 유지)
         note_content = f"견적번호: {estimate_number}\n엑셀견적서: {estimate_link}\nPDF견적서: {pdf_link}"
         HTTP.post(
-            f"{base_url}/notes?api_token={token}",
+            f"{base_url_v1}/notes?api_token={token}",
             json={"content": note_content, "deal_id": deal_id},
             timeout=TIMEOUT
         )
