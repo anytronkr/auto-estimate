@@ -536,6 +536,11 @@
   </div>
 
   <div class="content">
+    <!-- 전체 초기화 -->
+    <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+      <button type="button" id="full-reset-btn" class="btn btn-secondary" style="padding:8px 16px; font-size:13px;">🔄 처음부터 다시시작</button>
+    </div>
+
     <!-- 필수 입력 안내 -->
     <div class="required-notice">
       *표시는 필수사항입니다. *표시가 없는 항목은 입력하지 않으셔도 됩니다.
@@ -638,7 +643,9 @@
 
     <!-- 견적제품 선택 -->
     <div class="section">
-      <h2 class="section-title">견적제품 선택</h2>
+      <h2 class="section-title">견적제품 선택
+        <button type="button" id="product-reset-btn" class="remove-btn" style="margin-left:auto; white-space:nowrap;">🧹 내용초기화</button>
+      </h2>
       <div class="form-group">
         <label>제품 유형 <span class="required">*</span></label>
         <select id="product-category" required>
@@ -2265,6 +2272,75 @@ async function sendEstimateToFastAPI() {
 }
 
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
+
+// ===== 처음부터 다시시작 (전체 초기화) =====
+document.getElementById('full-reset-btn').addEventListener('click', function() {
+  if (!confirm('입력한 모든 내용이 사라집니다. 처음부터 다시 시작하시겠습니까?')) return;
+  try {
+    localStorage.removeItem('estimateData');
+    sessionStorage.removeItem('estimateData');
+    localStorage.removeItem('productCategory');
+    sessionStorage.removeItem('productCategory');
+  } catch (e) {
+    console.warn('Storage 초기화 실패:', e);
+  }
+  window.location.href = 'estimate_form.html';
+});
+
+// ===== 내용초기화 (견적제품 선택부터만 초기화, 수신자 정보까지는 유지) =====
+function resetProductTrainingField() {
+  const current = document.getElementById('product-training');
+  if (!current) return;
+  if (current.tagName === 'SELECT') {
+    current.selectedIndex = 0;
+    return;
+  }
+  const select = document.createElement('select');
+  select.id = 'product-training';
+  select.required = true;
+  select.innerHTML =
+    '<option value="">선택하세요</option>' +
+    '<option value="제품 납품시 사용자 교육을 진행 합니다.">제품 납품시 사용자 교육을 진행 합니다.</option>' +
+    '<option value="엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(300,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>' +
+    '<option value="엔지니어 방문 설치교육(250,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)">엔지니어 방문 설치교육(250,000원(부가세별도) 입니다.(설치 메뉴얼, 동영상 제공)</option>';
+  current.parentNode.replaceChild(select, current);
+  select.addEventListener('change', function() {
+    if (this.value && this.value !== '') {
+      const textInput = document.createElement('input');
+      textInput.type = 'text';
+      textInput.id = 'product-training';
+      textInput.value = this.value;
+      textInput.style.cssText = this.style.cssText;
+      textInput.style.width = '100%';
+      textInput.style.padding = '8px';
+      textInput.style.border = '1px solid #ddd';
+      textInput.style.borderRadius = '4px';
+      textInput.placeholder = '제품교육 내용을 입력하거나 수정하세요';
+      const parent = this.parentNode;
+      parent.removeChild(this);
+      parent.appendChild(textInput);
+      textInput.focus();
+    }
+  });
+}
+
+document.getElementById('product-reset-btn').addEventListener('click', function() {
+  if (!confirm('제품 정보와 기타정보가 모두 지워집니다. (수신자 정보까지는 그대로 유지됩니다) 계속하시겠습니까?')) return;
+
+  document.getElementById('product-category').value = '';
+
+  document.getElementById('products-area').innerHTML = '';
+  productCount = 0;
+  setAddProductButtonsDisabled(false);
+  addProductSet();
+
+  document.getElementById('quote-validity').value = '견적일로부터 4주';
+  document.getElementById('delivery-date').value = '입금확인일로부터 2주 이내';
+  document.getElementById('extra-note').value = '리와인더 및 편집 소프트웨어는 별매입니다.';
+  resetProductTrainingField();
+
+  updateGrandTotal();
+});
 
 // 페이지 로드 시 fileId 상태 확인 및 데이터 복원
 function tryRestoreFormData() {
