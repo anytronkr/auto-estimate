@@ -1064,6 +1064,29 @@ def get_pipedrive_config():
         "domain": os.environ.get("PIPEDRIVE_DOMAIN", "api.pipedrive.com")
     }
 
+# Pipedrive 견적번호 커스텀필드 키
+PIPEDRIVE_QUOTE_NUM_FIELD_KEY = "55c48a15f50d667c26682f95d38a9a06d420369f"
+
+def _pd_extract_search_items(res_json):
+    """v1(data.items[].item)과 v2(data가 배열/리스트일 가능성) 검색 응답을 모두 흡수해서
+    딜/조직 딕셔너리 리스트로 반환. v2 정확한 응답 구조는 라이브 테스트로 확인 필요."""
+    if not res_json.get("success"):
+        return []
+    data = res_json.get("data")
+    if isinstance(data, dict) and data.get("items"):
+        return [it.get("item", {}) for it in data["items"] if it.get("item")]
+    if isinstance(data, list):
+        return data
+    return []
+
+def _pd_custom_field_value(data_obj, key):
+    """v2 custom_fields.{key}.value 중첩 구조에서 값 읽기 (평면 구조도 방어)"""
+    cf = (data_obj or {}).get("custom_fields") or {}
+    v = cf.get(key)
+    if isinstance(v, dict):
+        return v.get("value") or ""
+    return v or ""
+
 def get_pipedrive_user_id(supplier_person):
     """담당자 이름에서 Pipedrive 사용자 ID를 찾습니다."""
     pipedrive_settings = get_pipedrive_config()
@@ -1102,7 +1125,7 @@ async def search_deals(q: str = "", debug: int = 0):
         return {"deals": []}
     try:
         pipedrive_settings = get_pipedrive_config()
-        base_url = f"https://{pipedrive_settings['domain']}/api/v1"
+        base_url = f"https://{pipedrive_settings['domain']}/api/v2"
         token = pipedrive_settings["api_token"]
 
         res = HTTP.get(f"{base_url}/deals/search", params={
@@ -1112,65 +1135,61 @@ async def search_deals(q: str = "", debug: int = 0):
             "api_token": token
         })
         res_data = res.json()
+        search_items = _pd_extract_search_items(res_data)
 
         # 디버그 모드: 필터링 없이 Pipedrive 원본 결과 반환
         if debug:
-            raw_items = []
-            if res_data.get("success") and res_data.get("data", {}).get("items"):
-                for item in res_data["data"]["items"]:
-                    deal = item.get("item", {})
-                    raw_items.append(dict(deal))  # 전체 필드 그대로 반환
-            return {"total": len(raw_items), "raw_items": raw_items}
+            return {"total": len(search_items), "raw_items": [dict(d) for d in search_items]}
 
         deals = []
         seen_ids = set()
         q_lower = q.lower()
         org_id_to_indices = {}  # org_id -> deals 리스트 인덱스 목록
 
-        if res_data.get("success") and res_data.get("data", {}).get("items"):
-            for item in res_data["data"]["items"]:
-                deal = item.get("item", {})
-                deal_id = deal.get("id")
-                if deal_id in seen_ids:
-                    continue
-                seen_ids.add(deal_id)
+        for deal in search_items:
+            deal_id = deal.get("id")
+            if deal_id in seen_ids:
+                continue
+            seen_ids.add(deal_id)
 
-                title = deal.get("title", "") or ""
-                org_info = deal.get("organization") or {}
-                org_name = org_info.get("name", "") or ""
-                org_id = org_info.get("id")
+            title = deal.get("title", "") or ""
+            org_info = deal.get("organization") or {}
+            org_name = org_info.get("name", "") or ""
+            org_id = org_info.get("id")
 
-                # 거래명에 검색어가 실제로 포함된 것만 (조직명 기준 매칭 제외)
-                if q_lower not in title.lower():
-                    continue
+            # 거래명에 검색어가 실제로 포함된 것만 (조직명 기준 매칭 제외)
+            if q_lower not in title.lower():
+                continue
 
-                value = deal.get("value") or 0
-                value_fmt = f"{int(value):,}" if value else "-"
-                currency = deal.get("currency", "KRW")
+            value = deal.get("value") or 0
+            value_fmt = f"{int(value):,}" if value else "-"
+            currency = deal.get("currency", "KRW")
 
-                idx = len(deals)
-                deals.append({
-                    "id": deal_id,
-                    "title": title,
-                    "org_name": org_name,
-                    "value": value_fmt,
-                    "currency": currency,
-                    "add_time": "",
-                    "status": deal.get("status", ""),
-                })
+            idx = len(deals)
+            deals.append({
+                "id": deal_id,
+                "title": title,
+                "org_name": org_name,
+                "value": value_fmt,
+                "currency": currency,
+                "add_time": "",
+                "status": deal.get("status", ""),
+            })
 
-                if org_id:
-                    org_id_to_indices.setdefault(org_id, []).append(idx)
+            if org_id:
+                org_id_to_indices.setdefault(org_id, []).append(idx)
 
         # 조직별 거래 조회로 add_time 취득 (검색 API는 add_time 미포함)
         # 조직 수만큼만 API 호출 (검색 결과 건수와 무관)
+        # v1 /organizations/{id}/deals는 v2에서 폐지 → /deals?org_id= 로 대체
+        # v2 status 필터는 open/won/lost/deleted만 허용 (v1의 all_not_deleted 값 사용 불가) → 생략
         if org_id_to_indices:
             deal_add_times = {}
             for org_id in org_id_to_indices:
                 try:
                     org_res = HTTP.get(
-                        f"{base_url}/organizations/{org_id}/deals",
-                        params={"api_token": token, "limit": 100, "status": "all_not_deleted"}
+                        f"{base_url}/deals",
+                        params={"api_token": token, "limit": 100, "org_id": org_id}
                     )
                     org_data = org_res.json()
                     if org_data.get("success") and org_data.get("data"):
@@ -1189,28 +1208,34 @@ async def search_deals(q: str = "", debug: int = 0):
 
 
 def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estimate_link, pdf_link):
-    """기존 Pipedrive 거래에 견적번호 추가 및 PDF 첨부"""
+    """기존 Pipedrive 거래에 견적번호 추가 및 PDF 첨부
+
+    Deals는 API v2 사용. Notes/Files는 v2 엔드포인트가 아직 없어(2026-07 기준,
+    Pipedrive 공식 답변 "Notes는 당분간 v1 계속 사용 권장") v1을 그대로 유지.
+    """
     TIMEOUT = 15  # 초
     try:
         pipedrive_settings = get_pipedrive_config()
-        base_url = f"https://{pipedrive_settings['domain']}/api/v1"
+        base_url_v2 = f"https://{pipedrive_settings['domain']}/api/v2"
+        base_url_v1 = f"https://{pipedrive_settings['domain']}/api/v1"
         token = pipedrive_settings["api_token"]
 
         # 기존 견적번호 가져오기 (누적 저장)
-        deal_res = HTTP.get(f"{base_url}/deals/{deal_id}?api_token={token}", timeout=TIMEOUT)
+        deal_res = HTTP.get(f"{base_url_v2}/deals/{deal_id}?api_token={token}", timeout=TIMEOUT)
         existing = ""
         if deal_res.status_code == 200:
-            existing = deal_res.json().get("data", {}).get("55c48a15f50d667c26682f95d38a9a06d420369f", "") or ""
+            existing = _pd_custom_field_value(deal_res.json().get("data"), PIPEDRIVE_QUOTE_NUM_FIELD_KEY)
         else:
             print(f"[WARN] 거래 조회 실패 - deal_id: {deal_id}, status: {deal_res.status_code}, body: {deal_res.text[:200]}")
 
         # 견적번호 누적 (기존값 있으면 쉼표로 구분)
         new_value = f"{existing}, {estimate_number}".strip(", ") if existing else estimate_number
 
-        # 커스텀 필드 업데이트
-        update_res = HTTP.put(
-            f"{base_url}/deals/{deal_id}?api_token={token}",
-            json={"55c48a15f50d667c26682f95d38a9a06d420369f": new_value},
+        # 커스텀 필드 업데이트 (v2: PUT→PATCH, custom_fields 중첩 구조)
+        # 주의: 텍스트형 커스텀필드의 정확한 쓰기 body 구조는 실제 토큰으로 라이브 테스트 필요
+        update_res = HTTP.patch(
+            f"{base_url_v2}/deals/{deal_id}?api_token={token}",
+            json={"custom_fields": {PIPEDRIVE_QUOTE_NUM_FIELD_KEY: {"value": new_value}}},
             timeout=TIMEOUT
         )
         print(f"Pipedrive 거래 업데이트 결과: {update_res.status_code} - {update_res.text[:200]}")
@@ -1218,14 +1243,14 @@ def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estim
             print(f"[ERROR] 커스텀 필드 업데이트 실패 - deal_id: {deal_id}, status: {update_res.status_code}")
             return None
 
-        # PDF 첨부
+        # PDF 첨부 (Files API v1 유지)
         if pdf_filename and os.path.exists(pdf_filename):
             upload_file_to_pipedrive_deal(deal_id, pdf_filename, pdf_filename)
 
-        # 노트 추가
+        # 노트 추가 (Notes API v1 유지)
         note_content = f"견적번호: {estimate_number}\n엑셀견적서: {estimate_link}\nPDF견적서: {pdf_link}"
         HTTP.post(
-            f"{base_url}/notes?api_token={token}",
+            f"{base_url_v1}/notes?api_token={token}",
             json={"content": note_content, "deal_id": deal_id},
             timeout=TIMEOUT
         )
