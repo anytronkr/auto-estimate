@@ -52,6 +52,8 @@ Thumbs.db
 # Google credentials (local development only)
 creds.json
 pipedrive_config_local.py
+run-local-test.ps1
+set-local-env.ps1
 
 # PDF files
 *.pdf

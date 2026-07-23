@@ -4,10 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import gspread
 from config import (
-    CREDS_PATH, CELL_MAP, API_HOST, API_PORT, 
+    CREDS_PATH, CELL_MAP, API_HOST, API_PORT,
     DATA_COLLECTION_SHEET_ID, DATA_COLLECTION_COLUMNS,
-    get_google_credentials, get_pipedrive_config, get_google_drive_folder_id
+    get_google_credentials, get_google_drive_folder_id
 )
+# 참고: get_pipedrive_config는 이 파일 하단에 정의된 버전을 사용 (config.py 버전과 중복이었음)
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google.oauth2.credentials import Credentials
@@ -313,6 +314,20 @@ def copy_estimate_template():
 async def fill_estimate(request: Request):
     try:
         data = await request.json()
+
+        # 견적번호 미리보기용 확인 호출 — 실제 생성 없이 오늘 발행 카운트만 반환
+        # (이전에는 이 호출이 템플릿 복사 + 발행 카운터 증가까지 실행되는 버그가 있었음)
+        if data.get("check_only"):
+            today = datetime.now().strftime("%Y-%m-%d")
+            cnt = 0
+            try:
+                if os.path.exists("pdf_count.json"):
+                    with open("pdf_count.json", "r", encoding="utf-8") as f:
+                        cnt = json.load(f).get(today, 0)
+            except Exception as e:
+                print(f"⚠️ check_only 카운트 읽기 실패 (0으로 처리): {e}")
+            return {"status": "success", "check_only": True, "pdf_count_today": cnt}
+
         print(f"=== /estimate 엔드포인트 호출됨 ===")
         print(f"받은 데이터: {data}")
         print(f"estimate_date 존재: {'estimate_date' in data}")
@@ -467,14 +482,14 @@ async def fill_estimate(request: Request):
         
         ws.batch_update(updates)
         
-        # 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용
+        # 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용 (개별 10회 호출 → 배치 1회로 속도 개선)
         try:
             detail_cells = [CELL_MAP[f"products[{i}][detail]"] for i in range(10)]
-            for cell in detail_cells:
-                ws.format(cell, {
-                    "wrapStrategy": "WRAP"
-                })
-            print(f"✅ 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용 완료: {detail_cells}")
+            ws.batch_format([
+                {"range": cell, "format": {"wrapStrategy": "WRAP"}}
+                for cell in detail_cells
+            ])
+            print(f"✅ 제품상세정보 셀 줄바꿈 포맷 일괄 적용 완료: {detail_cells}")
         except Exception as e:
             print(f"⚠️ 셀 포맷 적용 중 오류 (무시됨): {e}")
         
@@ -1087,109 +1102,131 @@ def _pd_custom_field_value(data_obj, key):
         return v.get("value") or ""
     return v or ""
 
-def get_pipedrive_user_id(supplier_person):
-    """담당자 이름에서 Pipedrive 사용자 ID를 찾습니다."""
-    pipedrive_settings = get_pipedrive_config()
-    user_mapping = {
-        "이훈수": 23659842,    # hslee@bitekps.com
-        "차재원": 23787233,    # cjw@bitekps.com
-        "장진호": 23823247,    # jhjang@bitekps.com
-        "전준영": 23839164,    # methu78@bitekps.com
-        "하철용": 23839131,    # cyha@bitekps.com
-        "노재익": 23839109     # jake@bitekps.com
-    }
-    for name, user_id in user_mapping.items():
-        if name in supplier_person:
-            return user_id
-    return None
+def _norm_text(s):
+    """검색 비교용 정규화: 공백/특수문자 제거 + 소문자 (한글/영문/숫자만 유지)
+    예: '(주)경신 이엔피' → '주경신이엔피' — '경신이' 검색어도 매칭됨"""
+    return re.sub(r'[^0-9a-zA-Z가-힣]', '', str(s or '')).lower()
 
-def get_pipedrive_stage_id(supplier_person):
-    """담당자 이름에서 Pipedrive 스테이지 ID를 반환합니다."""
-    stage_mapping = {
-        "이훈수": 47,    # 이훈수견적서
-        "차재원": 48,    # 차재원견적서
-        "전준영": 49,    # 전준영견적서
-        "장진호": 50,    # 장진호견적서
-        "하철용": 51,    # 하철용견적서
-        "노재익": 52,    # 노재익견적서
-    }
-    for name, stage_id in stage_mapping.items():
-        if name in supplier_person:
-            return stage_id
-    return 47  # 기본값: 이훈수견적서
 
 @app.get("/search-deals")
-async def search_deals(q: str = "", debug: int = 0):
-    """거래 제목으로 Pipedrive 거래 검색"""
-    if not q or len(q) < 2:
+def search_deals(q: str = "", debug: int = 0):
+    """거래 제목 + 조직명으로 Pipedrive 거래 검색 (공백/특수문자 무시 매칭)
+
+    개선 사항:
+    1. 검색어 그대로 + 공백 제거 버전 이중 검색 (Pipedrive는 공백 경계를 넘는 매칭 불가)
+    2. 조직명 검색 병행 → 거래 제목에 회사명이 없어도 검색됨
+    3. 필터를 엄격한 부분문자열 → 정규화 후 비교로 완화
+    """
+    q = (q or "").strip()
+    if len(q) < 2:
         return {"deals": []}
+    TIMEOUT = 10
     try:
         pipedrive_settings = get_pipedrive_config()
         base_url = f"https://{pipedrive_settings['domain']}/api/v2"
         token = pipedrive_settings["api_token"]
+        qn = _norm_text(q)
 
-        res = HTTP.get(f"{base_url}/deals/search", params={
-            "term": q,
-            "fields": "title",
-            "limit": 30,
-            "api_token": token
-        })
-        res_data = res.json()
-        search_items = _pd_extract_search_items(res_data)
+        # 검색어 변형: 입력 그대로 + 공백 제거 버전
+        terms = [q]
+        q_nospace = q.replace(" ", "")
+        if q_nospace != q and len(q_nospace) >= 2:
+            terms.append(q_nospace)
 
-        # 디버그 모드: 필터링 없이 Pipedrive 원본 결과 반환
+        # 1) 거래 제목 검색 (변형 검색어별로 호출, id로 중복 제거)
+        raw_deals = {}  # deal_id -> deal dict
+        for term in terms:
+            try:
+                res = HTTP.get(f"{base_url}/deals/search", params={
+                    "term": term, "fields": "title", "limit": 30, "api_token": token
+                }, timeout=TIMEOUT)
+                for deal in _pd_extract_search_items(res.json()):
+                    if deal.get("id"):
+                        raw_deals.setdefault(deal["id"], dict(deal))
+            except Exception as e:
+                print(f"[WARN] deals/search '{term}' 오류: {e}", flush=True)
+
+        # 2) 조직명 검색 → 해당 조직의 거래 수집 (제목에 회사명 없는 거래 대비)
+        org_names = {}  # org_id -> name
+        for term in terms:
+            try:
+                org_res = HTTP.get(f"{base_url}/organizations/search", params={
+                    "term": term, "fields": "name", "limit": 10, "api_token": token
+                }, timeout=TIMEOUT)
+                for org in _pd_extract_search_items(org_res.json()):
+                    oname = org.get("name", "") or ""
+                    if org.get("id") and qn in _norm_text(oname):
+                        org_names[org["id"]] = oname
+            except Exception as e:
+                print(f"[WARN] organizations/search '{term}' 오류: {e}", flush=True)
+
+        # v1 /organizations/{id}/deals는 v2에서 폐지 → /deals?org_id= 로 대체
+        # v2 status 필터는 open/won/lost/deleted만 허용 (v1의 all_not_deleted 값 사용 불가) → 생략
+        org_deal_add_times = {}  # deal_id -> add_time (조직 거래 조회 시 함께 확보)
+        for org_id in list(org_names.keys())[:5]:  # 과도한 API 호출 방지
+            try:
+                od_res = HTTP.get(
+                    f"{base_url}/deals",
+                    params={"api_token": token, "limit": 100, "org_id": org_id},
+                    timeout=TIMEOUT
+                )
+                od_data = od_res.json()
+                if od_data.get("success") and od_data.get("data"):
+                    for d in od_data["data"]:
+                        org_deal_add_times[d["id"]] = (d.get("add_time") or "")[:10]
+                        if d["id"] not in raw_deals:
+                            raw_deals[d["id"]] = {
+                                "id": d["id"],
+                                "title": d.get("title", "") or "",
+                                "organization": {"id": org_id, "name": org_names[org_id]},
+                                "value": d.get("value") or 0,
+                                "currency": d.get("currency", "KRW"),
+                                "status": d.get("status", ""),
+                            }
+            except Exception as e:
+                print(f"[WARN] org/{org_id} deals fetch 오류: {e}", flush=True)
+
+        # 디버그 모드: 필터링 없이 수집된 원본 반환
         if debug:
-            return {"total": len(search_items), "raw_items": [dict(d) for d in search_items]}
+            return {"total": len(raw_deals), "raw_items": list(raw_deals.values())}
 
+        # 3) 필터: 정규화 후 제목 또는 조직명에 검색어 포함되면 통과
         deals = []
-        seen_ids = set()
-        q_lower = q.lower()
-        org_id_to_indices = {}  # org_id -> deals 리스트 인덱스 목록
-
-        for deal in search_items:
-            deal_id = deal.get("id")
-            if deal_id in seen_ids:
-                continue
-            seen_ids.add(deal_id)
-
+        org_id_to_indices = {}  # add_time 미확보 거래의 org_id -> 인덱스
+        for deal in raw_deals.values():
             title = deal.get("title", "") or ""
             org_info = deal.get("organization") or {}
             org_name = org_info.get("name", "") or ""
             org_id = org_info.get("id")
 
-            # 거래명에 검색어가 실제로 포함된 것만 (조직명 기준 매칭 제외)
-            if q_lower not in title.lower():
+            if qn not in _norm_text(title) and qn not in _norm_text(org_name):
                 continue
 
             value = deal.get("value") or 0
             value_fmt = f"{int(value):,}" if value else "-"
-            currency = deal.get("currency", "KRW")
 
             idx = len(deals)
             deals.append({
-                "id": deal_id,
+                "id": deal["id"],
                 "title": title,
                 "org_name": org_name,
                 "value": value_fmt,
-                "currency": currency,
-                "add_time": "",
+                "currency": deal.get("currency", "KRW"),
+                "add_time": org_deal_add_times.get(deal["id"], ""),
                 "status": deal.get("status", ""),
             })
-
-            if org_id:
+            if org_id and not deals[idx]["add_time"]:
                 org_id_to_indices.setdefault(org_id, []).append(idx)
 
-        # 조직별 거래 조회로 add_time 취득 (검색 API는 add_time 미포함)
-        # 조직 수만큼만 API 호출 (검색 결과 건수와 무관)
-        # v1 /organizations/{id}/deals는 v2에서 폐지 → /deals?org_id= 로 대체
-        # v2 status 필터는 open/won/lost/deleted만 허용 (v1의 all_not_deleted 값 사용 불가) → 생략
+        # 4) add_time 미확보 거래만 조직별 조회로 보충 (검색 API는 add_time 미포함)
         if org_id_to_indices:
             deal_add_times = {}
-            for org_id in org_id_to_indices:
+            for org_id in list(org_id_to_indices.keys())[:5]:
                 try:
                     org_res = HTTP.get(
                         f"{base_url}/deals",
-                        params={"api_token": token, "limit": 100, "org_id": org_id}
+                        params={"api_token": token, "limit": 100, "org_id": org_id},
+                        timeout=TIMEOUT
                     )
                     org_data = org_res.json()
                     if org_data.get("success") and org_data.get("data"):
@@ -1199,12 +1236,136 @@ async def search_deals(q: str = "", debug: int = 0):
                     print(f"[WARN] org/{org_id} deals fetch error: {e}", flush=True)
 
             for deal_dict in deals:
-                deal_dict["add_time"] = deal_add_times.get(deal_dict["id"], "")
+                if not deal_dict["add_time"]:
+                    deal_dict["add_time"] = deal_add_times.get(deal_dict["id"], "")
 
+        # 최신 생성순 정렬
+        deals.sort(key=lambda d: d.get("add_time") or "", reverse=True)
         return {"deals": deals}
     except Exception as e:
         print(f"Pipedrive 거래 검색 오류: {e}")
         return {"deals": []}
+
+
+@app.get("/estimate-history")
+def estimate_history(person: str = "", q: str = "", limit: int = 20):
+    """발행목록(데이터 수집 시트)에서 이전 견적 검색
+
+    - person: 견적담당자 필터 (C열, 정규화 부분일치)
+    - q: 거래처명 또는 견적번호 검색 (D열/B열, 정규화 부분일치 — 공백/특수문자 무시)
+    - 최신 발행순(시트 아래쪽부터)으로 최대 limit건 반환
+    """
+    try:
+        creds, gc, drive_service = get_google_clients()
+        sh = gc.open_by_key(DATA_COLLECTION_SHEET_ID)
+        ws = sh.sheet1
+        rows = ws.get_all_values()
+
+        pn = _norm_text(person)
+        qn = _norm_text(q)
+        try:
+            limit = max(1, min(int(limit), 50))
+        except Exception:
+            limit = 20
+
+        items = []
+        # 최신 행이 아래쪽에 append되므로 뒤에서부터 탐색 (0행은 헤더)
+        for i in range(len(rows) - 1, 0, -1):
+            r = list(rows[i]) + [""] * max(0, 25 - len(rows[i]))
+            date_s, number, manager, company = r[0], r[1], r[2], r[3]
+            if not number and not company:
+                continue
+            if pn and pn not in _norm_text(manager):
+                continue
+            if qn and qn not in _norm_text(company) and qn not in _norm_text(number):
+                continue
+            # W열(견적파일 엑셀 링크)에서 파일 ID 추출
+            m = re.search(r"/d/([a-zA-Z0-9_-]+)", r[22] or "")
+            items.append({
+                "date": date_s,
+                "number": number,
+                "manager": manager,
+                "company": company,
+                "total": r[19],          # T열: 최종견적(VAT포함)
+                "file_id": m.group(1) if m else "",
+                "deal_id": r[24],        # Y열: Pipedrive 거래 ID
+            })
+            if len(items) >= limit:
+                break
+        return {"status": "success", "items": items}
+    except Exception as e:
+        print(f"[ERROR] estimate-history 오류: {e}")
+        return {"status": "error", "message": str(e), "items": []}
+
+
+def _to_number(s):
+    """시트 셀 값('20,000,000' 등)을 정수로 변환"""
+    s = re.sub(r"[^\d]", "", str(s or ""))
+    return int(s) if s else 0
+
+
+@app.get("/load-estimate")
+def load_estimate(file_id: str = ""):
+    """기존 견적서 구글시트에서 폼 데이터를 역으로 읽어오기 (CELL_MAP 역방향)
+
+    반환 형식은 폼의 collectEstimateData()와 동일한 구조 —
+    프론트의 restoreFormData()로 바로 복원 가능
+    """
+    if not file_id:
+        return {"status": "error", "message": "file_id가 필요합니다."}
+    try:
+        creds, gc, drive_service = get_google_clients()
+        sh = gc.open_by_key(file_id)
+        ws = sh.sheet1
+
+        # CELL_MAP 기준 읽기 대상 (한 번의 batch_get으로 조회)
+        ranges = ["F5", "F6", "B11", "B12", "B13", "D10", "E11", "E12", "E13",
+                  "A16:G25", "B30", "B32", "B33", "B34"]
+        vals = ws.batch_get(ranges)
+
+        def cell(i):
+            try:
+                return str(vals[i][0][0]).strip()
+            except Exception:
+                return ""
+
+        products = []
+        grid = vals[9] if len(vals) > 9 else []
+        for row in grid:
+            row = list(row) + [""] * max(0, 7 - len(row))
+            name = str(row[1]).strip()
+            if not name:
+                continue
+            products.append({
+                "type": str(row[0]).strip(),
+                "name": name,
+                "detail": str(row[2]).strip(),  # 저장 시 앞뒤로 추가된 공백 줄 제거
+                "qty": _to_number(row[3]) or 1,
+                "price": _to_number(row[4]),
+                "total": _to_number(row[5]),
+                "note": str(row[6]).strip(),
+            })
+
+        data = {
+            "estimate_date": cell(0),
+            "estimate_number": cell(1),
+            "supplier_person": cell(2),
+            "supplier_email": cell(3),
+            "supplier_phone": cell(4),
+            "receiver_company": cell(5),
+            "receiver_person": cell(6),
+            "receiver_email": cell(7),
+            "receiver_phone": cell(8),
+            "quote_validity": cell(10),
+            "product_training": cell(11),
+            "delivery_date": cell(12),
+            "extra_note": cell(13),
+            "products": products,
+        }
+        return {"status": "success", "data": data}
+    except Exception as e:
+        print(f"[ERROR] load-estimate 오류: {e}")
+        return {"status": "error", "message": f"견적서를 불러오지 못했습니다: {e}"}
 
 
 def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estimate_link, pdf_link):
@@ -1261,142 +1422,9 @@ def update_pipedrive_deal_estimate(deal_id, estimate_number, pdf_filename, estim
         return None
 
 
-def create_pipedrive_organization(data):
-    """Pipedrive에 조직을 생성합니다."""
-    try:
-        org_name = data.get("receiver_company", "")
-        if not org_name:
-            return None
-            
-        pipedrive_settings = get_pipedrive_config()
-        url = f"https://{pipedrive_settings['domain']}/api/v1/organizations?api_token={pipedrive_settings['api_token']}"
-        headers = {"Content-Type": "application/json"}
-        
-        org_data = {
-            "name": org_name,
-            "visible_to": 3  # 전체 회사에서 볼 수 있도록 설정
-        }
-        
-        response = HTTP.post(url, headers=headers, json=org_data)
-
-        if response.status_code == 201:
-            result = response.json()
-            org_id = result['data']['id']
-            print(f"조직 생성 성공: {org_name} (ID: {org_id})")
-            return org_id
-        else:
-            print(f"조직 생성 실패: {response.status_code} - {response.text}")
-            return None
-            
-    except Exception as e:
-        print(f"조직 생성 오류: {e}")
-        return None
-
-def create_pipedrive_person(data):
-    """Pipedrive에 담당자를 생성합니다."""
-    try:
-        person_name = data.get("receiver_person", "")
-        person_email = data.get("receiver_contact", "")
-        if not person_name:
-            return None
-        
-        pipedrive_settings = get_pipedrive_config()
-        url = f"https://{pipedrive_settings['domain']}/api/v1/persons?api_token={pipedrive_settings['api_token']}"
-        headers = {"Content-Type": "application/json"}
-        
-        person_data = {
-            "name": person_name,
-            "visible_to": 3  # 전체 회사에서 볼 수 있도록 설정
-        }
-        if person_email:
-            person_data["email"] = [{"value": person_email, "primary": True, "label": "work"}]
-        
-        response = HTTP.post(url, headers=headers, json=person_data)
-
-        if response.status_code == 201:
-            result = response.json()
-            person_id = result['data']['id']
-            print(f"담당자 생성 성공: {person_name} (ID: {person_id})")
-            return person_id
-        else:
-            print(f"담당자 생성 실패: {response.status_code} - {response.text}")
-            return None
-        
-    except Exception as e:
-        print(f"담당자 생성 오류: {e}")
-        return None
-
-def create_pipedrive_deal(data):
-    """Pipedrive에 거래를 생성합니다."""
-    try:
-        # 담당자에서 사용자 ID 찾기
-        supplier_person = data.get("supplier_person", "")
-        user_id = get_pipedrive_user_id(supplier_person)
-        
-        if not user_id:
-            print(f"담당자 '{supplier_person}'에 해당하는 Pipedrive 사용자를 찾을 수 없습니다.")
-            return None
-        
-        # 최종견적 계산
-        products = data.get("products", [])
-        total_sum = sum(product.get("total", 0) for product in products if product.get("total"))
-        vat = round(total_sum * 0.1)
-        final_total = total_sum + vat
-        
-        # 거래명 생성
-        deal_title = f"{data.get('receiver_company', '')} - {data.get('estimate_number', '')}"
-        
-        # Pipedrive 스테이지 ID 매핑 (담당자별)
-        stage_id = get_pipedrive_stage_id(supplier_person)
-        print(f"담당자: {supplier_person} → 스테이지 ID: {stage_id}")
-        
-        # 조직과 담당자 생성
-        org_id = create_pipedrive_organization(data)
-        person_id = create_pipedrive_person(data)
-        
-        # Pipedrive API 요청 데이터
-        pipedrive_settings = get_pipedrive_config()
-        deal_data = {
-            "title": deal_title,
-            "value": final_total,
-            "currency": "KRW",
-            "pipeline_id": 4,  # 고정
-            "stage_id": stage_id,
-            "user_id": user_id,
-            "visible_to": 3,  # 전체 회사에서 볼 수 있도록 설정
-            "55c48a15f50d667c26682f95d38a9a06d420369f": data.get("estimate_number", "")  # 견적번호 커스텀 필드
-        }
-        
-        # 조직과 담당자 ID가 있으면 추가
-        if org_id:
-            deal_data["org_id"] = org_id
-        if person_id:
-            deal_data["person_id"] = person_id
-        
-        # Pipedrive API 호출
-        url = f"https://{pipedrive_settings['domain']}/api/v1/deals?api_token={pipedrive_settings['api_token']}"
-        headers = {"Content-Type": "application/json"}
-        
-        print(f"Pipedrive API 호출 정보:")
-        print(f"URL: {url}")
-        print(f"Data: {deal_data}")
-        
-        response = HTTP.post(url, headers=headers, json=deal_data)
-
-        print(f"Response Status: {response.status_code}")
-        print(f"Response Text: {response.text}")
-        
-        if response.status_code == 201:
-            result = response.json()
-            print(f"Pipedrive 거래 생성 성공: {result['data']['id']}")
-            return result['data']['id']
-        else:
-            print(f"Pipedrive 거래 생성 실패: {response.status_code} - {response.text}")
-            return None
-            
-    except Exception as e:
-        print(f"Pipedrive 거래 생성 오류: {e}")
-        return None
+# 참고: create_pipedrive_deal / create_pipedrive_organization / create_pipedrive_person /
+# get_pipedrive_user_id / get_pipedrive_stage_id 함수는 2026-05-13 "거래 선택 필수화" 이후
+# 미사용 코드가 되어 제거됨. 필요 시 git 히스토리(커밋 54b1e3b 이전) 참조.
 
 def upload_file_to_pipedrive_deal(deal_id, file_path, file_name):
     """Pipedrive 거래에 파일을 업로드합니다."""
