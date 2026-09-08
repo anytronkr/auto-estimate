@@ -437,10 +437,10 @@ async def fill_estimate(request: Request):
                 "노재익": "D", "전준영": "E", "장진호": "F"
             }
             person_id = person_id_map.get(supplier_person, "B")  # 기본값 B
-            
-            # 오늘 발행 횟수 (실제 PDF 생성 횟수 카운팅)
-            today_count = get_today_pdf_count()
-            
+
+            # 담당자·날짜별 다음 순번 (시트의 실제 견적번호 기준 — 서버 재배포에 영향 안 받음)
+            today_count = get_next_seq_number(current_date_short, person_id)
+
             auto_estimate_number = f"DLP{current_date_short}-{person_id}-{today_count}"
             if "estimate_number" in CELL_MAP:
                 updates.append({
@@ -1472,6 +1472,35 @@ def upload_file_to_pipedrive_deal(deal_id, file_path, file_name):
     finally:
         if file_handle:
             file_handle.close()
+
+def get_next_seq_number(date_short, person_id):
+    """담당자·날짜별 다음 견적 순번을 시트의 실제 견적번호(B열) 기준으로 계산.
+
+    이전에는 로컬 파일(pdf_count.json)로 카운트했는데, Render 서버가 재배포/재시작될
+    때마다 파일이 초기화되어 순번이 1로 되돌아가는 버그가 있었음(같은 날 같은 담당자가
+    여러 건 발행해도 전부 -1로 찍혀 중복 견적번호 발생 → 견적성공집계에서 서로 다른
+    견적이 같은 견적번호로 오인되어 하나로 합쳐짐). 서버 상태에 의존하지 않도록
+    시트에 이미 기록된 최대 순번 + 1로 변경.
+    """
+    try:
+        creds, gc, drive_service = get_google_clients()
+        sh = gc.open_by_key(DATA_COLLECTION_SHEET_ID)
+        ws = sh.sheet1
+        numbers = ws.col_values(2)  # B열: 견적번호
+        prefix = f"DLP{date_short}-{person_id}-"
+        max_seq = 0
+        for num in numbers:
+            if num.startswith(prefix):
+                try:
+                    seq = int(num[len(prefix):])
+                    if seq > max_seq:
+                        max_seq = seq
+                except ValueError:
+                    pass
+        return max_seq + 1
+    except Exception as e:
+        print(f"[ERROR] 견적번호 순번 계산 오류: {e}")
+        return 1
 
 def get_today_pdf_count():
     """오늘 PDF 생성 횟수를 가져오고 +1 증가시킵니다."""
