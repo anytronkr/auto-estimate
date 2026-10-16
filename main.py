@@ -373,7 +373,7 @@ async def fill_estimate(request: Request):
 
         # 일반 필드 (estimate_date는 사용자 입력, estimate_number는 자동 생성)
         for key in ["supplier_person", "supplier_email", "supplier_phone",
-                    "receiver_company", "receiver_person", "receiver_email", "receiver_phone", "quote_validity", "delivery_date", "product_training", "extra_note"]:
+                    "receiver_company", "receiver_person", "receiver_email", "receiver_phone", "quote_validity", "payment_terms", "delivery_date", "product_training", "extra_note"]:
             if key in data:
                 if key in CELL_MAP:
                     print(f"DEBUG: {key} 처리 중 - 값: '{data[key]}', CELL_MAP 위치: '{CELL_MAP.get(key, 'NOT_FOUND')}'")
@@ -1320,7 +1320,7 @@ def load_estimate(file_id: str = ""):
 
         # CELL_MAP 기준 읽기 대상 (한 번의 batch_get으로 조회)
         ranges = ["F5", "F6", "B11", "B12", "B13", "D10", "E11", "E12", "E13",
-                  "A16:G25", "B30", "B32", "B33", "B34"]
+                  "A16:G25", "B30", "B32", "B33", "B34", "B31"]
         vals = ws.batch_get(ranges)
 
         def cell(i):
@@ -1360,6 +1360,7 @@ def load_estimate(file_id: str = ""):
             "product_training": cell(11),
             "delivery_date": cell(12),
             "extra_note": cell(13),
+            "payment_terms": cell(14),
             "products": products,
         }
         return {"status": "success", "data": data}
