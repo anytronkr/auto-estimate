@@ -105,6 +105,7 @@ CELL_MAP = {
     "products[9][note]": "G25",      # 비고
     
     "quote_validity": "B30",         # 견적유효기간
+    "payment_terms": "B31",          # 대금지급 조건
     "delivery_date": "B33",          # 납기일 (B31 → B33으로 변경)
     "product_training": "B32",       # 제품교육 (B30 → B32로 변경)
     "extra_note": "B34",             # 기타 (B34:C34 병합 셀)

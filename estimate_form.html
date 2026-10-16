@@ -702,6 +702,10 @@
           </select>
         </div>
         <div class="form-group full-width">
+          <label>대금지급조건 <span style="font-weight:400;color:#888;font-size:12px;">(수정없을 시 아래 내용으로 출력됨)</span></label>
+          <input type="text" id="payment-terms" value="현금결제 후 납품" placeholder="현금결제 후 납품">
+        </div>
+        <div class="form-group full-width">
           <label>기타 <span style="font-weight:400;color:#888;font-size:12px;">(수정없을 시 아래 내용으로 출력됨)</span></label>
           <input type="text" id="extra-note" value="리와인더 및 편집 소프트웨어는 별매입니다." placeholder="리와인더 및 편집 소프트웨어는 별매입니다.">
         </div>
@@ -1970,6 +1974,7 @@ function collectEstimateData() {
     receiver_phone: document.getElementById('receiver-phone').value,
     product_category: document.getElementById('product-category').value,
     quote_validity: document.getElementById('quote-validity').value,
+    payment_terms: document.getElementById('payment-terms').value,
     delivery_date: document.getElementById('delivery-date').value,
     product_training: document.getElementById('product-training').value,
     extra_note: document.getElementById('extra-note').value,
@@ -2335,6 +2340,7 @@ document.getElementById('product-reset-btn').addEventListener('click', function(
   addProductSet();
 
   document.getElementById('quote-validity').value = '견적일로부터 4주';
+  document.getElementById('payment-terms').value = '현금결제 후 납품';
   document.getElementById('delivery-date').value = '입금확인일로부터 2주 이내';
   document.getElementById('extra-note').value = '리와인더 및 편집 소프트웨어는 별매입니다.';
   resetProductTrainingField();
@@ -2600,6 +2606,7 @@ function restoreFormData(data) {
   if(data.receiver_email) document.getElementById('receiver-email').value = data.receiver_email;
   if(data.receiver_phone) document.getElementById('receiver-phone').value = data.receiver_phone;
   if(data.quote_validity) document.getElementById('quote-validity').value = data.quote_validity;
+  if(data.payment_terms) document.getElementById('payment-terms').value = data.payment_terms;
   if(data.delivery_date) document.getElementById('delivery-date').value = data.delivery_date;
   if(data.extra_note) {
     const extraEl = document.getElementById('extra-note');
