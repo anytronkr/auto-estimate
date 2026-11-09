@@ -434,7 +434,7 @@ async def fill_estimate(request: Request):
             # 담당자 ID 매핑 (A, B, C, D, E, F) - 이미지 기준
             person_id_map = {
                 "이훈수": "A", "차재원": "B", "하철용": "C", 
-                "노재익": "D", "전준영": "E", "장진호": "F"
+                "노재익": "D", "전준영": "E", "황영태": "F"
             }
             person_id = person_id_map.get(supplier_person, "B")  # 기본값 B
 
