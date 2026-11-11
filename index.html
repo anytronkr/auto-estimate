@@ -4,192 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>애니트론 견적서 생성</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* 견적폼과 같은 디자인 토큰 (틸그린 유지) */
+        :root {
+            --primary: #2A8486; --primary-strong: #216b6d; --primary-weak: #e8f4f4; --primary-weak-2: #d3eaea;
+            --grey-100: #f2f4f6; --grey-200: #e5e8eb; --grey-500: #8b95a1; --grey-600: #6b7684; --grey-700: #4e5968; --grey-900: #191f28;
+            --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
         }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: #333;
+            font-family: var(--font); background: var(--grey-100); color: var(--grey-900);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 24px 16px; -webkit-font-smoothing: antialiased; letter-spacing: -0.01em;
         }
-
-        .container {
-            background: white;
-            padding: 60px 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .logo {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            margin: 0 auto 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            box-shadow: 0 8px 25px rgba(44, 62, 80, 0.3);
-        }
-
-        .logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 2.2em;
-            font-weight: 600;
-        }
-
-        .subtitle {
-            color: #666;
-            margin-bottom: 40px;
-            font-size: 1.1em;
-            line-height: 1.5;
-        }
-
+        .container { background: #fff; border-radius: 28px; padding: 48px 32px 36px; text-align: center; width: 100%; max-width: 440px; }
+        .logo { width: 88px; height: 88px; border-radius: 26px; margin: 0 auto 24px; overflow: hidden; background: var(--grey-100); }
+        .logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .eyebrow { font-size: 14px; font-weight: 600; color: var(--primary); margin-bottom: 8px; }
+        h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.35; margin-bottom: 10px; }
+        .subtitle { font-size: 15px; color: var(--grey-600); line-height: 1.6; margin-bottom: 32px; }
         .start-button {
-            background: linear-gradient(135deg, #16a085, #1abc9c);
-            color: white;
-            padding: 18px 40px;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            font-size: 1.3em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 25px rgba(22, 160, 133, 0.3);
-            position: relative;
-            overflow: hidden;
+            width: 100%; height: 58px; border: none; border-radius: 16px;
+            background: var(--primary); color: #fff;
+            font-family: inherit; font-size: 18px; font-weight: 700;
+            cursor: pointer; transition: background 0.15s, transform 0.1s;
         }
-
-        .start-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 35px rgba(22, 160, 133, 0.4);
-        }
-
-        .start-button:active {
-            transform: translateY(0);
-        }
-
-        .start-button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .loading {
-            display: none;
-            margin-top: 20px;
-            color: #666;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #16a085;
-            border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 12px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-message {
-            font-size: 1.05em;
-            color: #555;
-            transition: opacity 0.3s ease;
-            min-height: 1.5em;
-        }
-
-        .loading-sub {
-            font-size: 0.85em;
-            color: #999;
-            margin-top: 6px;
-        }
-
-        .features {
-            margin-top: 40px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-        }
-
-        .feature {
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            font-size: 0.9em;
-            color: #555;
-        }
-
-        .quick-links {
-            margin-top: 30px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            align-items: center;
-        }
-
+        .start-button:hover { background: var(--primary-strong); }
+        .start-button:active { transform: scale(0.98); }
+        .start-button:disabled { background: var(--primary-weak-2); color: var(--primary-strong); cursor: not-allowed; transform: none; }
+        .loading { display: none; margin-top: 20px; }
+        .spinner { width: 28px; height: 28px; margin: 0 auto 10px; border: 3px solid var(--primary-weak-2); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-message { font-size: 15px; font-weight: 600; color: var(--grey-700); min-height: 1.5em; transition: opacity 0.2s ease; }
+        .loading-sub { font-size: 13px; color: var(--grey-500); margin-top: 4px; }
+        .quick-links { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--grey-100); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .quick-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: #f8f9fa;
-            color: #666;
-            text-decoration: none;
-            border-radius: 25px;
-            font-size: 0.9em;
-            transition: all 0.3s ease;
-            border: 1px solid #e9ecef;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 14px 8px; border-radius: 14px; background: var(--grey-100);
+            color: var(--grey-700); text-decoration: none; font-size: 13px; font-weight: 600;
+            transition: background 0.15s;
         }
-
-        .quick-link:hover {
-            background: #e9ecef;
-            color: #333;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .link-icon {
-            font-size: 1.1em;
-        }
-
+        .quick-link:hover { background: var(--grey-200); color: var(--grey-900); }
+        .link-icon { font-size: 20px; }
         @media (max-width: 480px) {
-            .container {
-                padding: 40px 20px;
-            }
-            
-            h1 {
-                font-size: 1.8em;
-            }
-            
-            .start-button {
-                padding: 15px 30px;
-                font-size: 1.1em;
-            }
+            .container { padding: 40px 22px 28px; border-radius: 24px; }
+            h1 { font-size: 23px; }
         }
     </style>
 </head>
@@ -198,9 +59,11 @@
         <div class="logo">
             <img src="https://yt3.googleusercontent.com/s7VsIPqvAChTQjSDxEphkx913wzI4BVTiS6ZOQPZbPpCClgrZQBb9YAS4yJFmfoMK2-vftRXfw=s160-c-k-c0x00ffffff-no-rj" alt="애니트론 로고">
         </div>
-        <h1>애니트론 견적서 생성 시스템</h1>
+        <div class="eyebrow">바이텍테크놀로지 · 애니트론</div>
+        <h1>견적서를 바로 만들어 드릴게요</h1>
+        <p class="subtitle">거래처·제품을 입력하면 엑셀·PDF 견적서와<br>Pipedrive 기록까지 한 번에 끝나요.</p>
         <button id="startButton" class="start-button">
-            견적서 생성 시작
+            견적서 작성 시작하기
         </button>
         
         <div id="loading" class="loading">
@@ -212,11 +75,11 @@
         <div class="quick-links">
             <a href="https://drive.google.com/drive/folders/1aRR0m61B_a4B6ag76GrYt-8bdxiyYRC6?ths=true" target="_blank" class="quick-link">
                 <span class="link-icon">📁</span>
-                구글드라이브 바로가기
+                견적서 드라이브
             </a>
             <a href="https://docs.google.com/spreadsheets/d/1lanDTaqOzAXFQaZcqj91X6kknbpHXREH3bLQrTeVq6Q/edit?gid=0#gid=0" target="_blank" class="quick-link">
                 <span class="link-icon">📊</span>
-                견적발행목록 바로가기
+                견적 발행목록
             </a>
         </div>
     </div>
@@ -319,7 +182,7 @@
                     stopLoadingMessages();
                     alert('견적서 템플릿 생성에 실패했습니다: ' + result.message);
                     button.disabled = false;
-                    button.textContent = '견적서 생성 시작';
+                    button.textContent = '견적서 작성 시작하기';
                     loading.style.display = 'none';
                 }
 
@@ -328,22 +191,9 @@
                 console.error('견적서 템플릿 생성 중 오류:', error);
                 alert('견적서 템플릿 생성 중 오류가 발생했습니다.');
                 button.disabled = false;
-                button.textContent = '견적서 생성 시작';
+                button.textContent = '견적서 작성 시작하기';
                 loading.style.display = 'none';
             }
-        });
-
-        // 페이지 로드 시 애니메이션
-        window.addEventListener('load', function() {
-            const container = document.querySelector('.container');
-            container.style.opacity = '0';
-            container.style.transform = 'translateY(20px)';
-            
-            setTimeout(() => {
-                container.style.transition = 'all 0.6s ease';
-                container.style.opacity = '1';
-                container.style.transform = 'translateY(0)';
-            }, 100);
         });
 
         // 서버 활성 상태 유지 (10분마다 ping)
