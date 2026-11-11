@@ -5,118 +5,101 @@
   <title>PDF 미리보기</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>
-    body { font-family: 'Pretendard', 'Noto Sans KR', Arial, sans-serif; background: #f8f8f8; margin: 0; }
-    .container { max-width: 100%; width: 100%; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 2px 8px #eee; padding: 16px; box-sizing: border-box; }
-    h2 { color: #21808c; text-align: center; margin-bottom: 24px; font-size: 1.5em; }
-    .pdf-viewer { width: 100%; height: 60vh; min-height: 400px; border: 1px solid #ccc; border-radius: 8px; }
-    .share-btn { 
-      margin-top: 20px; 
-      display: block; 
-      width: 100%; 
-      padding: 14px; 
-      background: #1cc7b6; 
-      color: #fff; 
-      border: none; 
-      border-radius: 8px; 
-      font-size: 1em; 
-      cursor: pointer;
-      transition: background-color 0.2s ease;
+    /* 견적폼과 같은 디자인 토큰 (틸그린 유지) */
+    :root {
+      --primary: #2A8486; --primary-strong: #216b6d; --primary-weak: #e8f4f4; --primary-weak-2: #d3eaea;
+      --grey-50: #f9fafb; --grey-100: #f2f4f6; --grey-200: #e5e8eb; --grey-400: #b0b8c1;
+      --grey-500: #8b95a1; --grey-600: #6b7684; --grey-700: #4e5968; --grey-900: #191f28;
+      --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font); background: var(--grey-100); color: var(--grey-900); -webkit-font-smoothing: antialiased; letter-spacing: -0.01em; }
+    .topbar { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--grey-200); }
+    .topbar-inner { max-width: 820px; margin: 0 auto; height: 56px; padding: 0 20px; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; }
+    .brand-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+    .brand-sub { font-weight: 500; color: var(--grey-500); }
+
+    .container { max-width: 820px; margin: 0 auto; padding: 0 16px 32px; }
+    .done-head { padding: 32px 4px 20px; display: flex; align-items: center; gap: 14px; }
+    .done-icon { flex: none; width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; }
+    .done-head h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.03em; }
+    .done-head p { margin: 4px 0 0; font-size: 15px; color: var(--grey-600); }
+
+    .viewer-card { background: #fff; border-radius: 20px; padding: 12px; margin-bottom: 12px; }
+    .pdf-viewer { display: block; width: 100%; height: 60vh; min-height: 400px; border: none; border-radius: 12px; background: var(--grey-50); }
+    #pdf-error { text-align: center; padding: 48px 20px; color: var(--grey-600); }
+    #pdf-error h3 { margin: 12px 0 6px; font-size: 18px; color: var(--grey-900); }
+    #pdf-error p { margin: 0; font-size: 14px; line-height: 1.6; }
+
+    .btn-stack { display: flex; flex-direction: column; gap: 8px; }
+    .btn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .share-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; height: 56px; padding: 0 20px;
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 14px;
+      font-family: inherit; font-size: 17px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
       -webkit-tap-highlight-color: transparent;
     }
-    .share-btn:active {
-      background: #189a8c;
-      transform: scale(0.98);
-    }
-    .action-btns {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 18px;
-    }
+    .share-btn:hover { background: var(--primary-strong); }
+    .share-btn:active { transform: scale(0.98); }
+    .share-btn.weak { background: var(--primary-weak); color: var(--primary-strong); }
+    .share-btn.weak:hover { background: var(--primary-weak-2); }
+    .share-btn.plain { background: #fff; color: var(--grey-700); }
+    .share-btn.plain:hover { background: var(--grey-200); }
+
+    .action-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 16px; }
     .action-btns button {
-      width: 100%;
-      padding: 13px;
-      background: #f5f5f5;
-      color: #21808c;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 1em;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
+      background: none; border: none; cursor: pointer;
+      font-family: inherit; font-size: 14px; font-weight: 600; color: var(--grey-600);
+      padding: 10px 12px; border-radius: 10px;
     }
-    .action-btns button:hover {
-      background: #21808c;
-      color: #fff;
-    }
+    .action-btns button:hover { background: #fff; color: var(--grey-900); }
+
     @media (max-width: 600px) {
-      .container { 
-        padding: 12px; 
-        border-radius: 0; 
-        box-shadow: none; 
-        margin: 0;
-        max-width: 100%;
-      }
-      h2 { 
-        font-size: 1.2em; 
-        margin-bottom: 16px; 
-        color: #21808c;
-      }
-      .pdf-viewer { 
-        min-height: 300px; 
-        height: 50vh; 
-        border-radius: 6px;
-      }
-      .share-btn { 
-        padding: 14px; 
-        font-size: 1em; 
-        font-weight: 500;
-        margin-bottom: 8px;
-      }
-      .action-btns { 
-        gap: 8px; 
-        margin-top: 16px; 
-      }
-      .action-btns button { 
-        padding: 12px; 
-        font-size: 0.95em; 
-        font-weight: 500;
-      }
-      /* 모바일에서 버튼 간격 조정 */
-      .share-btn[style*="margin-top"] {
-        margin-top: 8px !important;
-      }
-    }
-    
-    /* 매우 작은 화면 (320px 이하) */
-    @media (max-width: 320px) {
-      .container { padding: 8px; }
-      h2 { font-size: 1.1em; }
-      .pdf-viewer { min-height: 250px; height: 45vh; }
-      .share-btn { padding: 12px; font-size: 0.9em; }
-      .action-btns button { padding: 10px; font-size: 0.9em; }
+      .done-head { padding: 24px 4px 16px; }
+      .done-head h2 { font-size: 22px; }
+      .pdf-viewer { min-height: 300px; height: 50vh; }
+      .viewer-card { border-radius: 18px; padding: 8px; }
     }
   </style>
 </head>
 <body>
+  <div class="topbar"><div class="topbar-inner"><span class="brand-mark"></span>바이텍테크놀로지 <span class="brand-sub">자동견적</span></div></div>
   <div class="container">
-    <h2>PDF 미리보기</h2>
-    <iframe id="pdf-frame" class="pdf-viewer" src="" allow="autoplay" onload="handlePdfLoad()" onerror="handlePdfError()"></iframe>
-    <div id="pdf-error" style="display: none; text-align: center; padding: 40px; color: #666;">
-      <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
-      <h3>PDF 미리보기를 불러올 수 없습니다</h3>
-      <p>PDF 파일은 정상적으로 생성되었습니다. 아래 버튼을 통해 다운로드하거나 공유할 수 있습니다.</p>
+    <div class="done-head">
+      <div class="done-icon">✓</div>
+      <div>
+        <h2>견적서를 발행했어요</h2>
+        <p>PDF가 구글 드라이브와 Pipedrive 거래에 저장됐어요.</p>
+      </div>
     </div>
-    <button class="share-btn" onclick="downloadPDF()">PDF 다운로드</button>
-    <button class="share-btn" onclick="sharePDF()" style="margin-top: 10px; background: #21808c;">PDF 공유하기</button>
-    <button class="share-btn" onclick="openInGoogleDrive()" style="margin-top: 10px; background: #34a853;">
-      <i class="fas fa-external-link-alt"></i>
-      PDF 파일 구글드라이브에서 보기
-    </button>
+
+    <div class="viewer-card">
+      <iframe id="pdf-frame" class="pdf-viewer" src="" allow="autoplay" onload="handlePdfLoad()" onerror="handlePdfError()"></iframe>
+      <div id="pdf-error" style="display: none;">
+        <div style="font-size: 40px;">📄</div>
+        <h3>PDF 미리보기를 불러올 수 없어요</h3>
+        <p>PDF 파일은 정상적으로 만들어졌어요. 아래 버튼으로 내려받거나 공유할 수 있어요.</p>
+      </div>
+    </div>
+
+    <div class="btn-stack">
+      <button class="share-btn" onclick="downloadPDF()">PDF 다운로드</button>
+      <div class="btn-pair">
+        <button class="share-btn weak" onclick="sharePDF()">PDF 공유하기</button>
+        <button class="share-btn plain" onclick="openInGoogleDrive()">구글 드라이브에서 보기</button>
+      </div>
+    </div>
+
     <div class="action-btns">
-      <button onclick="goBack()">편집화면으로 돌아가기</button>
-      <button onclick="goHome()">홈으로 돌아가기</button>
-      <button onclick="goDrive()">구글드라이브 바로가기</button>
+      <button onclick="goBack()">편집 화면으로</button>
+      <button onclick="goHome()">처음 화면으로</button>
+      <button onclick="goDrive()">견적서 드라이브 폴더</button>
     </div>
   </div>
   <script>

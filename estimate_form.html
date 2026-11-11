@@ -4,542 +4,333 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>견적내용 입력</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    /* =========================================================
+       디자인 토큰 — 틸그린(#2A8486) 유지, 밝은 회색 배경 + 흰 카드 + 큰 글씨
+       (토스 앱 느낌을 참고해 직접 만든 스타일. 토스 디자인 키트·폰트는 쓰지 않음)
+       ========================================================= */
+    :root {
+      --primary: #2A8486;
+      --primary-strong: #216b6d;
+      --primary-weak: #e8f4f4;
+      --primary-weak-2: #d3eaea;
+      --grey-50: #f9fafb;
+      --grey-100: #f2f4f6;
+      --grey-200: #e5e8eb;
+      --grey-300: #d1d6db;
+      --grey-400: #b0b8c1;
+      --grey-500: #8b95a1;
+      --grey-600: #6b7684;
+      --grey-700: #4e5968;
+      --grey-800: #333d4b;
+      --grey-900: #191f28;
+      --red: #e5484d;
+      --red-weak: #fff1f1;
+      --yellow-weak: #fff8e6;
+      --radius-card: 20px;
+      --radius-field: 12px;
+      --radius-btn: 14px;
+      --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      padding: 20px;
+      font-family: var(--font);
+      background: var(--grey-100);
+      color: var(--grey-900);
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.01em;
+      padding-bottom: 24px;
     }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(42, 132, 134, 0.15);
-      overflow: hidden;
+    /* ---------- 상단 바 + 제목 ---------- */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      border-bottom: 1px solid var(--grey-200);
     }
-
-    .header {
-      background: #2A8486;
-      color: white;
-      padding: 30px 40px;
-      text-align: center;
+    .topbar-inner {
+      max-width: 820px; margin: 0 auto; height: 56px; padding: 0 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
-
-    .header h1 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 5px;
+    .brand { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--grey-900); }
+    .brand-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+    .brand-sub { font-weight: 500; color: var(--grey-500); }
+    .text-btn {
+      background: none; border: none; cursor: pointer; font: inherit;
+      font-size: 14px; font-weight: 600; color: var(--grey-600);
+      padding: 8px 10px; border-radius: 10px;
     }
+    .text-btn:hover { background: var(--grey-100); color: var(--grey-800); }
 
-    .header p {
-      font-size: 14px;
-      opacity: 0.9;
-    }
+    .container { max-width: 820px; margin: 0 auto; padding: 0 16px; }
 
-    .content {
-      padding: 40px;
-    }
+    .header { padding: 32px 4px 20px; }
+    .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.3; }
+    .header p { margin-top: 6px; font-size: 15px; color: var(--grey-600); }
 
+    .content { display: flex; flex-direction: column; gap: 12px; }
+
+    /* ---------- 섹션 카드 ---------- */
     .section {
-      margin-bottom: 40px;
-    }
-
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #2A8486;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #2A8486;
-      display: flex;
-      align-items: center;
-    }
-
-    .section-title::before {
-      content: '';
-      width: 4px;
-      height: 20px;
-      background: #2A8486;
-      margin-right: 10px;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .form-group.full-width {
-      grid-column: 1 / -1;
-    }
-
-    label {
-      font-size: 14px;
-      font-weight: 500;
-      color: #333;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-    }
-
-    label .required {
-      color: #e74c3c;
-      margin-left: 4px;
-    }
-
-    input[type="text"],
-    input[type="date"],
-    input[type="email"],
-    input[type="tel"],
-    input[type="number"],
-    select,
-    textarea {
-      padding: 12px 16px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-      transition: all 0.3s;
-      font-family: inherit;
-    }
-
-    input[type="text"]:focus,
-    input[type="date"]:focus,
-    input[type="email"]:focus,
-    input[type="tel"]:focus,
-    input[type="number"]:focus,
-    select:focus,
-    textarea:focus {
-      outline: none;
-      border-color: #2A8486;
-      box-shadow: 0 0 0 3px rgba(42, 132, 134, 0.1);
-    }
-
-    input[readonly] {
-      background: #f8f9fa;
-      cursor: not-allowed;
-    }
-
-    select {
-      cursor: pointer;
-      appearance: none;
-      background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 12px center;
-      padding-right: 40px;
-    }
-
-    hr {
-      border: none;
-      border-top: 1px solid #e9ecef;
-      margin: 24px 0;
-    }
-
-    .product-set {
-      background: #f8f9fa;
-      padding: 24px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      border: 2px solid #e9ecef;
-      position: relative;
-    }
-
-    .product-set:hover {
-      border-color: #2A8486;
-    }
-
-    .product-set > div:first-child {
-      font-size: 16px;
-      font-weight: 600;
-      color: #2A8486;
-      margin-bottom: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .remove-btn {
-      background: white;
-      color: #e74c3c;
-      border: 1px solid #e74c3c;
-      font-size: 12px;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .remove-btn:hover {
-      background: #e74c3c;
-      color: white;
-    }
-
-    .move-btn {
-      background: white;
-      color: #2A8486;
-      border: 1px solid #2A8486;
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.3s;
-      min-width: 30px;
-    }
-
-    .move-btn:hover {
-      background: #2A8486;
-      color: white;
-    }
-
-    .move-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-
-    .product-row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .product-row input, .product-row select {
-      flex: 1;
-      margin-top: 0;
-    }
-
-    .product-field-label {
-      font-size: 13px;
-      font-weight: 500;
-      color: #555;
-      margin-bottom: 6px;
-      display: block;
-    }
-
-    .product-field-group {
-      margin-bottom: 12px;
-    }
-
-    .product-field-group.three-columns {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1.2fr;
-      gap: 12px;
-    }
-
-    .product-field-group.three-columns > div {
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* 대분류·구분·제품명: 넓은 화면에서만 한 줄 */
-    .product-field-group.product-category-row > div {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .product-total-highlight {
-      background: #e8f5f5 !important;
-      border: 2px solid #2A8486 !important;
-      font-weight: 700;
-      font-size: 15px;
-      color: #1a6b6d;
-      box-shadow: 0 1px 4px rgba(42, 132, 134, 0.2);
-      cursor: text;
-    }
-
-    /* 비고: 맨 마지막 줄 한 줄 최대 폭 */
-    .product-field-group.product-note-row {
-      width: 100%;
-      margin-top: 4px;
-    }
-    .product-field-group.product-note-row .product-note {
-      width: 100%;
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-
-    /* 상세정보: 제품란 전체 폭, 넓은 입력 영역 */
-    .product-field-group.product-detail-row {
-      width: 100%;
-    }
-    .product-field-group.product-detail-row .product-detail {
-      width: 100%;
-      max-width: 100%;
-      min-height: 140px;
-      box-sizing: border-box;
-    }
-
-    /* 총 견적금액 표시 */
-    .summary-box {
-      background: #f8f9fa;
-      padding: 16px 20px;
-      border-radius: 8px;
-      border-left: 4px solid #2A8486;
-      margin-bottom: 24px;
-    }
-    .summary-total {
-      font-size: 18px;
-      font-weight: 600;
-      color: #1a6b6d;
-    }
-    .summary-total span:first-child {
-      margin-right: 8px;
-    }
-    #total-estimate-amount {
-      font-weight: 700;
-      color: #2A8486;
-      width: 160px;
-      text-align: right;
-      padding: 6px 10px;
-      border: 1px solid #c5d0d0;
-      border-radius: 6px;
-      font-size: 18px;
-    }
-    #total-estimate-amount:focus {
-      outline: none;
-      border-color: #2A8486;
-      box-shadow: 0 0 0 2px rgba(42, 132, 134, 0.2);
-    }
-    .btn-edit-total, .btn-confirm-total {
-      margin-left: 8px;
-      padding: 6px 12px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid #2A8486;
       background: #fff;
-      color: #2A8486;
-      cursor: pointer;
-      font-weight: 600;
+      border-radius: var(--radius-card);
+      padding: 28px 28px 30px;
     }
-    .btn-edit-total:hover, .btn-confirm-total:hover {
-      background: #2A8486;
-      color: #fff;
+    .section-title {
+      font-size: 19px; font-weight: 700; color: var(--grey-900);
+      letter-spacing: -0.02em; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
     }
-    .total-edit-wrap {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-left: 4px;
-    }
-    .total-edit-wrap input {
-      width: 140px;
+    .info-badge {
+      display: inline-flex; align-items: center;
+      background: var(--grey-100); color: var(--grey-600);
+      padding: 3px 9px; border-radius: 8px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0;
     }
 
     .required-notice {
-      background: #fff9e6;
-      border-left: 4px solid #ffc107;
-      padding: 12px 16px;
-      margin-bottom: 24px;
-      font-size: 13px;
-      color: #666;
-      border-radius: 4px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 6px 4px; font-size: 13px; color: var(--grey-600);
     }
+    .required-notice::before {
+      content: 'i'; flex: none; width: 18px; height: 18px; border-radius: 50%;
+      background: var(--grey-300); color: #fff; font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center; font-style: italic;
+    }
+
+    /* ---------- 입력칸 ---------- */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 16px; }
+    .form-group { display: flex; flex-direction: column; min-width: 0; }
+    .form-group.full-width, .full-width { grid-column: 1 / -1; }
+
+    label {
+      font-size: 14px; font-weight: 600; color: var(--grey-700);
+      margin-bottom: 8px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    }
+    label .required { color: var(--primary); font-weight: 700; }
+    .label-sub { font-weight: 500; color: var(--grey-500); font-size: 12px; }
+
+    input[type="text"], input[type="date"], input[type="email"], input[type="tel"],
+    input[type="number"], select, textarea {
+      width: 100%; min-height: 52px;
+      padding: 14px 16px;
+      background: var(--grey-100);
+      border: 1.5px solid transparent;
+      border-radius: var(--radius-field);
+      font-family: inherit; font-size: 16px; color: var(--grey-900);
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    input::placeholder, textarea::placeholder { color: var(--grey-400); }
+    input:hover, select:hover, textarea:hover { background: #edf0f3; }
+    input[type="text"]:focus, input[type="date"]:focus, input[type="email"]:focus, input[type="tel"]:focus,
+    input[type="number"]:focus, select:focus, textarea:focus {
+      outline: none; background: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(42, 132, 134, 0.12);
+    }
+    input[readonly] { background: var(--grey-50); color: var(--grey-800); cursor: default; border-color: var(--grey-200); }
+    input[readonly]:hover { background: var(--grey-50); }
+
+    select {
+      cursor: pointer; appearance: none; -webkit-appearance: none; padding-right: 44px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238b95a1' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+    textarea { resize: vertical; min-height: 150px; line-height: 1.6; }
+    input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
+
+    hr { border: none; border-top: 1px solid var(--grey-200); margin: 24px 0; }
+
+    /* ---------- 버튼 ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      height: 56px; padding: 0 24px;
+      border: none; border-radius: var(--radius-btn);
+      font-family: inherit; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-strong); }
+    .btn-secondary { background: var(--grey-100); color: var(--grey-700); }
+    .btn-secondary:hover { background: var(--grey-200); }
 
     .add-btn {
-      background: #2A8486;
-      color: white;
-      padding: 8px 16px;
-      font-size: 13px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+      display: inline-flex; align-items: center; gap: 6px;
+      height: 40px; padding: 0 14px;
+      background: var(--primary-weak); color: var(--primary-strong);
+      border: none; border-radius: 10px;
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
     }
+    .add-btn:hover { background: var(--primary-weak-2); }
 
-    .add-btn:hover {
-      background: #236b6d;
+    .remove-btn {
+      height: 32px; padding: 0 12px;
+      background: var(--red-weak); color: var(--red);
+      border: none; border-radius: 8px;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
     }
+    .remove-btn:hover { background: #ffe1e2; }
+    .chip-btn {
+      height: 32px; padding: 0 12px;
+      background: var(--primary-weak); color: var(--primary-strong);
+      border: none; border-radius: 8px;
+      font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .chip-btn:hover { background: var(--primary-weak-2); }
+    .move-btn {
+      width: 32px; height: 32px; padding: 0;
+      background: #fff; color: var(--grey-600);
+      border: 1px solid var(--grey-200); border-radius: 8px;
+      font-size: 11px; cursor: pointer;
+    }
+    .move-btn:hover { background: var(--grey-100); }
+    .move-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    .btn {
-      padding: 14px 28px;
-      border: none;
-      border-radius: 6px;
-      font-size: 15px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    .btn-primary {
-      background: #2A8486;
-      color: white;
-    }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-row.top { margin-bottom: 16px; }
+    .btn-row.bottom { margin-top: 4px; }
 
-    .btn-primary:hover {
-      background: #236b6d;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(42, 132, 134, 0.3);
-    }
-
-    .btn-secondary {
-      background: white;
-      color: #2A8486;
-      border: 1px solid #2A8486;
-    }
-
-    .btn-secondary:hover {
-      background: #f8f9fa;
-    }
-
-    .action-buttons {
-      display: flex;
-      gap: 15px;
-      margin-top: 40px;
-      padding-top: 30px;
-      border-top: 2px solid #e9ecef;
-    }
-
-    .info-badge {
-      display: inline-block;
-      background: #e8f5f5;
-      color: #2A8486;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      margin-left: 8px;
-    }
-    
-    /* 로딩 애니메이션 스타일 */
-    .loading {
+    /* ---------- 제품 블록 ---------- */
+    .product-set {
+      background: var(--grey-50);
+      border: 1px solid var(--grey-200);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
       position: relative;
-      background: #2A8486 !important;
-      color: transparent !important;
-      pointer-events: none;
-      transform: scale(0.98);
-      box-shadow: 0 2px 8px rgba(42, 132, 134, 0.3);
-      transition: all 0.3s ease;
+      transition: border-color 0.15s;
+    }
+    .product-set:hover { border-color: var(--grey-300); }
+    .product-set input[type="text"], .product-set input[type="number"], .product-set select, .product-set textarea { background: #fff; border-color: var(--grey-200); }
+    .product-set input:hover, .product-set select:hover, .product-set textarea:hover { background: #fff; border-color: var(--grey-300); }
+    .product-set input:focus, .product-set select:focus, .product-set textarea:focus { border-color: var(--primary); }
+    .product-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .product-head-title { font-size: 16px; font-weight: 700; color: var(--grey-900); }
+    .product-head-actions { display: flex; gap: 6px; align-items: center; }
+
+    .product-field-label { font-size: 13px; font-weight: 600; color: var(--grey-600); margin-bottom: 6px; display: block; }
+    .product-field-group { margin-bottom: 14px; }
+    .product-field-group.three-columns { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 12px; }
+    .product-field-group.three-columns > div, .product-field-group.product-category-row > div { display: flex; flex-direction: column; min-width: 0; }
+    .product-field-group.product-category-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 12px; }
+    .product-field-group.product-note-row { margin-bottom: 0; }
+    .product-field-group.product-detail-row .product-detail { min-height: 140px; }
+    .product-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .product-row input, .product-row select { flex: 1; }
+
+    .product-set .product-total-highlight,
+    .product-total-highlight {
+      background: var(--primary-weak) !important;
+      border-color: transparent !important;
+      color: var(--primary-strong);
+      font-weight: 700; cursor: text;
+    }
+    .product-set .product-total-highlight:focus { border-color: var(--primary) !important; background: #fff !important; }
+
+    /* ---------- 총 견적금액 ---------- */
+    .summary-box {
+      margin-top: 20px; padding: 20px 22px;
+      background: var(--grey-900); color: #fff;
+      border-radius: 16px;
+    }
+    .summary-total { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.75); }
+    .summary-total span:first-child { margin-right: auto; }
+    #total-estimate-display { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+    .btn-edit-total, .btn-confirm-total {
+      height: 32px; padding: 0 12px; border: none; border-radius: 8px;
+      background: rgba(255,255,255,0.14); color: #fff;
+      font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-edit-total:hover, .btn-confirm-total:hover { background: rgba(255,255,255,0.24); }
+    .total-edit-wrap { display: inline-flex; align-items: center; gap: 6px; }
+    #total-estimate-amount {
+      width: 170px; min-height: 40px; padding: 8px 12px; text-align: right;
+      font-size: 18px; font-weight: 700; color: var(--grey-900);
+      background: #fff; border-radius: 10px;
     }
 
-    .loading::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 24px;
-      height: 24px;
-      margin: -12px 0 0 -12px;
-      border: 3px solid rgba(255, 255, 255, 0.2);
-      border-top: 3px solid #fff;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      z-index: 10;
+    /* ---------- 아래 고정 버튼 ---------- */
+    .action-buttons {
+      position: sticky; bottom: 0; z-index: 40;
+      display: flex; gap: 8px;
+      margin: 4px -16px 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+      background: linear-gradient(to bottom, rgba(242,244,246,0), var(--grey-100) 28%);
+    }
+    .action-buttons .btn-primary { flex: 1; }
+    .action-buttons .btn-secondary { background: #fff; }
+    .action-buttons .btn-secondary:hover { background: var(--grey-200); }
+
+    /* ---------- 검색 목록 · 안내 배지 ---------- */
+    .search-row { display: flex; gap: 8px; }
+    .search-row input { flex: 1; }
+    .search-row .add-btn { height: 52px; padding: 0 16px; border-radius: var(--radius-field); }
+    .dropdown-panel {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+      background: #fff; border-radius: 14px; overflow-y: auto;
+      box-shadow: 0 10px 32px rgba(25, 31, 40, 0.16), 0 0 0 1px rgba(25, 31, 40, 0.04);
+    }
+    #deal-search-dropdown { z-index: 999; max-height: 260px; }
+    #history-dropdown { z-index: 998; max-height: 300px; }
+    .dropdown-panel > div:last-child { border-bottom: none !important; }
+    .note-badge {
+      margin-top: 8px; padding: 10px 12px; border-radius: 10px;
+      font-size: 13px; line-height: 1.5;
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .note-badge > .grow { flex: 1; }
+    .note-badge .close-x { cursor: pointer; color: var(--grey-400); font-size: 14px; padding: 0 2px; }
+    .note-badge .close-x:hover { color: var(--grey-700); }
+    .note-badge.ok { background: var(--primary-weak); color: var(--primary-strong); }
+    .note-badge.warn { background: var(--yellow-weak); color: #7a5a00; }
+
+    .loading { pointer-events: none; }
+    .hidden { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---------- 좁은 화면 ---------- */
+    @media (max-width: 720px) {
+      .header { padding: 24px 4px 16px; }
+      .header h1 { font-size: 24px; }
+      .section { padding: 22px 18px 24px; border-radius: 18px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .product-field-group.three-columns,
+      .product-field-group.product-category-row { grid-template-columns: 1fr; }
+      .product-set { padding: 16px; }
+      .product-head { flex-wrap: wrap; }
+      .action-buttons .btn-secondary { flex: none; width: 56px; padding: 0; font-size: 0; }
+      .action-buttons .btn-secondary::before { content: '⌂'; font-size: 22px; }
+      .summary-total span:first-child { width: 100%; }
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* 버튼 비활성화 상태 */
-    button:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 150px;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    @media (max-width: 768px) {
-      .content {
-        padding: 20px;
-      }
-
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .product-set > div:first-child {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-      }
-
-      .action-buttons {
-        flex-direction: column;
-      }
-
-      .btn {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .product-row {
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .product-field-group.three-columns {
-        grid-template-columns: 1fr;
-      }
-
-      /* 대분류·구분·제품명: 좁은 화면에서는 세로 배치 */
-      .product-field-group.product-category-row {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-    }
-
-    /* 2-column 레이아웃 (데스크톱 1024px 이상) */
-    @media (min-width: 1024px) {
-      .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-      }
-
-      .form-grid > div {
-        margin-bottom: 0 !important;
-      }
-
-      .full-width {
-        grid-column: 1 / -1;
-      }
-
-      /* 대분류·구분·제품명 한 줄 */
-      .product-field-group.product-category-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1.2fr;
-        gap: 12px;
-      }
-    }
-  
+    /* 입력칸 아래 안내 문구 */
+    .field-hint { margin-top: 8px; font-size: 13px; line-height: 1.55; color: var(--grey-600); }
+    .field-hint b { color: var(--primary-strong); font-weight: 600; }
+    .field-hint-sub { display: block; color: var(--grey-500); font-size: 12px; }
     /* 빠진 입력칸 표시 */
-    .field-error { border-color: #e74c3c !important; background-color: #fff5f5 !important; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12) !important; }
+    .field-error { border-color: var(--red) !important; background-color: var(--red-weak) !important; box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.12) !important; }
     /* 임시저장 불러옴 안내 */
-    .draft-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 14px; background: #e8f5f5; border: 1px solid #2A8486; border-radius: 8px; font-size: 13px; color: #1f3d3e; }
-    .draft-banner-btn { padding: 6px 12px; border: 1px solid #2A8486; border-radius: 6px; background: #fff; color: #2A8486; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .draft-banner-btn:hover { background: #2A8486; color: #fff; }
+    .draft-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 16px 14px 20px; background: var(--primary-weak); border-radius: 16px; font-size: 14px; font-weight: 600; color: var(--primary-strong); }
+    .draft-banner-btn { height: 34px; padding: 0 14px; border: none; border-radius: 10px; background: #fff; color: var(--primary-strong); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .draft-banner-btn:hover { background: var(--primary); color: #fff; }
     /* 거래 검색 중 표시 */
-    .deal-spinner { width: 14px; height: 14px; border: 2px solid #cfe6e6; border-top-color: #2A8486; border-radius: 50%; display: inline-block; animation: ep-spin 0.8s linear infinite; flex: none; }
+    .deal-spinner { width: 14px; height: 14px; border: 2px solid var(--primary-weak-2); border-top-color: var(--primary); border-radius: 50%; display: inline-block; animation: ep-spin 0.8s linear infinite; flex: none; }
     /* ===== 진행 화면 (견적서 생성 / PDF 생성 대기) ===== */
-    .ep-overlay { position: fixed; inset: 0; background: rgba(15, 40, 41, 0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: ep-fade 0.2s ease; padding: 16px; box-sizing: border-box; }
+    .ep-overlay { position: fixed; inset: 0; background: rgba(25, 31, 40, 0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: ep-fade 0.2s ease; padding: 16px; box-sizing: border-box; }
     @keyframes ep-fade { from { opacity: 0; } to { opacity: 1; } }
-    .ep-card { background: #fff; border-radius: 16px; width: 100%; max-width: 420px; padding: 28px 28px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); box-sizing: border-box; font-family: 'Pretendard', 'Noto Sans KR', Arial, sans-serif; }
-    .ep-title { font-size: 18px; font-weight: 700; color: #1f3d3e; margin: 0 0 4px; }
+    .ep-card { background: #fff; border-radius: 24px; width: 100%; max-width: 400px; padding: 28px 28px 22px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); box-sizing: border-box; font-family: var(--font); }
+    .ep-title { font-size: 20px; font-weight: 700; color: var(--grey-900); letter-spacing: -0.02em; margin: 0 0 4px; }
     .ep-sub { font-size: 13px; color: #7a8a8b; margin: 0 0 18px; }
     .ep-bar { height: 6px; background: #e6f0f0; border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
     .ep-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #2A8486, #3fb6b2); border-radius: 3px; transition: width 0.5s ease; }
@@ -565,22 +356,22 @@
   </style>
 </head>
 <body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="brand-mark"></span>바이텍테크놀로지 <span class="brand-sub">자동견적</span></div>
+    <button type="button" id="full-reset-btn" class="text-btn">처음부터 다시 시작</button>
+  </div>
+</div>
 <div class="container">
   <div class="header">
-    <h1>📋 견적내용 입력</h1>
-    <p>(주)바이텍테크놀로지</p>
+    <h1>견적서 작성</h1>
+    <p>필수 항목(<b style="color:var(--primary)">*</b>)을 채우고 아래 버튼을 누르면 견적서가 만들어져요.</p>
   </div>
 
   <div class="content">
-    <!-- 전체 초기화 -->
-    <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
-      <button type="button" id="full-reset-btn" class="btn btn-secondary" style="padding:8px 16px; font-size:13px;">🔄 처음부터 다시시작</button>
-    </div>
 
     <!-- 필수 입력 안내 -->
-    <div class="required-notice">
-      *표시는 필수사항입니다. *표시가 없는 항목은 입력하지 않으셔도 됩니다.
-    </div>
+    <div class="required-notice">*표시가 없는 항목은 비워 두어도 괜찮아요.</div>
 
     <!-- 기본정보 -->
     <div class="section">
@@ -592,7 +383,11 @@
         </div>
         <div class="form-group">
           <label>견적번호 <span class="required">*</span></label>
-          <input type="text" id="number" placeholder="예시) DLP_250707-1" required>
+          <input type="text" id="number" placeholder="예시) DLP261111-C-1" required>
+          <div class="field-hint">
+            💡 견적일자와 담당자를 선택하면 견적번호가 <b>자동으로 생성</b>됩니다. 필요하면 직접 입력해도 됩니다.
+            <span class="field-hint-sub">직접 입력한 뒤 견적일자나 담당자를 바꾸면 자동 번호로 다시 바뀝니다.</span>
+          </div>
         </div>
       </div>
     </div>
@@ -630,14 +425,14 @@
     <div class="section">
       <h2 class="section-title">이전 견적 불러오기 <span class="info-badge">선택사항</span></h2>
       <div class="form-group" style="position:relative;">
-        <div style="display:flex; gap:10px;">
-          <input type="text" id="history-search" placeholder="거래처명으로 검색 (담당자 선택 후 이용 가능)" autocomplete="off" style="flex:1;">
-          <button type="button" id="history-recent-btn" class="add-btn" style="white-space:nowrap;">📂 내 최근 견적</button>
+        <div class="search-row">
+          <input type="text" id="history-search" placeholder="거래처명으로 검색 (담당자 선택 후 이용 가능)" autocomplete="off">
+          <button type="button" id="history-recent-btn" class="add-btn">내 최근 견적</button>
         </div>
-        <div id="history-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #2A8486;border-radius:0 0 8px 8px;z-index:998;max-height:280px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div>
-        <div id="history-loaded-badge" style="display:none;margin-top:6px;padding:8px 12px;background:#fff9e6;border:1px solid #ffc107;border-radius:6px;font-size:13px;color:#8a6d00;">
-          📂 <strong id="history-loaded-info"></strong> 견적을 불러왔습니다. 수정 후 발행하면 <strong>새 견적번호</strong>로 발행됩니다.
-          <span onclick="this.parentElement.style.display='none'" style="float:right;cursor:pointer;color:#999;">✕</span>
+        <div id="history-dropdown" class="dropdown-panel" style="display:none;"></div>
+        <div id="history-loaded-badge" class="note-badge warn" style="display:none;">
+          <span class="grow"><strong id="history-loaded-info"></strong> 견적을 불러왔어요. 수정 후 발행하면 <strong>새 견적번호</strong>로 발행돼요.</span>
+          <span class="close-x" onclick="this.parentElement.style.display='none'">✕</span>
         </div>
       </div>
     </div>
@@ -650,11 +445,10 @@
           <label>회사명 <span class="required">*</span></label>
           <input type="text" id="receiver-company" required placeholder="회사명 입력 시 Pipedrive 거래 자동 검색" autocomplete="off">
           <input type="hidden" id="pipedrive-deal-id">
-          <div id="deal-search-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #2A8486;border-radius:0 0 8px 8px;z-index:999;max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.12);">
-          </div>
-          <div id="deal-selected-badge" style="display:none;margin-top:6px;padding:6px 10px;background:#e8f5f5;border:1px solid #2A8486;border-radius:6px;font-size:13px;color:#2A8486;">
-            ✅ 선택된 거래: <strong id="deal-selected-title"></strong>
-            <span onclick="clearDealSelection()" style="float:right;cursor:pointer;color:#999;">✕</span>
+          <div id="deal-search-dropdown" class="dropdown-panel" style="display:none;"></div>
+          <div id="deal-selected-badge" class="note-badge ok" style="display:none;">
+            <span class="grow">✓ 선택된 거래: <strong id="deal-selected-title"></strong></span>
+            <span class="close-x" onclick="clearDealSelection()">✕</span>
           </div>
         </div>
         <div class="form-group">
@@ -675,7 +469,7 @@
     <!-- 견적제품 선택 -->
     <div class="section">
       <h2 class="section-title">견적제품 선택
-        <button type="button" id="product-reset-btn" class="remove-btn" style="margin-left:auto; white-space:nowrap;">🧹 내용초기화</button>
+        <button type="button" id="product-reset-btn" class="remove-btn" style="margin-left:auto;">제품·기타 비우기</button>
       </h2>
       <div class="form-group">
         <label>제품 유형 <span class="required">*</span></label>
@@ -690,17 +484,17 @@
     <!-- 제품정보 -->
     <div class="section">
       <h2 class="section-title">제품정보 <span class="info-badge">최대 10개</span></h2>
-      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-        <button type="button" id="add-product" class="add-btn add-product-btn">➕ 제품추가</button>
-        <button type="button" id="duplicate-product" class="add-btn">📋 제품복제</button>
+      <div class="btn-row top">
+        <button type="button" id="add-product" class="add-btn add-product-btn">＋ 제품 추가</button>
+        <button type="button" id="duplicate-product" class="add-btn">마지막 제품 복제</button>
       </div>
       <div id="products-area"></div>
-      <div style="display: flex; gap: 10px; margin-top: 12px; margin-bottom: 20px;">
-        <button type="button" id="add-product-bottom" class="add-btn add-product-btn">➕ 제품추가</button>
+      <div class="btn-row bottom">
+        <button type="button" id="add-product-bottom" class="add-btn add-product-btn">＋ 제품 추가</button>
       </div>
       <div class="summary-box">
         <div class="summary-total">
-          <span>총 견적금액:</span>
+          <span>총 견적금액 (VAT 별도)</span>
           <span id="total-estimate-display">0</span> 원
           <button type="button" id="total-estimate-edit-btn" class="btn-edit-total" title="총 견적금액 수정">수정</button>
           <span id="total-estimate-edit-wrap" class="total-edit-wrap" style="display:none;">
@@ -733,11 +527,11 @@
           </select>
         </div>
         <div class="form-group full-width">
-          <label>대금지급조건 <span style="font-weight:400;color:#888;font-size:12px;">(수정없을 시 아래 내용으로 출력됨)</span></label>
+          <label>대금지급조건 <span class="label-sub">수정하지 않으면 아래 내용으로 들어가요</span></label>
           <input type="text" id="payment-terms" value="현금결제 후 납품" placeholder="현금결제 후 납품">
         </div>
         <div class="form-group full-width">
-          <label>기타 <span style="font-weight:400;color:#888;font-size:12px;">(수정없을 시 아래 내용으로 출력됨)</span></label>
+          <label>기타 <span class="label-sub">수정하지 않으면 아래 내용으로 들어가요</span></label>
           <input type="text" id="extra-note" value="리와인더 및 편집 소프트웨어는 별매입니다." placeholder="리와인더 및 편집 소프트웨어는 별매입니다.">
         </div>
       </div>
@@ -745,12 +539,8 @@
 
     <!-- 제출 버튼 -->
     <div class="action-buttons">
-      <button type="button" id="preview-btn" class="btn btn-primary" style="flex: 1;">
-        📄 견적서 생성하기
-      </button>
-      <button type="button" class="btn btn-secondary" onclick="window.location.href='/'">
-        🏠 처음화면으로
-      </button>
+      <button type="button" id="preview-btn" class="btn btn-primary">견적서 생성하기</button>
+      <button type="button" class="btn btn-secondary" onclick="window.location.href='/'" title="처음 화면으로" aria-label="처음 화면으로">처음 화면</button>
     </div>
   </div>
 </div>
@@ -956,12 +746,12 @@ function createProductSet(idx) {
 
   return `
   <div class="product-set" data-index="${idx}">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <span style="font-weight: 600; color: #2A8486;">제품 ${idx+1}</span>
-      <div style="display: flex; gap: 4px;">
+    <div class="product-head">
+      <span class="product-head-title">제품 ${idx+1}</span>
+      <div class="product-head-actions">
         <button type="button" onclick="moveProductUp(this)" class="move-btn" title="위로 이동">▲</button>
         <button type="button" onclick="moveProductDown(this)" class="move-btn" title="아래로 이동">▼</button>
-        <button type="button" onclick="duplicateProduct(this)" class="remove-btn" style="background: #2A8486; color: white;">복제</button>
+        <button type="button" onclick="duplicateProduct(this)" class="chip-btn">복제</button>
         ${idx>0?'<button type="button" onclick="removeProduct(this)" class="remove-btn">삭제</button>':''}
       </div>
     </div>
@@ -2296,7 +2086,7 @@ window.addEventListener('pageshow', function(e) {
   const btn = document.getElementById('preview-btn');
   if (btn && btn.disabled) {
     btn.disabled = false;
-    btn.innerHTML = '📄 견적서 생성하기';
+    btn.innerHTML = '견적서 생성하기';
   }
 });
 
@@ -2342,9 +2132,6 @@ function resetProductTrainingField() {
       textInput.value = this.value;
       textInput.style.cssText = this.style.cssText;
       textInput.style.width = '100%';
-      textInput.style.padding = '8px';
-      textInput.style.border = '1px solid #ddd';
-      textInput.style.borderRadius = '4px';
       textInput.placeholder = '제품교육 내용을 입력하거나 수정하세요';
       const parent = this.parentNode;
       parent.removeChild(this);
@@ -2698,9 +2485,6 @@ function restoreFormData(data) {
         textInput.value = data.product_training;
         textInput.style.cssText = trainingSelect.style.cssText;
         textInput.style.width = '100%';
-        textInput.style.padding = '8px';
-        textInput.style.border = '1px solid #ddd';
-        textInput.style.borderRadius = '4px';
         
         trainingSelect.parentNode.replaceChild(textInput, trainingSelect);
     }
@@ -2866,9 +2650,6 @@ document.addEventListener('DOMContentLoaded', function() {
       textInput.value = selectedValue;
       textInput.style.cssText = this.style.cssText; // 기존 스타일 복사
       textInput.style.width = '100%';
-      textInput.style.padding = '8px';
-      textInput.style.border = '1px solid #ddd';
-      textInput.style.borderRadius = '4px';
       textInput.placeholder = '제품교육 내용을 입력하거나 수정하세요';
       
       // 부모 요소에서 드롭다운 제거하고 텍스트 입력 필드 추가

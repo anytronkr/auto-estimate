@@ -4,175 +4,80 @@
 <meta charset="UTF-8">
 <title>견적서 미리보기</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-body {
-background: #fff;
-font-family: 'Pretendard', 'Noto Sans KR', Arial, sans-serif;
-margin: 0;
+/* 견적폼과 같은 디자인 토큰 (틸그린 유지, 밝은 회색 배경 + 흰 카드) */
+:root {
+  --primary: #2A8486; --primary-strong: #216b6d; --primary-weak: #e8f4f4;
+  --grey-50: #f9fafb; --grey-100: #f2f4f6; --grey-200: #e5e8eb; --grey-300: #d1d6db;
+  --grey-400: #b0b8c1; --grey-500: #8b95a1; --grey-600: #6b7684; --grey-700: #4e5968;
+  --grey-800: #333d4b; --grey-900: #191f28;
+  --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 }
-.container {
-max-width: 900px;
-margin: 32px auto;
-background: #fff;
-padding: 32px 40px 24px 40px;
-border: 1px solid #e0e0e0;
-border-radius: 8px;
-box-shadow: none;
-}
-.header-bar {
-background: #21808c;
-color: #fff;
-padding: 24px 32px;
-display: flex;
-justify-content: space-between;
-align-items: center;
-border-radius: 8px 8px 0 0;
-}
-h2 {
-color: #21808c;
-font-size: 2.2em;
-margin: 32px 0 16px 0;
-font-weight: 800;
-letter-spacing: -1px;
-}
-.section-title {
-color: #21808c;
-font-weight: bold;
-font-size: 1.1em;
-border-left: 4px solid #21808c;
-padding-left: 10px;
-margin: 32px 0 12px 0;
-background: none;
-}
-hr {
-border: none;
-border-top: 1.5px solid #e0e0e0;
-margin: 24px 0;
-}
-.row-flex {
-display: flex;
-align-items: center;
-margin-bottom: 8px;
-}
-.row-flex label {
-min-width: 90px;
-color: #21808c;
-font-weight: 600;
-margin-right: 8px;
-}
-.value-box {
-flex: 1;
-background: #f7f7f7;
-border: 1px solid #e0e0e0;
-border-radius: 4px;
-padding: 7px 12px;
-font-size: 1em;
-color: #222;
-}
-.product-table-wrap {
-overflow-x: auto;
-margin-bottom: 16px;
-}
-.product-table {
-width: 100%;
-border-collapse: collapse;
-background: #fff;
-font-size: 1em;
-text-align: center;
-}
-.product-table th {
-background: #21808c;
-color: #fff !important;
-font-weight: 700;
-padding: 8px 0;
-border: 1px solid #e0e0e0;
-}
-.product-table td {
-border: 1px solid #e0e0e0;
-padding: 8px 0;
-color: #222;
-}
-.final-total {
-background: #21808c;
-color: #fff;
-font-weight: bold;
-font-size: 1.1em;
-}
-button {
-border: none;
-border-radius: 6px;
-padding: 12px 24px;
-font-size: 1em;
-margin: 0 8px;
-background: #21808c;
-color: #fff;
-cursor: pointer;
-transition: all 0.3s ease;
-}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); background: var(--grey-100); color: var(--grey-900); -webkit-font-smoothing: antialiased; letter-spacing: -0.01em; }
 
-/* 로딩 애니메이션 스타일 */
-.loading {
-  position: relative;
-  background: #1cc7b6 !important;
-  color: transparent !important;
-  pointer-events: none;
-  transform: scale(0.98);
-  box-shadow: 0 2px 8px rgba(28, 199, 182, 0.3);
-  transition: all 0.3s ease;
-}
+.topbar { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--grey-200); }
+.topbar-inner { max-width: 820px; margin: 0 auto; height: 56px; padding: 0 20px; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; }
+.brand-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+.brand-sub { font-weight: 500; color: var(--grey-500); }
 
-.loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 24px;
-  height: 24px;
-  margin: -12px 0 0 -12px;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  border-top: 3px solid #fff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  z-index: 10;
-}
+.container { max-width: 820px; margin: 0 auto; padding: 0 16px 24px; }
+.page-head { padding: 32px 4px 20px; }
+.page-head h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.page-head p { margin: 6px 0 0; font-size: 15px; color: var(--grey-600); }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+.card { background: #fff; border-radius: 20px; padding: 24px 28px; margin-bottom: 12px; }
+.section-title { font-size: 17px; font-weight: 700; color: var(--grey-900); margin: 0 0 8px; }
 
-/* 버튼 비활성화 상태 */
-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-button#back-to-edit {
-background: #e0e0e0;
-color: #21808c;
-}
-button:hover:not(:disabled) {
-opacity: 0.9;
-transform: translateY(-1px);
-box-shadow: 0 4px 12px rgba(33, 128, 140, 0.3);
-}
+.row-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--grey-100); }
+.row-flex:last-child { border-bottom: none; }
+.row-flex label { flex: none; width: 110px; font-size: 14px; font-weight: 500; color: var(--grey-600); }
+.value-box { flex: 1; text-align: right; font-size: 15px; font-weight: 600; color: var(--grey-900); word-break: keep-all; overflow-wrap: anywhere; min-height: 1.4em; }
+.value-box:empty::after { content: '-'; color: var(--grey-400); font-weight: 500; }
 
-button:active:not(:disabled) {
-transform: translateY(0);
-box-shadow: 0 2px 6px rgba(33, 128, 140, 0.3);
-}
-.header-bar h2 {
-color: #fff !important;
-margin: 0;
-font-size: 2.2em;
-font-weight: 800;
-letter-spacing: -1px;
-}
+.product-table-wrap { overflow-x: auto; margin: 8px -4px 0; }
+.product-table { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.product-table th { background: var(--grey-50); color: var(--grey-600); font-weight: 600; font-size: 13px; padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--grey-200); white-space: nowrap; }
+.product-table th:first-child { border-radius: 10px 0 0 10px; }
+.product-table th:last-child { border-radius: 0 10px 10px 0; }
+.product-table td { padding: 14px 8px; color: var(--grey-800); border-bottom: 1px solid var(--grey-100); vertical-align: top; text-align: left; white-space: pre-line; }
+.product-table td:nth-child(4), .product-table td:nth-child(5), .product-table td:nth-child(6),
+.product-table th:nth-child(4), .product-table th:nth-child(5), .product-table th:nth-child(6) { text-align: right; white-space: nowrap; }
+.product-table td:nth-child(2) { font-weight: 600; color: var(--grey-900); }
+.product-table td:nth-child(3) { color: var(--grey-600); font-size: 13px; min-width: 180px; }
+.product-table tbody tr:last-child td { border-bottom: none; }
 
-    /* ===== 진행 화면 (견적서 생성 / PDF 생성 대기) ===== */
-    .ep-overlay { position: fixed; inset: 0; background: rgba(15, 40, 41, 0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: ep-fade 0.2s ease; padding: 16px; box-sizing: border-box; }
+.total-card { background: var(--grey-900); color: #fff; }
+.total-card .section-title { color: rgba(255,255,255,0.75); font-size: 15px; font-weight: 600; }
+.total-card .row-flex { border-bottom-color: rgba(255,255,255,0.08); }
+.total-card .row-flex label { color: rgba(255,255,255,0.6); }
+.total-card .value-box { color: #fff; }
+.total-card .row-flex.grand label { color: #fff; font-weight: 600; padding-top: 6px; }
+.total-card .row-flex.grand .value-box { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.total-card .row-flex.grand .value-box::after { content: ' 원'; font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.7); }
+
+.cta-bar { position: sticky; bottom: 0; z-index: 40; display: flex; gap: 8px; max-width: 820px; margin: 0 auto; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(242,244,246,0), var(--grey-100) 28%); }
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 56px; padding: 0 22px; border: none; border-radius: 14px; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+.btn:active { transform: scale(0.98); }
+.btn-primary { flex: 1; background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-strong); }
+.btn-secondary { background: #fff; color: var(--grey-700); }
+.btn-secondary:hover { background: var(--grey-200); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 720px) {
+  .page-head { padding: 24px 4px 16px; }
+  .page-head h1 { font-size: 24px; }
+  .card { padding: 20px 18px; border-radius: 18px; }
+  .row-flex label { width: 92px; }
+}
+/* ===== 진행 화면 (견적서 생성 / PDF 생성 대기) ===== */
+    .ep-overlay { position: fixed; inset: 0; background: rgba(25, 31, 40, 0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: ep-fade 0.2s ease; padding: 16px; box-sizing: border-box; }
     @keyframes ep-fade { from { opacity: 0; } to { opacity: 1; } }
-    .ep-card { background: #fff; border-radius: 16px; width: 100%; max-width: 420px; padding: 28px 28px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); box-sizing: border-box; font-family: 'Pretendard', 'Noto Sans KR', Arial, sans-serif; }
-    .ep-title { font-size: 18px; font-weight: 700; color: #1f3d3e; margin: 0 0 4px; }
+    .ep-card { background: #fff; border-radius: 24px; width: 100%; max-width: 400px; padding: 28px 28px 22px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); box-sizing: border-box; font-family: var(--font); }
+    .ep-title { font-size: 20px; font-weight: 700; color: var(--grey-900); letter-spacing: -0.02em; margin: 0 0 4px; }
     .ep-sub { font-size: 13px; color: #7a8a8b; margin: 0 0 18px; }
     .ep-bar { height: 6px; background: #e6f0f0; border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
     .ep-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #2A8486, #3fb6b2); border-radius: 3px; transition: width 0.5s ease; }
@@ -198,91 +103,66 @@ letter-spacing: -1px;
   </style>
 </head>
 <body>
+<div class="topbar"><div class="topbar-inner"><span class="brand-mark"></span>바이텍테크놀로지 <span class="brand-sub">자동견적</span></div></div>
 <div class="container">
-<div class="header-bar">
-<h2>견적서 미리보기</h2>
+  <div class="page-head">
+    <h1>견적서 미리보기</h1>
+    <p>내용을 확인한 뒤 PDF 파일을 만들어 주세요. 고칠 곳이 있으면 '수정하기'를 눌러요.</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">기본정보</div>
+    <div class="row-flex"><label>견적일자</label><div class="value-box" id="estimate-date"></div></div>
+    <div class="row-flex"><label>견적번호</label><div class="value-box" id="estimate-number"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">공급자</div>
+    <div class="row-flex"><label>회사명</label><div class="value-box" id="supplier-company"></div></div>
+    <div class="row-flex"><label>담당자</label><div class="value-box" id="supplier-person"></div></div>
+    <div class="row-flex"><label>이메일</label><div class="value-box" id="supplier-email"></div></div>
+    <div class="row-flex"><label>전화번호</label><div class="value-box" id="supplier-phone"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">수신자</div>
+    <div class="row-flex"><label>회사명</label><div class="value-box" id="receiver-company"></div></div>
+    <div class="row-flex"><label>담당자</label><div class="value-box" id="receiver-person"></div></div>
+    <div class="row-flex"><label>이메일</label><div class="value-box" id="receiver-email"></div></div>
+    <div class="row-flex"><label>전화번호</label><div class="value-box" id="receiver-phone"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">제품정보</div>
+    <div class="product-table-wrap">
+      <table class="product-table" id="product-table">
+        <thead>
+          <tr><th>구분</th><th>제품명</th><th>제품상세정보</th><th>수량</th><th>공급단가(원)</th><th>합계(원)</th><th>비고</th></tr>
+        </thead>
+        <tbody>
+          <!-- JS로 제품정보 행 추가 -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">기타</div>
+    <div class="row-flex"><label>납기일</label><div class="value-box" id="delivery-date"></div></div>
+    <div class="row-flex"><label>제품교육</label><div class="value-box" id="product-training"></div></div>
+  </div>
+
+  <div class="card total-card">
+    <div class="section-title">견적 금액</div>
+    <div class="row-flex"><label>합계</label><div class="value-box" id="sum-total"></div></div>
+    <div class="row-flex"><label>부가세(VAT)</label><div class="value-box" id="vat"></div></div>
+    <div class="row-flex grand"><label>최종견적<br>(VAT 포함)</label><div class="value-box" id="final-total"></div></div>
+  </div>
 </div>
-<div class="section-title">기본정보</div>
-<div class="row-flex">
-<label>견적일자</label>
-<div class="value-box" id="estimate-date"></div>
-</div>
-<div class="row-flex">
-<label>견적번호</label>
-<div class="value-box" id="estimate-number"></div>
-</div>
-<div class="section-title">공급자</div>
-<div class="row-flex">
-<label>회사명</label>
-<div class="value-box" id="supplier-company"></div>
-</div>
-<div class="row-flex">
-<label>담당자</label>
-<div class="value-box" id="supplier-person"></div>
-</div>
-<div class="row-flex">
-<label>이메일</label>
-<div class="value-box" id="supplier-email"></div>
-</div>
-<div class="row-flex">
-<label>전화번호</label>
-<div class="value-box" id="supplier-phone"></div>
-</div>
-<div class="section-title">수신자</div>
-<div class="row-flex">
-<label>회사명</label>
-<div class="value-box" id="receiver-company"></div>
-</div>
-<div class="row-flex">
-<label>담당자</label>
-<div class="value-box" id="receiver-person"></div>
-</div>
-<div class="row-flex">
-<label>이메일</label>
-<div class="value-box" id="receiver-email"></div>
-</div>
-<div class="row-flex">
-<label>전화번호</label>
-<div class="value-box" id="receiver-phone"></div>
-</div>
-<div class="section-title">제품정보</div>
-<div class="product-table-wrap">
-<table class="product-table" id="product-table">
-<thead>
-<tr>
-<th>구분</th><th>제품명</th><th>제품상세정보</th><th>수량</th><th>공급단가(원)</th><th>합계(원)</th><th>비고</th>
-</tr>
-</thead>
-<tbody>
-<!-- JS로 제품정보 행 추가 -->
-</tbody>
-</table>
-</div>
-<div class="section-title">합계/기타</div>
-<div class="row-flex">
-<label>납기일</label>
-<div class="value-box" id="delivery-date"></div>
-</div>
-<div class="row-flex">
-<label>제품교육</label>
-<div class="value-box" id="product-training"></div>
-</div>
-<div class="row-flex">
-<label>합계</label>
-<div class="value-box" id="sum-total"></div>
-</div>
-<div class="row-flex">
-<label>부가세(VAT)</label>
-<div class="value-box" id="vat"></div>
-</div>
-<div class="row-flex">
-<label>최종견적(VAT포함)</label>
-<div class="value-box" id="final-total"></div>
-</div>
-</div>
-<div style="display: flex; justify-content: center; gap: 16px; margin-top: 32px;">
-<button id="back-to-edit" style="padding: 12px 24px; border-radius: 8px; border: none; background: #eee; color: #222; font-size: 1em; cursor: pointer;">편집으로 돌아가기</button>
-<button id="download-pdf" style="padding: 12px 24px; border-radius: 8px; border: none; background: #1cc7b6; color: #fff; font-size: 1em; cursor: pointer;">PDF파일 생성하기</button>
+
+<div class="cta-bar">
+  <button id="back-to-edit" class="btn btn-secondary">수정하기</button>
+  <button id="download-pdf" class="btn btn-primary">PDF 파일 만들기</button>
 </div>
 <script>
 // localStorage에서 데이터 읽기
@@ -551,7 +431,7 @@ window.addEventListener('pageshow', function(e) {
   const btn = document.getElementById('download-pdf');
   if (btn && btn.disabled) {
     btn.disabled = false;
-    btn.textContent = 'PDF파일 생성하기';
+    btn.textContent = 'PDF 파일 만들기';
   }
 });
 
