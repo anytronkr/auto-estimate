@@ -340,29 +340,39 @@ async def fill_estimate(request: Request):
         print(f"'estimate_date' in CELL_MAP: {'estimate_date' in CELL_MAP}")
         print(f"'estimate_number' in CELL_MAP: {'estimate_number' in CELL_MAP}")
         
+        timer = StepTimer("/estimate")
         file_id = data.get("fileId")
-        
+
         # fileId가 없거나 템플릿 변수인 경우 새로운 템플릿 생성
         if not file_id or file_id == "{{24.id}}" or "{{" in str(file_id) or "}}" in str(file_id):
             print("fileId가 없거나 템플릿 변수입니다. 새로운 템플릿을 생성합니다.")
             template_result = copy_estimate_template()
-            
+            timer.lap("템플릿 복사")
+
             if template_result["status"] == "success":
                 file_id = template_result["file_id"]
                 print(f"새로운 템플릿 생성 완료: {file_id}")
             else:
-                return {"status": "error", "msg": f"템플릿 생성 실패: {template_result['message']}"}
-        
+                return {"status": "error", "message": f"템플릿 생성 실패: {template_result['message']}"}
+
         if not file_id:
-            return {"status": "error", "msg": "fileId 없음"}
+            return {"status": "error", "message": "fileId 없음"}
 
         creds, gc, drive_service = get_google_clients()
 
+        # 견적번호 확정: 비어 있으면 새로 채번, 이미 발행목록에 있는 자동번호면 다음 순번으로 교체
+        requested_number = data.get("estimate_number", "").strip()
+        estimate_number, number_changed = resolve_estimate_number(
+            requested_number, data.get("supplier_person", "")
+        )
+        data["estimate_number"] = estimate_number
+        timer.lap("견적번호 중복 확인")
+
         sh = gc.open_by_key(file_id)
         ws = sh.sheet1
+        timer.lap("견적서 파일 열기")
 
         # 1. 파일명 변경
-        estimate_number = data.get("estimate_number", "").strip()
         if estimate_number:
             try:
                 sh.update_title(estimate_number)
@@ -408,48 +418,16 @@ async def fill_estimate(request: Request):
             else:
                 print(f"❌ CELL_MAP에 'estimate_date' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
         
-        # estimate_number 처리 (사용자 입력값 우선, 없으면 자동 생성)
-        estimate_number = data.get("estimate_number", "").strip()
-        print(f"DEBUG: 받은 estimate_number 데이터: '{estimate_number}'")
-        print(f"DEBUG: estimate_number 타입: {type(estimate_number)}")
-        print(f"DEBUG: estimate_number 길이: {len(estimate_number) if estimate_number else 0}")
-        
-        if estimate_number:
-            # 사용자가 입력한 견적번호 사용
-            if "estimate_number" in CELL_MAP:
-                updates.append({
-                    "range": CELL_MAP["estimate_number"],
-                    "values": [[estimate_number]]
-                })
-                print(f"사용자 입력 견적번호 사용: {estimate_number}")
-            else:
-                print(f"❌ CELL_MAP에 'estimate_number' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
+        # estimate_number 처리 (위에서 중복 확인까지 끝난 최종 번호)
+        if "estimate_number" in CELL_MAP:
+            updates.append({
+                "range": CELL_MAP["estimate_number"],
+                "values": [[estimate_number]]
+            })
+            if number_changed:
+                print(f"[견적번호] '{requested_number}'는 이미 발행됨 → '{estimate_number}'로 변경")
         else:
-            # 견적번호가 없으면 자동 생성
-            print(f"DEBUG: estimate_number가 비어있어서 자동 생성합니다.")
-            from datetime import datetime
-            current_date_short = datetime.now().strftime("%y%m%d")
-            supplier_person = data.get("supplier_person", "UNKNOWN")
-            
-            # 담당자 ID 매핑 (A, B, C, D, E, F) - 이미지 기준
-            person_id_map = {
-                "이훈수": "A", "차재원": "B", "하철용": "C", 
-                "노재익": "D", "전준영": "E", "황영태": "F"
-            }
-            person_id = person_id_map.get(supplier_person, "B")  # 기본값 B
-
-            # 담당자·날짜별 다음 순번 (시트의 실제 견적번호 기준 — 서버 재배포에 영향 안 받음)
-            today_count = get_next_seq_number(current_date_short, person_id)
-
-            auto_estimate_number = f"DLP{current_date_short}-{person_id}-{today_count}"
-            if "estimate_number" in CELL_MAP:
-                updates.append({
-                    "range": CELL_MAP["estimate_number"],
-                    "values": [[auto_estimate_number]]
-                })
-                print(f"estimate_number 자동 생성: {auto_estimate_number}")
-            else:
-                print(f"❌ CELL_MAP에 'estimate_number' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
+            print(f"❌ CELL_MAP에 'estimate_number' 키가 없습니다. 사용 가능한 키: {list(CELL_MAP.keys())}")
 
         # 제품 정보
         products = data.get("products", [])
@@ -481,7 +459,8 @@ async def fill_estimate(request: Request):
             print(f"DEBUG: 업데이트 {i+1}: {update['range']} = {update['values']}")
         
         ws.batch_update(updates)
-        
+        timer.lap("견적 내용 입력")
+
         # 제품상세정보 셀들에 텍스트 줄바꿈 포맷 적용 (개별 10회 호출 → 배치 1회로 속도 개선)
         try:
             detail_cells = [CELL_MAP[f"products[{i}][detail]"] for i in range(10)]
@@ -503,8 +482,16 @@ async def fill_estimate(request: Request):
             print("✅ B47 셀 합치기 해제 완료")
         except Exception as e:
             print(f"⚠️ B47 셀 합치기 해제 중 오류 (무시됨): {e}")
-        
-        return {"status": "success"}
+        timer.lap("서식 정리")
+        timer.total()
+
+        return {
+            "status": "success",
+            "file_id": file_id,
+            "estimate_number": estimate_number,
+            "number_changed": number_changed,
+            "requested_number": requested_number,
+        }
         
     except Exception as e:
         print(f"❌ fill_estimate 함수에서 오류 발생: {e}")
@@ -571,12 +558,28 @@ async def collect_data(request: Request):
         data = await request.json()
         print(f"받은 데이터: {data}")
         
+        timer = StepTimer("/collect-data")
         # Google Sheets 연결 (캐시 재사용)
         creds, gc, drive_service = get_google_clients()
 
         sh = gc.open_by_key(DATA_COLLECTION_SHEET_ID)
         ws = sh.sheet1
-        
+
+        # 중복 발행 방지: 같은 견적번호 + 같은 견적서 파일이 이미 발행목록에 있으면
+        # (버튼 두 번 클릭, 뒤로가기 후 재클릭 등) PDF·Pipedrive·시트 기록을 다시 하지 않음
+        already = find_issued_row(ws, data.get("estimate_number", ""), data.get("fileId", ""))
+        timer.lap("발행목록 중복 확인")
+        if already:
+            print(f"[중복 방지] 이미 발행된 견적 재요청 - {data.get('estimate_number')} (행 {already['row']})")
+            return {
+                "status": "success",
+                "already_issued": True,
+                "message": "이미 발행된 견적입니다. 기존 PDF를 보여드립니다.",
+                "pdf_link": already["pdf_link"],
+                "pdf_id": "",
+                "pipedrive_deal_id": already["deal_id"],
+            }
+
         # 견적서 링크 생성
         estimate_link = f"https://docs.google.com/spreadsheets/d/{data.get('fileId', '')}/edit"
         
@@ -616,8 +619,10 @@ async def collect_data(request: Request):
             print(f"DEBUG: PDF 생성 시도 - file_id: '{file_id}', pdf_filename: '{pdf_filename}'")
             
             if file_id and export_sheet_to_pdf(file_id, pdf_filename, creds):
+                timer.lap("PDF 변환")
                 # Google Drive 업로드
                 pdf_id, pdf_link = upload_pdf_to_drive(pdf_filename, get_google_drive_folder_id(), pdf_filename, creds)
+                timer.lap("구글 드라이브 업로드")
                 print(f"DEBUG: Google Drive 업로드 성공 - {pdf_id}, {pdf_link}")
                 # ⚠️ 임시 파일 삭제는 Pipedrive 업로드 후로 이동 (아래)
             else:
@@ -653,6 +658,7 @@ async def collect_data(request: Request):
         pipedrive_deal_id = update_pipedrive_deal_estimate(
             selected_deal_id, data.get("estimate_number", ""), pdf_filename, estimate_link, pdf_link
         )
+        timer.lap("Pipedrive 거래 등록")
 
         # ✅ Pipedrive 업로드 완료 후에 임시 파일 삭제
         try:
@@ -696,7 +702,9 @@ async def collect_data(request: Request):
             selected_deal_id                    # Y: Pipedrive 거래 ID — 사용자 선택값을 그대로 기록 (PD API 업데이트 실패와 무관)
         ]
         ws.append_row(row_data)
-        
+        timer.lap("발행목록 기록")
+        timer.total()
+
         success_message = f"견적 데이터 및 PDF가 성공적으로 추가되었습니다."
         if pipedrive_deal_id:
             success_message += f"\nPipedrive 거래가 성공적으로 업데이트되었습니다. (거래 ID: {pipedrive_deal_id})"
@@ -1474,6 +1482,57 @@ def upload_file_to_pipedrive_deal(deal_id, file_path, file_name):
         if file_handle:
             file_handle.close()
 
+class StepTimer:
+    """단계별 소요 시간을 Render 로그에 남김. 로그에서 '[TIMING]'으로 검색."""
+
+    def __init__(self, name):
+        self.name = name
+        self.start = self.last = time.time()
+        self.steps = []
+
+    def lap(self, label):
+        now = time.time()
+        self.steps.append(f"{label} {now - self.last:.1f}s")
+        self.last = now
+
+    def total(self):
+        print(f"[TIMING] {self.name} 총 {time.time() - self.start:.1f}s | " + " → ".join(self.steps))
+
+
+# 담당자 → 견적번호 기호 (estimate_form.html 담당자 목록의 data-id와 같아야 함)
+PERSON_ID_MAP = {
+    "이훈수": "A", "차재원": "B", "하철용": "C",
+    "노재익": "D", "전준영": "E", "황영태": "F",
+}
+AUTO_NUMBER_RE = re.compile(r"^DLP(\d{6})-([A-Z])-(\d+)$")
+
+
+def person_letter(supplier_person):
+    """'애니트론사업부 황영태 대리'처럼 직함이 붙은 이름에서도 기호를 찾음 (못 찾으면 B)"""
+    for name, letter in PERSON_ID_MAP.items():
+        if name in (supplier_person or ""):
+            return letter
+    return "B"
+
+
+def issued_numbers():
+    """발행목록 B열(견적번호) 전체"""
+    _, gc, _ = get_google_clients()
+    return gc.open_by_key(DATA_COLLECTION_SHEET_ID).sheet1.col_values(2)
+
+
+def next_seq_from(numbers, date_short, person_id):
+    prefix = f"DLP{date_short}-{person_id}-"
+    max_seq = 0
+    for num in numbers:
+        if num.startswith(prefix):
+            try:
+                max_seq = max(max_seq, int(num[len(prefix):]))
+            except ValueError:
+                pass
+    return max_seq + 1
+
+
 def get_next_seq_number(date_short, person_id):
     """담당자·날짜별 다음 견적 순번을 시트의 실제 견적번호(B열) 기준으로 계산.
 
@@ -1484,24 +1543,77 @@ def get_next_seq_number(date_short, person_id):
     시트에 이미 기록된 최대 순번 + 1로 변경.
     """
     try:
-        creds, gc, drive_service = get_google_clients()
-        sh = gc.open_by_key(DATA_COLLECTION_SHEET_ID)
-        ws = sh.sheet1
-        numbers = ws.col_values(2)  # B열: 견적번호
-        prefix = f"DLP{date_short}-{person_id}-"
-        max_seq = 0
-        for num in numbers:
-            if num.startswith(prefix):
-                try:
-                    seq = int(num[len(prefix):])
-                    if seq > max_seq:
-                        max_seq = seq
-                except ValueError:
-                    pass
-        return max_seq + 1
+        return next_seq_from(issued_numbers(), date_short, person_id)
     except Exception as e:
         print(f"[ERROR] 견적번호 순번 계산 오류: {e}")
         return 1
+
+
+def resolve_estimate_number(requested, supplier_person):
+    """최종 견적번호와 변경 여부를 반환.
+
+    - 비어 있으면: 오늘 날짜 + 담당자 기호로 새로 채번
+    - 'DLP날짜-기호-순번' 형식인데 이미 발행목록에 있으면: 같은 날짜·기호의 다음 순번으로 교체
+      (2026-11 이전 폼은 항상 -1을 채워 보내서 서로 다른 견적이 같은 번호로 발행됐음)
+    - 직접 입력한 다른 형식의 번호는 그대로 사용
+    """
+    requested = (requested or "").strip()
+    try:
+        if not requested:
+            date_short = datetime.now().strftime("%y%m%d")
+            letter = person_letter(supplier_person)
+            return f"DLP{date_short}-{letter}-{get_next_seq_number(date_short, letter)}", False
+        m = AUTO_NUMBER_RE.match(requested)
+        if not m:
+            return requested, False
+        numbers = issued_numbers()
+        if requested not in numbers:
+            return requested, False
+        date_short, letter = m.group(1), m.group(2)
+        return f"DLP{date_short}-{letter}-{next_seq_from(numbers, date_short, letter)}", True
+    except Exception as e:
+        # 시트 조회 실패 시 발행은 막지 않음 (번호는 요청값 그대로)
+        print(f"[ERROR] 견적번호 중복 확인 실패 (요청값 사용): {e}")
+        return requested, False
+
+
+def find_issued_row(ws, estimate_number, file_id):
+    """발행목록에 같은 견적번호 + 같은 견적서 파일(W열 링크)이 있으면 그 행 정보를 반환"""
+    if not estimate_number or not file_id:
+        return None
+    try:
+        col_b, col_wy = ws.batch_get(["B:B", "W:Y"])
+        for i, row in enumerate(col_b):
+            if not row or row[0] != estimate_number:
+                continue
+            wy = col_wy[i] if i < len(col_wy) else []
+            if wy and file_id in wy[0]:
+                return {
+                    "row": i + 1,
+                    "pdf_link": wy[1] if len(wy) > 1 else "",
+                    "deal_id": wy[2] if len(wy) > 2 else "",
+                }
+    except Exception as e:
+        print(f"[WARN] 발행목록 중복 확인 실패 (계속 진행): {e}")
+    return None
+
+
+@app.get("/next-estimate-number")
+def next_estimate_number(date: str = "", person_id: str = ""):
+    """견적폼에서 날짜·담당자를 고르면 발행목록 기준 다음 견적번호를 돌려줌.
+    date: YYMMDD 또는 YYYY-MM-DD, person_id: A~F"""
+    date_short = re.sub(r"\D", "", date)
+    if len(date_short) == 8:
+        date_short = date_short[2:]
+    person_id = (person_id or "").strip().upper()
+    if len(date_short) != 6 or not re.fullmatch(r"[A-Z]", person_id):
+        return {"status": "error", "message": "date(YYMMDD)와 person_id(A~F)가 필요합니다."}
+    try:
+        seq = next_seq_from(issued_numbers(), date_short, person_id)
+        return {"status": "success", "estimate_number": f"DLP{date_short}-{person_id}-{seq}", "seq": seq}
+    except Exception as e:
+        print(f"[ERROR] /next-estimate-number 실패: {e}")
+        return {"status": "error", "message": str(e)}
 
 def get_today_pdf_count():
     """오늘 PDF 생성 횟수를 가져오고 +1 증가시킵니다."""

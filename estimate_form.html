@@ -526,6 +526,34 @@
         gap: 12px;
       }
     }
+  
+    /* ===== 진행 화면 (견적서 생성 / PDF 생성 대기) ===== */
+    .ep-overlay { position: fixed; inset: 0; background: rgba(15, 40, 41, 0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: ep-fade 0.2s ease; padding: 16px; box-sizing: border-box; }
+    @keyframes ep-fade { from { opacity: 0; } to { opacity: 1; } }
+    .ep-card { background: #fff; border-radius: 16px; width: 100%; max-width: 420px; padding: 28px 28px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); box-sizing: border-box; font-family: 'Pretendard', 'Noto Sans KR', Arial, sans-serif; }
+    .ep-title { font-size: 18px; font-weight: 700; color: #1f3d3e; margin: 0 0 4px; }
+    .ep-sub { font-size: 13px; color: #7a8a8b; margin: 0 0 18px; }
+    .ep-bar { height: 6px; background: #e6f0f0; border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+    .ep-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #2A8486, #3fb6b2); border-radius: 3px; transition: width 0.5s ease; }
+    .ep-steps { list-style: none; margin: 0; padding: 0; }
+    .ep-steps li { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 14px; color: #a3b1b2; transition: color 0.2s ease; }
+    .ep-ic { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #d5e1e1; flex: none; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; box-sizing: border-box; }
+    .ep-steps li.active { color: #1f3d3e; font-weight: 600; }
+    .ep-steps li.active .ep-ic { border-color: #cfe6e6; border-top-color: #2A8486; animation: ep-spin 0.8s linear infinite; }
+    .ep-steps li.done { color: #2A8486; }
+    .ep-steps li.done .ep-ic { background: #2A8486; border-color: #2A8486; }
+    .ep-steps li.done .ep-ic::after { content: '✓'; }
+    .ep-steps li.error { color: #c0392b; font-weight: 600; }
+    .ep-steps li.error .ep-ic { background: #e74c3c; border-color: #e74c3c; }
+    .ep-steps li.error .ep-ic::after { content: '!'; }
+    .ep-note { display: none; margin-top: 14px; padding: 10px 12px; background: #fff8e5; border: 1px solid #f3dd9b; border-radius: 8px; font-size: 13px; line-height: 1.5; color: #6b5200; }
+    .ep-note.show { display: block; }
+    .ep-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 12px; color: #9aa8a9; }
+    @keyframes ep-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .ep-steps li.active .ep-ic { animation: none; border-color: #2A8486; }
+      .ep-bar > i { transition: none; } .ep-overlay { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -1889,55 +1917,39 @@ async function autoFillEstimateNumber() {
   // 로딩 표시
   numberInput.value = '생성중...';
   numberInput.style.color = '#999';
-  
-  let count = 1;
-  
+
+  // 날짜·담당자를 빠르게 바꿀 때 늦게 온 이전 응답이 덮어쓰지 않도록
+  const requestId = ++autoFillEstimateNumber.lastRequest;
+  let estimateNumber = '';
+
   try {
-    console.log('견적번호 생성 시작...');
-    
-    // 5초 타임아웃 적용
+    // 발행목록 시트 기준 다음 순번 (5초 타임아웃)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
-    const res = await fetch(`${API_ORIGIN}/estimate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ check_only: true }),
+    const res = await fetch(`${API_ORIGIN}/next-estimate-number?date=${yymmdd}&person_id=${encodeURIComponent(supplierId)}`, {
       signal: controller.signal
     });
-    
     clearTimeout(timeoutId);
-    
-    if (res.ok) {
-      const result = await res.json();
-      if (result.pdf_count_today) count = result.pdf_count_today + 1;
-      console.log('서버에서 카운트 가져옴:', count);
-    } else {
-      console.warn('API 응답 실패, 로컬 카운트 사용');
-      count = getLocalCount(yymmdd, supplierId);
-    }
-    
+    const result = await res.json();
+    if (result.status === 'success') estimateNumber = result.estimate_number;
+    else console.warn('견적번호 조회 실패, 임시 번호 사용:', result.message);
   } catch (error) {
-    console.error('API 호출 실패:', error.name);
-    
-    if (error.name === 'AbortError') {
-      console.log('타임아웃으로 인한 로컬 카운트 사용');
-    }
-    
-    // 백업: 로컬 스토리지 사용
-    count = getLocalCount(yymmdd, supplierId);
+    console.warn('견적번호 조회 실패, 임시 번호 사용:', error.name);
   }
 
-  // 견적번호 생성
-  const estimateNumber = `DLP${yymmdd}-${supplierId}-${count}`;
+  if (requestId !== autoFillEstimateNumber.lastRequest) return;
+
+  if (!estimateNumber) {
+    // 서버 조회 실패 시 임시 번호 — 이미 쓰인 번호면 견적서 생성 때 서버가 다음 순번으로 바꿔줌
+    const count = getLocalCount(yymmdd, supplierId);
+    saveLocalCount(yymmdd, supplierId, count);
+    estimateNumber = `DLP${yymmdd}-${supplierId}-${count}`;
+  }
   numberInput.value = estimateNumber;
   numberInput.style.color = '#000';
-  
-  // 로컬 카운트 저장
-  saveLocalCount(yymmdd, supplierId, count);
-  
   console.log('견적번호 생성 완료:', estimateNumber);
 }
+autoFillEstimateNumber.lastRequest = 0;
 
 // 로컬 카운트 가져오기
 function getLocalCount(yymmdd, supplierId) {
@@ -2123,6 +2135,64 @@ function validateEstimateForm() {
   return true;
 }
 
+// ===== 진행 화면 (견적서 생성 / PDF 생성 대기) =====
+// showProgress(제목, [단계...]) → { step(i), stepLater(i, ms), complete(), note(text), fail(), leave(), close() }
+function showProgress(title, steps) {
+  document.querySelectorAll('.ep-overlay').forEach(function(x) { x.remove(); });
+  const el = document.createElement('div');
+  el.className = 'ep-overlay';
+  el.setAttribute('role', 'alertdialog');
+  el.setAttribute('aria-live', 'polite');
+  el.innerHTML = '<div class="ep-card"><p class="ep-title"></p>' +
+    '<p class="ep-sub">창을 닫거나 새로고침하지 마세요.</p>' +
+    '<div class="ep-bar"><i></i></div><ul class="ep-steps"></ul>' +
+    '<div class="ep-note"></div>' +
+    '<div class="ep-foot"><span>진행 단계는 서버 작업에 맞춰 표시됩니다</span><span class="ep-time">0초</span></div></div>';
+  el.querySelector('.ep-title').textContent = title;
+  const ul = el.querySelector('.ep-steps');
+  steps.forEach(function(s) {
+    const li = document.createElement('li');
+    const ic = document.createElement('span'); ic.className = 'ep-ic';
+    const tx = document.createElement('span'); tx.textContent = s;
+    li.appendChild(ic); li.appendChild(tx); ul.appendChild(li);
+  });
+  document.body.appendChild(el);
+
+  const items = Array.from(ul.children);
+  const bar = el.querySelector('.ep-bar > i');
+  const timeEl = el.querySelector('.ep-time');
+  const t0 = Date.now();
+  const tick = setInterval(function() { timeEl.textContent = Math.floor((Date.now() - t0) / 1000) + '초'; }, 500);
+  const timers = [];
+  const guard = function(e) { e.preventDefault(); e.returnValue = ''; };
+  window.addEventListener('beforeunload', guard);
+  let cur = -1;
+
+  function paint() {
+    items.forEach(function(li, i) { li.className = i < cur ? 'done' : (i === cur ? 'active' : ''); });
+    // 진행 중인 단계는 절반만큼 채워서 멈춘 것처럼 보이지 않게
+    const filled = Math.min(cur, items.length) + (cur < items.length ? 0.5 : 0);
+    bar.style.width = Math.round(Math.max(0, filled) / items.length * 100) + '%';
+  }
+  function stopTimers() { timers.forEach(clearTimeout); timers.length = 0; }
+
+  return {
+    step: function(i) { if (i > cur) { cur = Math.min(i, items.length - 1); paint(); } },
+    // 서버 응답 하나로 여러 단계가 끝나는 경우: 예상 시간에 맞춰 앞 단계만 넘기고 마지막 단계는 응답을 기다림
+    stepLater: function(i, ms) { const self = this; timers.push(setTimeout(function() { self.step(i); }, ms)); },
+    complete: function() { stopTimers(); cur = items.length; paint(); },
+    note: function(text) { const n = el.querySelector('.ep-note'); n.textContent = text; n.classList.add('show'); },
+    fail: function() { stopTimers(); if (items[cur]) items[cur].className = 'error'; },
+    leave: function() { stopTimers(); window.removeEventListener('beforeunload', guard); },
+    close: function() { stopTimers(); clearInterval(tick); window.removeEventListener('beforeunload', guard); el.remove(); }
+  };
+}
+
+// 뒤로가기로 돌아왔을 때(bfcache) 남아 있는 진행 화면 정리
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) document.querySelectorAll('.ep-overlay').forEach(function(x) { x.remove(); });
+});
+
 async function sendEstimateToFastAPI() {
   console.log("=== 견적서 생성 시작 ===");
   
@@ -2134,17 +2204,21 @@ async function sendEstimateToFastAPI() {
   console.log("✅ 유효성 검사 통과");
   
   const button = document.getElementById('preview-btn');
-  const originalText = button.textContent;
-  
+  if (button.disabled) return; // 이미 처리 중이면 무시 (중복 클릭 방지)
+  const originalHTML = button.innerHTML;
+  let navigating = false;
+  const progress = showProgress('견적서를 만들고 있어요', [
+    '견적서 파일 준비',
+    '견적번호 중복 확인',
+    '견적 내용 입력',
+    '미리보기 준비'
+  ]);
+
   try {
-    // 버튼 비활성화 및 로딩 애니메이션 적용
     button.disabled = true;
-    button.classList.add('loading');
     button.textContent = '처리 중...';
-    
-    // 즉시 시각적 피드백을 위한 약간의 지연
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
+    progress.step(0);
+
     const data = collectEstimateData();
     let fileId = new URLSearchParams(window.location.search).get("id");
     
@@ -2190,12 +2264,14 @@ async function sendEstimateToFastAPI() {
           console.log("URL 업데이트 완료:", newUrl.toString());
         } else {
           console.error("견적서 템플릿 생성 실패:", templateResult);
-          alert("견적서 템플릿 생성에 실패했습니다: " + templateResult.message);
+          progress.fail();
+          alert("견적서 파일을 만들지 못했습니다.\n\n" + (templateResult.message || '알 수 없는 오류') + "\n\n잠시 후 다시 눌러 주세요. 계속되면 관리자에게 이 화면을 캡처해서 보내 주세요.");
           return;
         }
       } catch (error) {
         console.error("견적서 템플릿 생성 중 오류:", error);
-        alert("견적서 템플릿 생성 중 오류가 발생했습니다.");
+        progress.fail();
+        alert("견적서 파일을 만드는 중 연결이 끊겼습니다.\n인터넷 연결을 확인한 뒤 다시 눌러 주세요.");
         return;
       }
     } else {
@@ -2214,14 +2290,12 @@ async function sendEstimateToFastAPI() {
       console.warn('Storage 저장 실패:', e);
     }
 
-    // 최소 로딩 시간 설정 (너무 빨리 넘어가는 것 방지)
-    const startTime = Date.now();
-    const minLoadingTime = 1500; // 최소 1.5초 로딩
-
-    button.textContent = '견적서 생성 중...';
-
     console.log("견적서 생성 API 호출 전 데이터:", data);
     console.log("사용할 fileId:", fileId);
+
+    // 서버 요청 하나에 '번호 확인 → 내용 입력'이 함께 처리됨
+    progress.step(1);
+    progress.stepLater(2, 1500);
 
     const response = await fetch(`${API_ORIGIN}/estimate`, {
       method: 'POST',
@@ -2232,49 +2306,61 @@ async function sendEstimateToFastAPI() {
     const result = await response.json();
     console.log("견적서 생성 API 응답:", result);
 
-    button.textContent = '완료 중...';
-
-    if(result.status === "success") {
-      // 최소 로딩 시간 보장
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-
-      setTimeout(() => {
-        // 데이터 저장 (localStorage와 sessionStorage 모두 시도)
-        const dataToStore = JSON.stringify(data);
-        console.log('저장할 데이터:', dataToStore);
-
-        try {
-          localStorage.setItem('estimateData', dataToStore);
-          sessionStorage.setItem('estimateData', dataToStore);
-          console.log('Storage 저장 완료');
-        } catch (e) {
-          console.warn('Storage 저장 실패:', e);
-          console.warn('localStorage 사용 불가 - 시크릿 모드이거나 저장 공간이 부족합니다.');
-        }
-
-        console.log('preview.html로 이동할 fileId:', fileId);
-
-        // fileId를 URL에 포함하여 preview.html로 이동
-        if (fileId) {
-          window.location.href = `preview.html?id=${fileId}`;
-        } else {
-          window.location.href = `preview.html`;
-        }
-      }, remainingTime);
-    } else {
-      alert('전송 실패! 다시 시도해 주세요.');
+    if (result.status !== "success") {
+      progress.fail();
+      alert('견적서를 만들지 못했습니다.\n\n' + (result.message || result.msg || '알 수 없는 오류') + '\n\n잠시 후 다시 눌러 주세요.');
+      return;
     }
+
+    progress.step(3);
+
+    // 이미 발행된 번호였으면 서버가 다음 순번으로 바꿔서 돌려줌
+    let holdMs = 300;
+    if (result.estimate_number && result.estimate_number !== data.estimate_number) {
+      data.estimate_number = result.estimate_number;
+      document.getElementById('number').value = result.estimate_number;
+      progress.note('견적번호 ' + (result.requested_number || '') + '은(는) 이미 발행된 번호라 ' +
+        result.estimate_number + '(으)로 바뀌었습니다.');
+      holdMs = 2500; // 바뀐 번호를 읽을 시간
+    }
+
+    try {
+      const dataToStore = JSON.stringify(data);
+      localStorage.setItem('estimateData', dataToStore);
+      sessionStorage.setItem('estimateData', dataToStore);
+    } catch (e) {
+      console.warn('Storage 저장 실패 (시크릿 모드이거나 저장 공간 부족):', e);
+    }
+
+    progress.complete();
+    navigating = true;
+    setTimeout(() => {
+      progress.leave();
+      window.location.href = fileId ? `preview.html?id=${fileId}` : 'preview.html';
+    }, holdMs);
   } catch (error) {
     console.error('견적서 생성 중 오류:', error);
-    alert('전송 중 오류가 발생했습니다.');
+    progress.fail();
+    alert('서버와 연결이 끊겼습니다.\n인터넷 연결을 확인한 뒤 다시 눌러 주세요.');
   } finally {
-    // 버튼 상태 복원
-    button.disabled = false;
-    button.classList.remove('loading');
-    button.textContent = originalText;
+    // 미리보기로 넘어가는 중에는 버튼을 다시 열지 않음 (넘어가기 전 재클릭 → 중복 생성 방지)
+    if (!navigating) {
+      progress.close();
+      button.disabled = false;
+      button.innerHTML = originalHTML;
+    }
   }
 }
+
+// 미리보기에서 뒤로가기로 돌아오면 버튼 다시 사용 가능하게
+window.addEventListener('pageshow', function(e) {
+  if (!e.persisted) return;
+  const btn = document.getElementById('preview-btn');
+  if (btn && btn.disabled) {
+    btn.disabled = false;
+    btn.innerHTML = '📄 견적서 생성하기';
+  }
+});
 
 document.getElementById('preview-btn').addEventListener('click', sendEstimateToFastAPI);
 
