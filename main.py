@@ -1,8 +1,9 @@
 import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 import gspread
+from staff import STAFF, display_name as staff_display_name
 from config import (
     CREDS_PATH, CELL_MAP, API_HOST, API_PORT,
     DATA_COLLECTION_SHEET_ID, DATA_COLLECTION_COLUMNS,
@@ -18,6 +19,10 @@ import json
 from datetime import datetime, timedelta
 import re
 import time
+import shutil
+import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from google.auth.transport.requests import Request as GoogleRequest
 
 app = FastAPI()
@@ -360,6 +365,9 @@ async def fill_estimate(request: Request):
 
         creds, gc, drive_service = get_google_clients()
 
+        # 내용이 바뀌므로 미리 만들어 둔 PDF가 있으면 버림
+        pdf_prefetch_invalidate(file_id)
+
         # 견적번호 확정: 비어 있으면 새로 채번, 이미 발행목록에 있는 자동번호면 다음 순번으로 교체
         requested_number = data.get("estimate_number", "").strip()
         estimate_number, number_changed = resolve_estimate_number(
@@ -522,11 +530,27 @@ async def test_cell_map():
             "cell_map_type": str(type(CELL_MAP))
         }
 
+NO_CACHE = {"Cache-Control": "no-cache"}
+
+
 def html_page(filename):
     """화면 파일 응답. 'no-cache' = 브라우저가 열 때마다 서버에서 최신 화면을 받음.
     배포하면 영업팀 화면에 바로 새 버전이 뜸 (예전에는 헤더가 없어 몇 시간 예전 화면이 남았음).
     견적폼도 압축 전송 시 약 29KB라 매번 받아도 체감 차이 없음 (2026-11-11 측정 0.16초)"""
-    return FileResponse(filename, headers={"Cache-Control": "no-cache"})
+    return FileResponse(filename, headers=NO_CACHE)
+
+
+def staff_options_html():
+    """staff.py 담당자 목록 → 견적폼 드롭다운 <option>들"""
+    from html import escape
+    lines = []
+    for p in STAFF:
+        name = escape(staff_display_name(p))
+        lines.append(
+            f'<option value="{name}" data-email="{escape(p["email"])}" '
+            f'data-phone="{escape(p["phone"])}" data-id="{escape(p["id"])}">{name}</option>'
+        )
+    return "\n            ".join(lines)
 
 @app.get("/")
 async def root():
@@ -535,8 +559,11 @@ async def root():
 
 @app.get("/estimate_form.html")
 async def estimate_form():
-    """견적서 작성 폼"""
-    return html_page("estimate_form.html")
+    """견적서 작성 폼 — 담당자 드롭다운은 staff.py에서 채워서 내려줌"""
+    with open("estimate_form.html", encoding="utf-8") as f:
+        page = f.read()
+    page = page.replace("<!--STAFF_OPTIONS-->", staff_options_html(), 1)
+    return HTMLResponse(page, headers=NO_CACHE)
 
 @app.get("/preview.html")
 async def preview():
@@ -624,7 +651,8 @@ async def collect_data(request: Request):
             # PDF 생성 (Google Sheet export)
             print(f"DEBUG: PDF 생성 시도 - file_id: '{file_id}', pdf_filename: '{pdf_filename}'")
             
-            if file_id and export_sheet_to_pdf(file_id, pdf_filename, creds):
+            # 미리보기 화면에서 미리 만들어 둔 PDF가 있으면 그걸 사용 (없거나 실패면 지금 변환)
+            if file_id and (pdf_prefetch_take(file_id, pdf_filename) or export_sheet_to_pdf(file_id, pdf_filename, creds)):
                 timer.lap("PDF 변환")
                 # Google Drive 업로드
                 pdf_id, pdf_link = upload_pdf_to_drive(pdf_filename, get_google_drive_folder_id(), pdf_filename, creds)
@@ -1122,18 +1150,32 @@ def _norm_text(s):
     return re.sub(r'[^0-9a-zA-Z가-힣]', '', str(s or '')).lower()
 
 
+# 거래 검색 결과를 1분간 기억 (같은 회사명을 다시 칠 때 바로 표시). 결과 없음은 기억하지 않음
+# (방금 만든 거래는 Pipedrive 검색에 수십 초 뒤 잡히므로 '다시 검색'이 항상 새로 찾게)
+_DEAL_SEARCH_CACHE = {}  # q -> (저장시각, 결과)
+_DEAL_SEARCH_TTL = 60
+_PD_POOL = ThreadPoolExecutor(max_workers=8)
+
+
 @app.get("/search-deals")
-def search_deals(q: str = "", debug: int = 0):
+def search_deals(q: str = "", debug: int = 0, fresh: int = 0):
     """거래 제목 + 조직명으로 Pipedrive 거래 검색 (공백/특수문자 무시 매칭)
 
     개선 사항:
     1. 검색어 그대로 + 공백 제거 버전 이중 검색 (Pipedrive는 공백 경계를 넘는 매칭 불가)
     2. 조직명 검색 병행 → 거래 제목에 회사명이 없어도 검색됨
     3. 필터를 엄격한 부분문자열 → 정규화 후 비교로 완화
+    4. (2026-11) Pipedrive 호출을 한 번에 동시에 보냄 — 예전엔 최대 14번을 하나씩 순서대로 호출해 약 3초
+    5. (2026-11) 결과 1분 기억, fresh=1이면 기억 무시
     """
     q = (q or "").strip()
     if len(q) < 2:
         return {"deals": []}
+    cache_key = q.lower()
+    if not fresh and not debug:
+        hit = _DEAL_SEARCH_CACHE.get(cache_key)
+        if hit and time.time() - hit[0] < _DEAL_SEARCH_TTL:
+            return {"deals": hit[1], "cached": True}
     TIMEOUT = 10
     try:
         pipedrive_settings = get_pipedrive_config()
@@ -1147,58 +1189,63 @@ def search_deals(q: str = "", debug: int = 0):
         if q_nospace != q and len(q_nospace) >= 2:
             terms.append(q_nospace)
 
-        # 1) 거래 제목 검색 (변형 검색어별로 호출, id로 중복 제거)
+        def pd_get(path, params, label):
+            try:
+                res = HTTP.get(f"{base_url}{path}", params=dict(params, api_token=token), timeout=TIMEOUT)
+                return res.json()
+            except Exception as e:
+                print(f"[WARN] {label} 오류: {e}", flush=True)
+                return {}
+
+        # 1) 거래 제목 검색 + 조직명 검색을 동시에
+        deal_jobs = [_PD_POOL.submit(pd_get, "/deals/search", {"term": t, "fields": "title", "limit": 30}, f"deals/search '{t}'") for t in terms]
+        org_jobs = [_PD_POOL.submit(pd_get, "/organizations/search", {"term": t, "fields": "name", "limit": 10}, f"organizations/search '{t}'") for t in terms]
+
         raw_deals = {}  # deal_id -> deal dict
-        for term in terms:
-            try:
-                res = HTTP.get(f"{base_url}/deals/search", params={
-                    "term": term, "fields": "title", "limit": 30, "api_token": token
-                }, timeout=TIMEOUT)
-                for deal in _pd_extract_search_items(res.json()):
-                    if deal.get("id"):
-                        raw_deals.setdefault(deal["id"], dict(deal))
-            except Exception as e:
-                print(f"[WARN] deals/search '{term}' 오류: {e}", flush=True)
+        for job in deal_jobs:
+            for deal in _pd_extract_search_items(job.result()):
+                if deal.get("id"):
+                    raw_deals.setdefault(deal["id"], dict(deal))
 
-        # 2) 조직명 검색 → 해당 조직의 거래 수집 (제목에 회사명 없는 거래 대비)
-        org_names = {}  # org_id -> name
-        for term in terms:
-            try:
-                org_res = HTTP.get(f"{base_url}/organizations/search", params={
-                    "term": term, "fields": "name", "limit": 10, "api_token": token
-                }, timeout=TIMEOUT)
-                for org in _pd_extract_search_items(org_res.json()):
-                    oname = org.get("name", "") or ""
-                    if org.get("id") and qn in _norm_text(oname):
-                        org_names[org["id"]] = oname
-            except Exception as e:
-                print(f"[WARN] organizations/search '{term}' 오류: {e}", flush=True)
+        org_names = {}  # org_id -> name (제목에 회사명 없는 거래 대비)
+        for job in org_jobs:
+            for org in _pd_extract_search_items(job.result()):
+                oname = org.get("name", "") or ""
+                if org.get("id") and qn in _norm_text(oname):
+                    org_names[org["id"]] = oname
 
-        # v1 /organizations/{id}/deals는 v2에서 폐지 → /deals?org_id= 로 대체
-        # v2 status 필터는 open/won/lost/deleted만 허용 (v1의 all_not_deleted 값 사용 불가) → 생략
-        org_deal_add_times = {}  # deal_id -> add_time (조직 거래 조회 시 함께 확보)
-        for org_id in list(org_names.keys())[:5]:  # 과도한 API 호출 방지
-            try:
-                od_res = HTTP.get(
-                    f"{base_url}/deals",
-                    params={"api_token": token, "limit": 100, "org_id": org_id},
-                    timeout=TIMEOUT
-                )
-                od_data = od_res.json()
-                if od_data.get("success") and od_data.get("data"):
-                    for d in od_data["data"]:
-                        org_deal_add_times[d["id"]] = (d.get("add_time") or "")[:10]
-                        if d["id"] not in raw_deals:
-                            raw_deals[d["id"]] = {
-                                "id": d["id"],
-                                "title": d.get("title", "") or "",
-                                "organization": {"id": org_id, "name": org_names[org_id]},
-                                "value": d.get("value") or 0,
-                                "currency": d.get("currency", "KRW"),
-                                "status": d.get("status", ""),
-                            }
-            except Exception as e:
-                print(f"[WARN] org/{org_id} deals fetch 오류: {e}", flush=True)
+        # 2) 조직별 거래 목록 — 조직명으로 찾은 조직 + 제목 검색 거래의 조직(등록일 보충용)을 한 번에 동시 조회
+        #    v1 /organizations/{id}/deals는 v2에서 폐지 → /deals?org_id= 로 대체
+        #    v2 status 필터는 open/won/lost/deleted만 허용 → 생략
+        name_org_ids = list(org_names.keys())[:5]  # 과도한 API 호출 방지
+        title_org_ids = []  # 검색어에 맞는 제목 검색 거래 중, 위에서 조회하지 않는 조직 (등록일 보충용)
+        for deal in raw_deals.values():
+            org_info = deal.get("organization") or {}
+            oid = org_info.get("id")
+            if not oid or oid in name_org_ids or oid in title_org_ids:
+                continue
+            if qn in _norm_text(deal.get("title", "") or "") or qn in _norm_text(org_info.get("name", "") or ""):
+                title_org_ids.append(oid)
+        fetch_org_ids = name_org_ids + title_org_ids[:5]
+        org_jobs2 = {oid: _PD_POOL.submit(pd_get, "/deals", {"limit": 100, "org_id": oid}, f"org/{oid} deals")
+                     for oid in fetch_org_ids}
+
+        add_times = {}  # deal_id -> add_time
+        for org_id, job in org_jobs2.items():
+            od_data = job.result()
+            if not (od_data.get("success") and od_data.get("data")):
+                continue
+            for d in od_data["data"]:
+                add_times[d["id"]] = (d.get("add_time") or "")[:10]
+                if org_id in name_org_ids and d["id"] not in raw_deals:
+                    raw_deals[d["id"]] = {
+                        "id": d["id"],
+                        "title": d.get("title", "") or "",
+                        "organization": {"id": org_id, "name": org_names[org_id]},
+                        "value": d.get("value") or 0,
+                        "currency": d.get("currency", "KRW"),
+                        "status": d.get("status", ""),
+                    }
 
         # 디버그 모드: 필터링 없이 수집된 원본 반환
         if debug:
@@ -1206,55 +1253,29 @@ def search_deals(q: str = "", debug: int = 0):
 
         # 3) 필터: 정규화 후 제목 또는 조직명에 검색어 포함되면 통과
         deals = []
-        org_id_to_indices = {}  # add_time 미확보 거래의 org_id -> 인덱스
         for deal in raw_deals.values():
             title = deal.get("title", "") or ""
-            org_info = deal.get("organization") or {}
-            org_name = org_info.get("name", "") or ""
-            org_id = org_info.get("id")
-
+            org_name = (deal.get("organization") or {}).get("name", "") or ""
             if qn not in _norm_text(title) and qn not in _norm_text(org_name):
                 continue
-
             value = deal.get("value") or 0
-            value_fmt = f"{int(value):,}" if value else "-"
-
-            idx = len(deals)
             deals.append({
                 "id": deal["id"],
                 "title": title,
                 "org_name": org_name,
-                "value": value_fmt,
+                "value": f"{int(value):,}" if value else "-",
                 "currency": deal.get("currency", "KRW"),
-                "add_time": org_deal_add_times.get(deal["id"], ""),
+                "add_time": add_times.get(deal["id"], ""),
                 "status": deal.get("status", ""),
             })
-            if org_id and not deals[idx]["add_time"]:
-                org_id_to_indices.setdefault(org_id, []).append(idx)
-
-        # 4) add_time 미확보 거래만 조직별 조회로 보충 (검색 API는 add_time 미포함)
-        if org_id_to_indices:
-            deal_add_times = {}
-            for org_id in list(org_id_to_indices.keys())[:5]:
-                try:
-                    org_res = HTTP.get(
-                        f"{base_url}/deals",
-                        params={"api_token": token, "limit": 100, "org_id": org_id},
-                        timeout=TIMEOUT
-                    )
-                    org_data = org_res.json()
-                    if org_data.get("success") and org_data.get("data"):
-                        for d in org_data["data"]:
-                            deal_add_times[d["id"]] = (d.get("add_time") or "")[:10]
-                except Exception as e:
-                    print(f"[WARN] org/{org_id} deals fetch error: {e}", flush=True)
-
-            for deal_dict in deals:
-                if not deal_dict["add_time"]:
-                    deal_dict["add_time"] = deal_add_times.get(deal_dict["id"], "")
 
         # 최신 생성순 정렬
         deals.sort(key=lambda d: d.get("add_time") or "", reverse=True)
+        if deals:
+            _DEAL_SEARCH_CACHE[cache_key] = (time.time(), deals)
+            if len(_DEAL_SEARCH_CACHE) > 300:  # 오래된 것 정리
+                for k in sorted(_DEAL_SEARCH_CACHE, key=lambda k: _DEAL_SEARCH_CACHE[k][0])[:100]:
+                    _DEAL_SEARCH_CACHE.pop(k, None)
         return {"deals": deals}
     except Exception as e:
         print(f"Pipedrive 거래 검색 오류: {e}")
@@ -1488,6 +1509,103 @@ def upload_file_to_pipedrive_deal(deal_id, file_path, file_name):
         if file_handle:
             file_handle.close()
 
+# ===== PDF 미리 만들기 =====
+# 미리보기 화면이 열리면(/prepare-pdf) 뒤에서 PDF 변환을 먼저 해 두고,
+# 'PDF파일 생성하기'(/collect-data)에서 그 파일을 그대로 씀 → PDF 변환 대기시간이 사라짐.
+# 견적 내용이 다시 저장되면(/estimate) 버림. 서버가 재시작됐거나 실패했으면 예전처럼 그 자리에서 변환.
+_PREFETCH = {}            # file_id -> {"gen": int, "path": str|None, "done": Event, "ok": bool}
+_PREFETCH_LOCK = threading.Lock()
+_PREFETCH_DIR = os.path.join(tempfile.gettempdir(), "estimate_pdf_prefetch")
+
+
+def _prefetch_path(file_id, gen):
+    os.makedirs(_PREFETCH_DIR, exist_ok=True)
+    return os.path.join(_PREFETCH_DIR, f"{re.sub(r'[^A-Za-z0-9_-]', '', file_id)}_{gen}.pdf")
+
+
+def pdf_prefetch_invalidate(file_id):
+    with _PREFETCH_LOCK:
+        entry = _PREFETCH.pop(file_id, None)
+    if entry and entry.get("path") and os.path.exists(entry["path"]):
+        try:
+            os.remove(entry["path"])
+        except OSError:
+            pass
+
+
+def pdf_prefetch_start(file_id):
+    """이미 만들고 있거나 만들어 뒀으면 그대로 두고, 아니면 뒤에서 변환 시작"""
+    # 미리보기만 보고 PDF 버튼을 안 누른 경우 남는 파일 정리 (1시간 지난 것)
+    cutoff = (time.time() - 3600) * 1000
+    with _PREFETCH_LOCK:
+        stale = [fid for fid, e in _PREFETCH.items() if e["gen"] < cutoff and e["done"].is_set()]
+    for fid in stale:
+        pdf_prefetch_invalidate(fid)
+    with _PREFETCH_LOCK:
+        if file_id in _PREFETCH:
+            return "already"
+        gen = int(time.time() * 1000)
+        entry = {"gen": gen, "path": None, "done": threading.Event(), "ok": False}
+        _PREFETCH[file_id] = entry
+
+    def work():
+        path = _prefetch_path(file_id, gen)
+        ok = False
+        try:
+            creds, _, _ = get_google_clients()
+            ok = export_sheet_to_pdf(file_id, path, creds)
+        except Exception as e:
+            print(f"[WARN] PDF 미리 만들기 실패 - {file_id}: {e}")
+        with _PREFETCH_LOCK:
+            current = _PREFETCH.get(file_id)
+            if current is entry:          # 그 사이 내용이 바뀌지 않았을 때만 사용 가능으로 표시
+                entry["path"] = path if ok else None
+                entry["ok"] = ok
+            elif ok and os.path.exists(path):
+                os.remove(path)
+        entry["done"].set()
+        print(f"[PDF 미리 만들기] {file_id} {'완료' if ok else '실패'}", flush=True)
+
+    threading.Thread(target=work, daemon=True).start()
+    return "started"
+
+
+def pdf_prefetch_take(file_id, dest_path, wait_seconds=25):
+    """미리 만든 PDF를 dest_path로 옮겨 쓰면 True. 아직 만드는 중이면 최대 wait_seconds 기다림."""
+    with _PREFETCH_LOCK:
+        entry = _PREFETCH.get(file_id)
+    if not entry:
+        return False
+    if not entry["done"].wait(wait_seconds):
+        print(f"[PDF 미리 만들기] {file_id} 대기 시간 초과 → 지금 변환", flush=True)
+        return False
+    with _PREFETCH_LOCK:
+        if _PREFETCH.get(file_id) is not entry or not entry["ok"] or not entry["path"]:
+            return False
+        _PREFETCH.pop(file_id, None)
+        src = entry["path"]
+    try:
+        shutil.move(src, dest_path)
+        print(f"[PDF 미리 만들기] {file_id} 미리 만든 PDF 사용", flush=True)
+        return True
+    except OSError as e:
+        print(f"[WARN] 미리 만든 PDF 이동 실패 → 지금 변환: {e}")
+        return False
+
+
+@app.post("/prepare-pdf")
+async def prepare_pdf(request: Request):
+    """미리보기 화면이 열리면 호출 — PDF 변환을 미리 시작 (기록·업로드는 하지 않음)"""
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    file_id = str(data.get("fileId") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{20,}", file_id):
+        return {"status": "skip"}
+    return {"status": pdf_prefetch_start(file_id)}
+
+
 class StepTimer:
     """단계별 소요 시간을 Render 로그에 남김. 로그에서 '[TIMING]'으로 검색."""
 
@@ -1502,14 +1620,11 @@ class StepTimer:
         self.last = now
 
     def total(self):
-        print(f"[TIMING] {self.name} 총 {time.time() - self.start:.1f}s | " + " → ".join(self.steps))
+        print(f"[TIMING] {self.name} 총 {time.time() - self.start:.1f}s | " + " → ".join(self.steps), flush=True)
 
 
-# 담당자 → 견적번호 기호 (estimate_form.html 담당자 목록의 data-id와 같아야 함)
-PERSON_ID_MAP = {
-    "이훈수": "A", "차재원": "B", "하철용": "C",
-    "노재익": "D", "전준영": "E", "황영태": "F",
-}
+# 담당자 → 견적번호 기호 (staff.py가 유일한 원본)
+PERSON_ID_MAP = {p["name"]: p["id"] for p in STAFF}
 AUTO_NUMBER_RE = re.compile(r"^DLP(\d{6})-([A-Z])-(\d+)$")
 
 

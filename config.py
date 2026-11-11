@@ -303,22 +303,7 @@ def get_google_credentials():
         traceback.print_exc()
         return None
 
-def get_pipedrive_config():
-    """환경변수에서 Pipedrive 설정 읽기"""
-    return {
-        'api_token': os.environ.get("PIPEDRIVE_API_TOKEN"),
-        'domain': os.environ.get("PIPEDRIVE_DOMAIN"),
-        'pipeline_id': int(os.environ.get("PIPEDRIVE_PIPELINE_ID", 4)),
-        'stage_id': int(os.environ.get("PIPEDRIVE_STAGE_ID", 47)),
-        'user_mapping': {
-            "이훈수": 23659842,
-            "차재원": 23787233,
-            "장진호": 23823247,
-            "하철용": 23839131,
-            "노재익": 23839109,
-            "전준영": 23839164
-        }
-    }
+# get_pipedrive_config는 main.py에 있음 (담당자 목록은 staff.py)
 
 def get_google_drive_folder_id():
     """환경변수에서 Google Drive 폴더 ID 읽기"""
