@@ -527,6 +527,14 @@
       }
     }
   
+    /* 빠진 입력칸 표시 */
+    .field-error { border-color: #e74c3c !important; background-color: #fff5f5 !important; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12) !important; }
+    /* 임시저장 불러옴 안내 */
+    .draft-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 14px; background: #e8f5f5; border: 1px solid #2A8486; border-radius: 8px; font-size: 13px; color: #1f3d3e; }
+    .draft-banner-btn { padding: 6px 12px; border: 1px solid #2A8486; border-radius: 6px; background: #fff; color: #2A8486; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .draft-banner-btn:hover { background: #2A8486; color: #fff; }
+    /* 거래 검색 중 표시 */
+    .deal-spinner { width: 14px; height: 14px; border: 2px solid #cfe6e6; border-top-color: #2A8486; border-radius: 50%; display: inline-block; animation: ep-spin 0.8s linear infinite; flex: none; }
     /* ===== 진행 화면 (견적서 생성 / PDF 생성 대기) ===== */
     .ep-overlay { position: fixed; inset: 0; background: rgba(15, 40, 41, 0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: ep-fade 0.2s ease; padding: 16px; box-sizing: border-box; }
     @keyframes ep-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -601,12 +609,7 @@
           <label>담당자 <span class="required">*</span></label>
           <select id="supplier-person" required>
             <option value="" data-email="" data-phone="" data-id="" disabled selected hidden>담당자를 선택하세요</option>
-            <option value="애니트론사업부 이훈수 이사" data-email="hslee@bitekps.com" data-phone="010-3252-0593" data-id="A">애니트론사업부 이훈수 이사</option>
-            <option value="애니트론사업부 차재원 차장" data-email="cjw@bitekps.com" data-phone="010-5035-7791" data-id="B">애니트론사업부 차재원 차장</option>
-            <option value="애니트론사업부 하철용 차장" data-email="cyha@bitekps.com" data-phone="010-6206-7656" data-id="C">애니트론사업부 하철용 차장</option>
-            <option value="애니트론사업부 노재익 차장" data-email="jake@bitekps.com" data-phone="010-6419-0945" data-id="D">애니트론사업부 노재익 차장</option>
-            <option value="애니트론사업부 전준영 과장" data-email="methu78@bitekps.com" data-phone="010-2866-4914" data-id="E">애니트론사업부 전준영 과장</option>
-            <option value="애니트론사업부 황영태 대리" data-email="ythwang@bitekps.com" data-phone="010-8255-5067" data-id="F">애니트론사업부 황영태 대리</option>
+            <!--STAFF_OPTIONS--><!-- 담당자 목록은 staff.py에서 서버가 채움 -->
           </select>
         </div>
         <div class="form-group">
@@ -1883,16 +1886,6 @@ document.getElementById('add-product-bottom').addEventListener('click', addProdu
 document.getElementById('duplicate-product').addEventListener('click', duplicateLastProduct);
 addProductSet(); // 최초 1개 세트 표시
 
-// 담당자-연락처 매핑
-const supplierContacts = {
-  "이훈수": "hslee@bitekps.com / 010-3252-0593",
-  "차재원": "cjw@bitekps.com / 010-5035-7791",
-  "황영태": "ythwang@bitekps.com / 010-8255-5067",
-  "하철용": "cyha@bitekps.com / 010-6206-7656",
-  "노재익": "jake@bitekps.com / 010-6419-0945",
-  "전준영": "methu78@bitekps.com / 010-2866-4914"
-};
-
 document.getElementById('supplier-person').addEventListener('change', function() {
   const selected = this.options[this.selectedIndex];
   // 연락처 자동 표시
@@ -2014,125 +2007,70 @@ function collectEstimateData() {
   };
 }
 
+// ===== 입력 확인: 빠진 칸을 한꺼번에 빨갛게 표시하고 첫 칸으로 이동 =====
+// 빨간 표시는 그 칸을 고치면 바로 사라짐
+['input', 'change'].forEach(function(type) {
+  document.addEventListener(type, function(e) {
+    const el = e.target;
+    if (el && el.classList && el.classList.contains('field-error')) el.classList.remove('field-error');
+  }, true);
+});
+
 function validateEstimateForm() {
-  console.log("=== 견적서 유효성 검사 시작 ===");
-  
-  // 필수 입력값 체크
-  const date = document.getElementById('date').value;
-  const number = document.getElementById('number').value;
-  const supplierPerson = document.getElementById('supplier-person').value;
-  const receiverCompany = document.getElementById('receiver-company').value;
-  const productCategory = document.getElementById('product-category').value;
-  const deliveryDate = document.getElementById('delivery-date').value;
-  
-  console.log("입력값 확인:");
-  console.log("- 견적일자:", date);
-  console.log("- 견적번호:", number);
-  console.log("- 공급자 담당자:", supplierPerson);
-  console.log("- 수신자 회사명:", receiverCompany);
-  console.log("- 견적제품:", productCategory);
-  console.log("- 납기일:", deliveryDate);
-  
-  if (!date) {
-    console.log("❌ 견적일자 누락");
-    alert('견적일자를 입력해 주세요.');
-    return false;
+  document.querySelectorAll('.field-error').forEach(function(el) { el.classList.remove('field-error'); });
+  const missing = [];
+  function need(el, label, ok) {
+    if (ok) return;
+    missing.push({ el: el, label: label });
+    if (el) el.classList.add('field-error');
   }
-  if (!number) {
-    console.log("❌ 견적번호 누락");
-    alert('견적번호를 입력해 주세요.');
-    return false;
-  }
-  if (!supplierPerson) {
-    console.log("❌ 공급자 담당자 누락");
-    alert('공급자 담당자를 선택해 주세요.');
-    return false;
-  }
-  if (!receiverCompany) {
-    console.log("❌ 수신자 회사명 누락");
-    alert('수신자 회사명을 입력해 주세요.');
-    return false;
-  }
-  // Pipedrive 거래 선택 필수
-  const pipedriveDealId = document.getElementById('pipedrive-deal-id').value;
-  if (!pipedriveDealId) {
-    console.log("❌ Pipedrive 거래 미선택");
-    alert('📋 파이프드라이브에 거래가 없습니다.\n\n유효PP로 체크하신 후 (파이프드라이브 리드로 전송됨) 리드수신함의 리드를 \'거래로 전환\' 하시거나,\n본인 파이프라인에 거래를 직접 생성하신 뒤\n회사명으로 검색하여 해당 거래를 선택해 주세요.');
-    document.getElementById('receiver-company').focus();
-    return false;
-  }
-  // 견적제품 선택 필수
-  if (!productCategory) {
-    console.log("❌ 견적제품 누락");
-    alert('견적제품을 선택해 주세요.');
-    return false;
-  }
-  // 제품정보 필수값 체크 (비고 제외)
+  function byId(id) { return document.getElementById(id); }
+  function val(el) { return el ? String(el.value || '').trim() : ''; }
+
+  need(byId('date'), '견적일자', val(byId('date')));
+  const num = val(byId('number'));
+  need(byId('number'), '견적번호', num && num !== '생성중...');
+  need(byId('supplier-person'), '담당자', val(byId('supplier-person')));
+  need(byId('receiver-company'), '수신자 회사명', val(byId('receiver-company')));
+  const noDeal = !val(byId('pipedrive-deal-id'));
+  need(byId('receiver-company'), 'Pipedrive 거래 선택 (회사명 입력 후 목록에서 선택)', !noDeal);
+  need(byId('product-category'), '견적제품 유형', val(byId('product-category')));
+
   const sets = document.querySelectorAll('.product-set');
-  if (sets.length === 0) {
-    alert('제품정보를 1개 이상 입력해 주세요.');
-    return false;
-  }
-  for (let i = 0; i < sets.length; i++) {
-    const set = sets[i];
-    const majorCategory = set.querySelector('.product-major-category').value;
+  if (sets.length === 0) missing.push({ el: byId('products-area'), label: '제품정보 (1개 이상)' });
+  sets.forEach(function(set, i) {
+    const n = '제품 ' + (i + 1) + ' ';
+    const typeEl = set.querySelector('.product-type') || set.querySelector('.product-type-input');
+    const qtyEl = set.querySelector('.product-qty');
+    const priceEl = set.querySelector('.product-price');
+    need(set.querySelector('.product-major-category'), n + '대분류', val(set.querySelector('.product-major-category')));
+    need(typeEl, n + '구분', val(typeEl));
+    need(set.querySelector('.product-name'), n + '제품명', val(set.querySelector('.product-name')));
+    need(set.querySelector('.product-detail'), n + '상세정보', val(set.querySelector('.product-detail')));
+    need(qtyEl, n + '수량', Number(val(qtyEl).replace(/,/g, '')) > 0);
+    // 공급단가는 0원도 허용 (무상 제공 등)
+    need(priceEl, n + '공급단가', val(priceEl) !== '');
+    need(set.querySelector('.product-total'), n + '합계', val(set.querySelector('.product-total')));
+  });
 
-    // 구분 필드가 input인지 select인지 확인 (직접입력 모드)
-    const typeElement = set.querySelector('.product-type') || set.querySelector('.product-type-input');
-    const type = typeElement ? typeElement.value : '';
+  need(byId('delivery-date'), '납기일', val(byId('delivery-date')));
+  need(byId('product-training'), '제품교육', val(byId('product-training')));
 
-    const nameElement = set.querySelector('.product-name');
-    const name = nameElement.tagName === 'INPUT' ? nameElement.value : nameElement.value;
-    const detail = set.querySelector('.product-detail').value;
-    const qty = set.querySelector('.product-qty').value;
-    const price = set.querySelector('.product-price').value;
-    const total = set.querySelector('.product-total').value;
-    if (!majorCategory) {
-      alert(`제품 ${i+1}의 대분류를 선택해 주세요.`);
-      return false;
-    }
-    if (!type) {
-      alert(`제품 ${i+1}의 구분을 입력해 주세요.`);
-      return false;
-    }
-    if (!name) {
-      alert(`제품 ${i+1}의 제품명을 입력해 주세요.`);
-      return false;
-    }
-    if (!detail) {
-      alert(`제품 ${i+1}의 상세정보를 입력해 주세요.`);
-      return false;
-    }
-    if (!qty) {
-      alert(`제품 ${i+1}의 수량을 입력해 주세요.`);
-      return false;
-    }
-    if (!price && price !== 0) {
-      alert(`제품 ${i+1}의 공급단가를 입력해 주세요.`);
-      return false;
-    }
-    if (!total) {
-      alert(`제품 ${i+1}의 합계를 입력해 주세요.`);
-      return false;
-    }
+  if (missing.length === 0) return true;
+
+  const first = missing[0].el;
+  if (first && first.scrollIntoView) {
+    first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(function() { try { first.focus({ preventScroll: true }); } catch (e) {} }, 400);
   }
-  // 납기일 필수
-  if (!deliveryDate) {
-    console.log("❌ 납기일 누락");
-    alert('납기일을 입력해 주세요.');
-    return false;
+  const labels = missing.map(function(m) { return m.label; });
+  let msg = '빨갛게 표시된 칸을 확인해 주세요. (' + labels.length + '개)\n\n- ' + labels.join('\n- ');
+  if (noDeal) {
+    msg += '\n\n📋 Pipedrive 거래가 없다면: 유효PP로 체크한 뒤(파이프드라이브 리드로 전송됨) 리드수신함에서 \'거래로 전환\'하거나, ' +
+      '본인 파이프라인에 거래를 직접 만든 다음 회사명으로 검색해서 선택해 주세요.';
   }
-  
-  // 제품교육 필수
-  const productTraining = document.getElementById('product-training').value;
-  if (!productTraining) {
-    console.log("❌ 제품교육 누락");
-    alert('제품교육을 선택해 주세요.');
-    return false;
-  }
-  
-  console.log("✅ 모든 필수 입력값 검증 완료");
-  return true;
+  alert(msg);
+  return false;
 }
 
 // ===== 진행 화면 (견적서 생성 / PDF 생성 대기) =====
@@ -2367,6 +2305,7 @@ document.getElementById('preview-btn').addEventListener('click', sendEstimateToF
 // ===== 처음부터 다시시작 (전체 초기화) =====
 document.getElementById('full-reset-btn').addEventListener('click', function() {
   if (!confirm('입력한 모든 내용이 사라집니다. 처음부터 다시 시작하시겠습니까?')) return;
+  if (window.discardDraft) window.discardDraft();
   try {
     localStorage.removeItem('estimateData');
     sessionStorage.removeItem('estimateData');
@@ -2432,6 +2371,7 @@ document.getElementById('product-reset-btn').addEventListener('click', function(
   resetProductTrainingField();
 
   updateGrandTotal();
+  if (window.saveDraftSoon) window.saveDraftSoon();
 });
 
 // 페이지 로드 시 fileId 상태 확인 및 데이터 복원
@@ -2508,18 +2448,38 @@ window.addEventListener('pageshow', function(event) {
     setTimeout(() => { document.getElementById('deal-search-dropdown').style.display = 'none'; }, 200);
   });
 
-  window.searchDeals = async function(q) {
+  // 같은 검색어는 1분간 바로 보여줌 (서버도 1분 기억). '다시 검색'은 항상 새로 찾음
+  const dealCache = new Map();
+  let searchSeq = 0;
+
+  window.searchDeals = async function(q, fresh) {
     const dropdown = document.getElementById('deal-search-dropdown');
-    dropdown.innerHTML = '<div style="padding:10px;color:#999;font-size:13px;">검색 중...</div>';
+    const seq = ++searchSeq;
+    const hit = !fresh && dealCache.get(q);
+    let json;
+    if (hit && Date.now() - hit.t < 60000) {
+      json = hit.json;
+    } else {
+      dropdown.innerHTML = '<div style="padding:10px;color:#666;font-size:13px;display:flex;align-items:center;gap:8px;">' +
+        '<span class="deal-spinner"></span>Pipedrive에서 \'' + q.replace(/</g, '&lt;') + '\' 거래 찾는 중...</div>';
+      dropdown.style.display = 'block';
+      try {
+        const res = await fetch(`${API_BASE}/search-deals?q=${encodeURIComponent(q)}${fresh ? '&fresh=1' : ''}`);
+        json = await res.json();
+      } catch (e) {
+        if (seq === searchSeq) dropdown.innerHTML = '<div style="padding:10px;color:#e74c3c;font-size:13px;">검색 오류 — 잠시 후 다시 입력해 주세요</div>';
+        return;
+      }
+      if (json.deals && json.deals.length) dealCache.set(q, { t: Date.now(), json: json });
+    }
+    if (seq !== searchSeq) return; // 그 사이 다른 글자를 더 쳤으면 이전 결과는 버림
     dropdown.style.display = 'block';
     try {
-      const res = await fetch(`${API_BASE}/search-deals?q=${encodeURIComponent(q)}`);
-      const json = await res.json();
       if (!json.deals || json.deals.length === 0) {
         const safeQ = q.replace(/'/g, "\\'");
         dropdown.innerHTML = '<div style="padding:10px;font-size:13px;color:#999;">검색 결과 없음' +
           '<div style="margin-top:4px;font-size:12px;color:#bbb;">방금 만든 거래는 Pipedrive 검색 반영까지 수십 초 걸릴 수 있어요.</div>' +
-          '<a href="#" onclick="searchDeals(\'' + safeQ + '\');return false;" style="display:inline-block;margin-top:6px;color:#2A8486;font-weight:600;">🔄 다시 검색</a></div>';
+          '<a href="#" onclick="searchDeals(\'' + safeQ + '\', true);return false;" style="display:inline-block;margin-top:6px;color:#2A8486;font-weight:600;">🔄 다시 검색</a></div>';
         return;
       }
       dropdown.innerHTML = json.deals.map(deal => {
@@ -2922,6 +2882,101 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+
+// ===== 오늘 날짜 기본값 + 작성 중 자동 임시저장 =====
+// 입력할 때마다 0.6초 뒤 이 브라우저에 저장 → 새로고침·탭을 닫았다 열어도 이어서 작성
+// (미리보기·뒤로가기 복원과 같은 저장소 'estimateData'를 씀. PDF 완료 후 '처음으로'나 '처음부터 다시시작'을 누르면 지워짐)
+(function() {
+  const DRAFT_KEY = 'estimateData';
+  let saveTimer = null;
+  let dirty = false;
+  let storageOK = true;
+
+  function hasContent(d) {
+    return !!(d && (d.receiver_company || d.receiver_person || d.pipedrive_deal_id ||
+      (d.products || []).some(function(p) { return p.name || p.type || p.detail; })));
+  }
+
+  function saveDraft() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (document.querySelector('.ep-overlay')) return; // 견적서 생성 중에는 생성 로직이 직접 저장
+    let d;
+    try { d = collectEstimateData(); } catch (e) { return; }
+    if (!hasContent(d)) { dirty = false; return; }
+    // 빈 제품 줄은 저장하지 않음 (복원할 때 수량 0 등으로 채워지는 것 방지)
+    d.products = (d.products || []).filter(function(p) { return p.name || p.type || p.detail; });
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+      storageOK = true;
+      dirty = false;
+    } catch (e) {
+      storageOK = false; // 시크릿 모드·저장공간 부족 등
+    }
+  }
+
+  function saveDraftSoon(e) {
+    if (e && e.target && e.target.closest && e.target.closest('.ep-overlay')) return;
+    dirty = true;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveDraft, 600);
+  }
+
+  document.addEventListener('input', saveDraftSoon);
+  document.addEventListener('change', saveDraftSoon);
+  window.saveDraftSoon = saveDraftSoon;
+  // '처음부터 다시시작' 직전에 호출 — 나가면서 방금 내용을 다시 저장하지 않도록
+  window.discardDraft = function() { clearTimeout(saveTimer); saveTimer = null; dirty = false; };
+
+  // 나갈 때: 아직 저장 안 된 입력이 있으면 바로 저장. 저장이 불가능한 환경이면 경고창
+  window.addEventListener('beforeunload', function(e) {
+    if (!dirty) return;
+    saveDraft();
+    if (dirty && !storageOK) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  function todayStr() {
+    const t = new Date();
+    return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  }
+
+  function showRestoredBanner() {
+    const notice = document.querySelector('.required-notice');
+    if (!notice || document.getElementById('draft-restored-banner')) return;
+    const box = document.createElement('div');
+    box.id = 'draft-restored-banner';
+    box.className = 'draft-banner';
+    const text = document.createElement('span');
+    text.textContent = '📝 작성 중이던 견적을 불러왔습니다.';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'draft-banner-btn';
+    btn.textContent = '새 견적 시작';
+    btn.addEventListener('click', function() { document.getElementById('full-reset-btn').click(); });
+    box.appendChild(text);
+    box.appendChild(btn);
+    notice.parentNode.insertBefore(box, notice);
+  }
+
+  // 위의 tryRestoreFormData(저장 내용 복원)가 먼저 실행된 뒤 동작
+  document.addEventListener('DOMContentLoaded', function() {
+    let restored = null;
+    try { restored = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) {}
+    if (hasContent(restored)) showRestoredBanner();
+
+    const dateEl = document.getElementById('date');
+    if (dateEl && !dateEl.value) {
+      dateEl.value = todayStr();
+      // 담당자가 이미 선택돼 있으면 견적번호도 바로 생성
+      if (document.getElementById('supplier-person').value && !document.getElementById('number').value) {
+        autoFillEstimateNumber();
+      }
+    }
+  });
+})();
 </script>
 </body>
 </html>

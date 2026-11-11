@@ -409,6 +409,21 @@ window.addEventListener('pageshow', function(e) {
   if (e.persisted) document.querySelectorAll('.ep-overlay').forEach(function(x) { x.remove(); });
 });
 
+// 미리보기가 열리면 서버가 PDF 변환을 미리 시작 → 'PDF파일 생성하기'를 누를 때 변환 대기 없음
+// (기록·업로드·Pipedrive 첨부는 버튼을 눌러야만 진행됨)
+(function() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('estimateData') || 'null');
+    const fid = new URLSearchParams(window.location.search).get('id') || (saved && saved.fileId);
+    if (!fid) return;
+    fetch(`${window.location.origin}/prepare-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileId: fid })
+    }).catch(function() {});
+  } catch (e) {}
+})();
+
 // PDF 생성 함수 추가
 async function generatePDF() {
   const button = document.getElementById('download-pdf');
@@ -465,7 +480,7 @@ async function generatePDF() {
     progress.stepLater(2, 7000);
     progress.stepLater(3, 11000);
 
-    const response = await fetch('https://auto-estimate.onrender.com/collect-data', {
+    const response = await fetch(`${window.location.origin}/collect-data`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
