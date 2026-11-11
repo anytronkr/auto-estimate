@@ -167,7 +167,35 @@ font-size: 2.2em;
 font-weight: 800;
 letter-spacing: -1px;
 }
-</style>
+
+    /* ===== 진행 화면 (견적서 생성 / PDF 생성 대기) ===== */
+    .ep-overlay { position: fixed; inset: 0; background: rgba(15, 40, 41, 0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: ep-fade 0.2s ease; padding: 16px; box-sizing: border-box; }
+    @keyframes ep-fade { from { opacity: 0; } to { opacity: 1; } }
+    .ep-card { background: #fff; border-radius: 16px; width: 100%; max-width: 420px; padding: 28px 28px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); box-sizing: border-box; font-family: 'Pretendard', 'Noto Sans KR', Arial, sans-serif; }
+    .ep-title { font-size: 18px; font-weight: 700; color: #1f3d3e; margin: 0 0 4px; }
+    .ep-sub { font-size: 13px; color: #7a8a8b; margin: 0 0 18px; }
+    .ep-bar { height: 6px; background: #e6f0f0; border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+    .ep-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #2A8486, #3fb6b2); border-radius: 3px; transition: width 0.5s ease; }
+    .ep-steps { list-style: none; margin: 0; padding: 0; }
+    .ep-steps li { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 14px; color: #a3b1b2; transition: color 0.2s ease; }
+    .ep-ic { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #d5e1e1; flex: none; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; box-sizing: border-box; }
+    .ep-steps li.active { color: #1f3d3e; font-weight: 600; }
+    .ep-steps li.active .ep-ic { border-color: #cfe6e6; border-top-color: #2A8486; animation: ep-spin 0.8s linear infinite; }
+    .ep-steps li.done { color: #2A8486; }
+    .ep-steps li.done .ep-ic { background: #2A8486; border-color: #2A8486; }
+    .ep-steps li.done .ep-ic::after { content: '✓'; }
+    .ep-steps li.error { color: #c0392b; font-weight: 600; }
+    .ep-steps li.error .ep-ic { background: #e74c3c; border-color: #e74c3c; }
+    .ep-steps li.error .ep-ic::after { content: '!'; }
+    .ep-note { display: none; margin-top: 14px; padding: 10px 12px; background: #fff8e5; border: 1px solid #f3dd9b; border-radius: 8px; font-size: 13px; line-height: 1.5; color: #6b5200; }
+    .ep-note.show { display: block; }
+    .ep-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 12px; color: #9aa8a9; }
+    @keyframes ep-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .ep-steps li.active .ep-ic { animation: none; border-color: #2A8486; }
+      .ep-bar > i { transition: none; } .ep-overlay { animation: none; }
+    }
+  </style>
 </head>
 <body>
 <div class="container">
@@ -323,46 +351,84 @@ if (!estimateData) {
   }
 }
 
+// ===== 진행 화면 (견적서 생성 / PDF 생성 대기) =====
+// showProgress(제목, [단계...]) → { step(i), stepLater(i, ms), complete(), note(text), fail(), leave(), close() }
+function showProgress(title, steps) {
+  document.querySelectorAll('.ep-overlay').forEach(function(x) { x.remove(); });
+  const el = document.createElement('div');
+  el.className = 'ep-overlay';
+  el.setAttribute('role', 'alertdialog');
+  el.setAttribute('aria-live', 'polite');
+  el.innerHTML = '<div class="ep-card"><p class="ep-title"></p>' +
+    '<p class="ep-sub">창을 닫거나 새로고침하지 마세요.</p>' +
+    '<div class="ep-bar"><i></i></div><ul class="ep-steps"></ul>' +
+    '<div class="ep-note"></div>' +
+    '<div class="ep-foot"><span>진행 단계는 서버 작업에 맞춰 표시됩니다</span><span class="ep-time">0초</span></div></div>';
+  el.querySelector('.ep-title').textContent = title;
+  const ul = el.querySelector('.ep-steps');
+  steps.forEach(function(s) {
+    const li = document.createElement('li');
+    const ic = document.createElement('span'); ic.className = 'ep-ic';
+    const tx = document.createElement('span'); tx.textContent = s;
+    li.appendChild(ic); li.appendChild(tx); ul.appendChild(li);
+  });
+  document.body.appendChild(el);
+
+  const items = Array.from(ul.children);
+  const bar = el.querySelector('.ep-bar > i');
+  const timeEl = el.querySelector('.ep-time');
+  const t0 = Date.now();
+  const tick = setInterval(function() { timeEl.textContent = Math.floor((Date.now() - t0) / 1000) + '초'; }, 500);
+  const timers = [];
+  const guard = function(e) { e.preventDefault(); e.returnValue = ''; };
+  window.addEventListener('beforeunload', guard);
+  let cur = -1;
+
+  function paint() {
+    items.forEach(function(li, i) { li.className = i < cur ? 'done' : (i === cur ? 'active' : ''); });
+    // 진행 중인 단계는 절반만큼 채워서 멈춘 것처럼 보이지 않게
+    const filled = Math.min(cur, items.length) + (cur < items.length ? 0.5 : 0);
+    bar.style.width = Math.round(Math.max(0, filled) / items.length * 100) + '%';
+  }
+  function stopTimers() { timers.forEach(clearTimeout); timers.length = 0; }
+
+  return {
+    step: function(i) { if (i > cur) { cur = Math.min(i, items.length - 1); paint(); } },
+    // 서버 응답 하나로 여러 단계가 끝나는 경우: 예상 시간에 맞춰 앞 단계만 넘기고 마지막 단계는 응답을 기다림
+    stepLater: function(i, ms) { const self = this; timers.push(setTimeout(function() { self.step(i); }, ms)); },
+    complete: function() { stopTimers(); cur = items.length; paint(); },
+    note: function(text) { const n = el.querySelector('.ep-note'); n.textContent = text; n.classList.add('show'); },
+    fail: function() { stopTimers(); if (items[cur]) items[cur].className = 'error'; },
+    leave: function() { stopTimers(); window.removeEventListener('beforeunload', guard); },
+    close: function() { stopTimers(); clearInterval(tick); window.removeEventListener('beforeunload', guard); el.remove(); }
+  };
+}
+
+// 뒤로가기로 돌아왔을 때(bfcache) 남아 있는 진행 화면 정리
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) document.querySelectorAll('.ep-overlay').forEach(function(x) { x.remove(); });
+});
+
 // PDF 생성 함수 추가
 async function generatePDF() {
   const button = document.getElementById('download-pdf');
+  if (button.disabled) return; // 이미 처리 중이면 무시 (중복 클릭 방지)
   const originalText = button.textContent;
-
-  // 단계별 버튼 메시지
-  const btnSteps = [
-    { text: '견적서 데이터 전송 중...', delay: 0 },
-    { text: 'PDF 변환 중...', delay: 3000 },
-    { text: 'Google Drive 업로드 중...', delay: 7000 },
-    { text: '거래 등록 중...', delay: 12000 },
-    { text: '거의 다 됐어요...', delay: 18000 },
-  ];
-  let btnTimers = [];
-
-  function startBtnMessages() {
-    btnSteps.forEach(step => {
-      btnTimers.push(setTimeout(() => { button.textContent = step.text; }, step.delay));
-    });
-  }
-  function stopBtnMessages() {
-    btnTimers.forEach(t => clearTimeout(t));
-    btnTimers = [];
-  }
+  let navigating = false;
+  const progress = showProgress('PDF 견적서를 만들고 있어요', [
+    'PDF 변환',
+    '구글 드라이브 저장',
+    'Pipedrive 거래에 첨부',
+    '견적서 발행목록 기록'
+  ]);
 
   try {
-    // 버튼 비활성화 및 로딩 애니메이션 적용
     button.disabled = true;
-    button.classList.add('loading');
-    startBtnMessages();
+    button.textContent = '처리 중...';
+    progress.step(0);
 
-    // 즉시 시각적 피드백을 위한 약간의 지연
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
     console.log('=== PDF 생성 및 전체 프로세스 시작 ===');
-    
-    // 최소 로딩 시간 설정 (너무 빨리 넘어가는 것 방지)
-    const startTime = Date.now();
-    const minLoadingTime = 2000; // 최소 2초 로딩
-    
+
     const estimateData = localStorage.getItem('estimateData');
     if (!estimateData) {
       alert('견적 데이터가 없습니다.');
@@ -393,9 +459,12 @@ async function generatePDF() {
     
     console.log('전송할 데이터:', data);
 
-    // 1단계: PDF 생성 및 업로드
-    console.log('1단계: PDF 생성 및 업로드 시작...');
-    
+    // 서버 요청 하나로 4단계가 모두 처리됨 → 예상 시간에 맞춰 표시, 마지막 단계는 응답을 기다림
+    // (예상 시간은 Render 로그의 [TIMING] 기록을 보고 조정)
+    progress.stepLater(1, 4000);
+    progress.stepLater(2, 7000);
+    progress.stepLater(3, 11000);
+
     const response = await fetch('https://auto-estimate.onrender.com/collect-data', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -412,18 +481,18 @@ async function generatePDF() {
 
     const result = await response.json();
     console.log('서버 응답:', result);
-    
-    stopBtnMessages();
 
     if (result.status === 'success') {
-      button.textContent = '완료!';
-      // 최소 로딩 시간 보장
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      
-      console.log(`성공! ${remainingTime}ms 후 페이지 이동...`);
-      
+      progress.complete();
+      let holdMs = 300;
+      if (result.already_issued) {
+        progress.note('이미 발행된 견적이라 다시 만들지 않았습니다. 기존 PDF로 이동합니다.');
+        holdMs = 2000;
+      }
+      navigating = true;
+
       setTimeout(() => {
+        progress.leave();
         // PDF 링크가 있으면 PDF 공유화면으로 이동 (원본 fileId도 함께 전달)
         if (result.pdf_link) {
           const match = result.pdf_link.match(/\/d\/([\w-]+)/);
@@ -437,22 +506,39 @@ async function generatePDF() {
           localStorage.removeItem('productCategory');
           window.location.href = 'index.html';
         }
-      }, remainingTime);
+      }, holdMs);
     } else {
-      // 실패 시에만 애니메이션 중단하고 오류 표시
-      alert('PDF 생성 실패: ' + (result.message || '알 수 없는 오류'));
+      progress.fail();
+      alert('PDF를 만들지 못했습니다.\n\n' + (result.message || '알 수 없는 오류'));
     }
   } catch (e) {
-    stopBtnMessages();
     console.error('PDF 생성 중 오류:', e);
-    alert('PDF 생성 중 오류가 발생했습니다.\n' + e.message);
+    progress.fail();
+    const what = String(e && e.message || '').startsWith('서버 오류')
+      ? 'PDF를 만드는 중 서버에서 오류가 났습니다.'
+      : 'PDF를 만드는 중 서버와 연결이 끊겼습니다.';
+    alert(what + '\n\n' +
+      '이미 처리됐을 수 있으니, 다시 누르기 전에 발행목록이나 Pipedrive 거래를 먼저 확인해 주세요.\n' +
+      '(처리가 끝난 견적은 다시 눌러도 두 번 기록되지 않습니다.)');
   } finally {
-    // 버튼 상태 복원
-    button.disabled = false;
-    button.classList.remove('loading');
-    button.textContent = originalText;
+    // PDF 화면으로 넘어가는 중에는 버튼을 다시 열지 않음 (중복 발행 방지)
+    if (!navigating) {
+      progress.close();
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
 }
+
+// PDF 화면에서 뒤로가기로 돌아오면 버튼 다시 사용 가능하게
+window.addEventListener('pageshow', function(e) {
+  if (!e.persisted) return;
+  const btn = document.getElementById('download-pdf');
+  if (btn && btn.disabled) {
+    btn.disabled = false;
+    btn.textContent = 'PDF파일 생성하기';
+  }
+});
 
 document.getElementById('back-to-edit').onclick = function() {
 history.back();
