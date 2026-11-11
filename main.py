@@ -522,25 +522,31 @@ async def test_cell_map():
             "cell_map_type": str(type(CELL_MAP))
         }
 
+def html_page(filename):
+    """화면 파일 응답. 'no-cache' = 브라우저가 열 때마다 서버에서 최신 화면을 받음.
+    배포하면 영업팀 화면에 바로 새 버전이 뜸 (예전에는 헤더가 없어 몇 시간 예전 화면이 남았음).
+    견적폼도 압축 전송 시 약 29KB라 매번 받아도 체감 차이 없음 (2026-11-11 측정 0.16초)"""
+    return FileResponse(filename, headers={"Cache-Control": "no-cache"})
+
 @app.get("/")
 async def root():
     """메인 페이지"""
-    return FileResponse("index.html")
+    return html_page("index.html")
 
 @app.get("/estimate_form.html")
 async def estimate_form():
     """견적서 작성 폼"""
-    return FileResponse("estimate_form.html")
+    return html_page("estimate_form.html")
 
 @app.get("/preview.html")
 async def preview():
     """미리보기 페이지"""
-    return FileResponse("preview.html")
+    return html_page("preview.html")
 
 @app.get("/pdf-sharing.html")
 async def pdf_sharing():
     """PDF 공유 페이지"""
-    return FileResponse("pdf-sharing.html")
+    return html_page("pdf-sharing.html")
 
 @app.post("/create-estimate-template")
 async def create_estimate_template():
