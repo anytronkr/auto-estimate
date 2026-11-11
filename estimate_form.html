@@ -527,6 +527,10 @@
       }
     }
   
+    /* 입력칸 아래 안내 문구 */
+    .field-hint { margin-top: 6px; font-size: 12px; line-height: 1.5; color: #4f6b6c; }
+    .field-hint b { color: #2A8486; }
+    .field-hint-sub { display: block; color: #8a9a9b; }
     /* 빠진 입력칸 표시 */
     .field-error { border-color: #e74c3c !important; background-color: #fff5f5 !important; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12) !important; }
     /* 임시저장 불러옴 안내 */
@@ -592,7 +596,11 @@
         </div>
         <div class="form-group">
           <label>견적번호 <span class="required">*</span></label>
-          <input type="text" id="number" placeholder="예시) DLP_250707-1" required>
+          <input type="text" id="number" placeholder="예시) DLP261111-C-1" required>
+          <div class="field-hint">
+            💡 견적일자와 담당자를 선택하면 견적번호가 <b>자동으로 생성</b>됩니다. 필요하면 직접 입력해도 됩니다.
+            <span class="field-hint-sub">직접 입력한 뒤 견적일자나 담당자를 바꾸면 자동 번호로 다시 바뀝니다.</span>
+          </div>
         </div>
       </div>
     </div>
