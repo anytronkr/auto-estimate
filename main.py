@@ -169,6 +169,130 @@ async def ping():
     """핑 엔드포인트"""
     return {"message": "pong", "timestamp": datetime.now().isoformat()}
 
+
+# ── 제품 목록: 구글 시트 「제품사양 › 제품정보」에서 읽음 ──────────────────
+# 영업팀이 시트에서 제품·단가·Special DC를 고치면 배포 없이 견적 화면에 반영된다.
+# 시트를 못 읽으면 견적 화면은 estimate_form.html 안의 기본 목록을 그대로 쓴다.
+PRODUCT_SHEET_ID = os.environ.get("PRODUCT_SHEET_ID", "18W1fOiuLWsaCCbSXGoCGUopMTz6n9FFk-jbw3QiKA3E")
+PRODUCT_SHEET_TAB = "제품정보"
+PRODUCT_CACHE_SECONDS = 60
+_PRODUCT_CACHE = {"at": 0.0, "data": None}
+_PRODUCT_LOCK = threading.Lock()
+
+
+def _product_detail(v):
+    """상세정보: 줄바꿈 정리 + CSV에서 넘어온 앞뒤 따옴표 제거"""
+    s = "" if v is None else str(v)
+    s = s.replace("\r", "")
+    if s.startswith('"'):
+        s = s[1:]
+    s = s.rstrip()
+    if s.endswith('"'):
+        s = s[:-1].rstrip()
+    return s
+
+
+def _product_price(v):
+    """단가: 숫자 → "6500000", 여러 줄(정가/할인가) → "3200000,2500000", 글자(무상제공 등)는 그대로"""
+    if v is None or v == "":
+        return ""
+    if isinstance(v, bool):
+        return ""
+    if isinstance(v, (int, float)):
+        return str(int(v)) if float(v).is_integer() else str(v)
+    parts = [p.strip().replace(",", "") if re.fullmatch(r"[\d,]+", p.strip()) else p.strip()
+             for p in re.split(r"[\n\r]+", str(v))]
+    parts = [p for p in parts if p]
+    return ",".join(parts)
+
+
+def _build_product_catalog(rows):
+    """시트 행 → 견적 화면이 쓰는 4개 객체 (majorCategories, consumableOptions, productData, consumableData)"""
+    if not rows:
+        raise ValueError("제품 시트가 비어 있음")
+    header = [str(h).replace("\n", "").strip() for h in rows[0]]
+
+    def col(*names, prefix=None):
+        for n in names:
+            if n in header:
+                return header.index(n)
+        if prefix:
+            for i, h in enumerate(header):
+                if h.startswith(prefix):
+                    return i
+        return -1
+
+    i_major = col("대분류")
+    i_type = col("구분")
+    i_cons = col("소모품 선택 시")
+    i_name = col("제품명")
+    i_det = col("제품상세정보")
+    i_price = col(prefix="공급단가")
+    i_hide = col("견적 화면에서 숨김")
+    if min(i_major, i_type, i_name) < 0:
+        raise ValueError(f"제품 시트 머리글을 찾지 못함: {header}")
+
+    major_categories, consumable_options, product_data, consumable_data = {}, {}, {}, {}
+    for r in rows[1:]:
+        def cell(i):
+            return r[i] if 0 <= i < len(r) else ""
+        hide = cell(i_hide)
+        if hide is True or str(hide).strip().upper() == "TRUE":
+            continue
+        major = str(cell(i_major)).strip()
+        typ = str(cell(i_type)).replace("\r", "")
+        name = str(cell(i_name)).replace("\r", "")
+        if not major or not typ.strip() or not name.strip():
+            continue
+        item = {"name": name, "detail": _product_detail(cell(i_det)), "price": _product_price(cell(i_price))}
+        types = major_categories.setdefault(major, [])
+        if typ not in types:
+            types.append(typ)
+        if typ.strip() == "소모품":
+            model = str(cell(i_cons)).replace("\r", "").strip()
+            if not model:
+                continue
+            consumable_options.setdefault(model, model)
+            consumable_data.setdefault(model, []).append(item)
+        else:
+            product_data.setdefault(typ, []).append(item)
+
+    count = sum(len(v) for v in product_data.values()) + sum(len(v) for v in consumable_data.values())
+    if count == 0:
+        raise ValueError("제품 시트에서 읽은 제품이 0개")
+    return {
+        "majorCategories": major_categories,
+        "consumableOptions": consumable_options,
+        "productData": product_data,
+        "consumableData": consumable_data,
+        "count": count,
+    }
+
+
+@app.get("/products")
+def get_products(fresh: int = 0):
+    """견적 화면용 제품 목록. 60초 캐시, ?fresh=1 이면 시트를 바로 다시 읽음."""
+    now = time.time()
+    with _PRODUCT_LOCK:
+        cached, cached_at = _PRODUCT_CACHE["data"], _PRODUCT_CACHE["at"]
+    if cached and not fresh and now - cached_at < PRODUCT_CACHE_SECONDS:
+        return cached
+    try:
+        _, gc, _ = get_google_clients()
+        ws = gc.open_by_key(PRODUCT_SHEET_ID).worksheet(PRODUCT_SHEET_TAB)
+        rows = ws.get_all_values(value_render_option="UNFORMATTED_VALUE")
+        catalog = _build_product_catalog(rows)
+        result = {"ok": True, "source": "sheet",
+                  "loaded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), **catalog}
+        with _PRODUCT_LOCK:
+            _PRODUCT_CACHE["data"], _PRODUCT_CACHE["at"] = result, now
+        return result
+    except Exception as e:
+        print(f"⚠️ 제품 시트 읽기 실패: {e}")
+        if cached:
+            return {**cached, "stale": True}
+        return {"ok": False, "error": str(e)}
+
 def get_credentials():
     """Google Service Account 자격증명 가져오기"""
     try:
@@ -704,9 +828,13 @@ async def collect_data(request: Request):
         
         # 한 행에 모든 데이터 배치 (새로운 컬럼 매핑)
         # 첫 번째 제품의 대분류 정보 추출
+        # (Special DC 같은 「공통」 항목은 사업부가 아니므로 건너뛰고 첫 실제 제품 기준)
         major_category = ""
-        if products and len(products) > 0:
-            major_category = products[0].get("major_category", "")
+        for _p in (products or []):
+            _m = (_p.get("major_category") or "").strip()
+            if _m and _m != "공통":
+                major_category = _m
+                break
         
         row_data = [
             data.get("estimate_date", ""),      # A: 견적일자
