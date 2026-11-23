@@ -50,6 +50,8 @@
         .link-icon { font-size: 20px; }
         .quick-link.wide { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 10px; background: var(--primary-weak); color: var(--primary-strong); }
         .quick-link.wide:hover { background: var(--primary-weak-2); color: var(--primary-strong); }
+        .quick-link.wide.dash { background: var(--grey-100); color: var(--grey-900); }
+        .quick-link.wide.dash:hover { background: var(--grey-200); color: var(--grey-900); }
         .quick-link .link-text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
         .quick-link .link-sub { font-size: 12px; font-weight: 500; color: var(--grey-600); }
         @media (max-width: 480px) {
@@ -82,8 +84,12 @@
                 견적서 드라이브
             </a>
             <a href="https://docs.google.com/spreadsheets/d/1lanDTaqOzAXFQaZcqj91X6kknbpHXREH3bLQrTeVq6Q/edit?gid=0#gid=0" target="_blank" class="quick-link">
-                <span class="link-icon">📊</span>
+                <span class="link-icon">📋</span>
                 견적 발행목록
+            </a>
+            <a href="https://script.google.com/a/macros/bitekps.com/s/AKfycbxmJqTb1fNYCIhN6gaXNhcEu-GIP4oY-eYaKB9frm7P5063wfn4m7Lxp7iPfS9--N2e/exec" target="_blank" class="quick-link wide dash">
+                <span class="link-icon">📊</span>
+                <span class="link-text">견적 현황 대시보드<span class="link-sub">발행·성공 현황을 사업부·담당자·월별로 봐요</span></span>
             </a>
             <a href="https://docs.google.com/spreadsheets/d/18W1fOiuLWsaCCbSXGoCGUopMTz6n9FFk-jbw3QiKA3E/edit?gid=0#gid=0" target="_blank" class="quick-link wide">
                 <span class="link-icon">🏷️</span>
